@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政府后台-欢迎登录</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            width: 100%;
+            height: 100vh;
+            font-family: "Microsoft Yahei", sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 顶部白色栏（1.1倍高度） */
+        .top-header {
+            height: 120px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+        }
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            margin-right: 10px;
+        }
+        .logo-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+        .logo-subtitle {
+            font-size: 14px;
+            color: #666;
+            display: block;
+        }
+        .login-type {
+            font-size: 14px;
+            color: #666;
+        }
+        .login-type a {
+            color: #666;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .login-type a.active {
+            color: #389e0d;
+            font-weight: bold;
+        }
+        /* 中间草绿色主区域 */
+      .main-container {
+	    flex: 1;
+	    background-color: #86c566; /* 草绿色底色保留 */
+	    display: flex;
+	    align-items: center;
+	    /* 替换 justify-content：从 space-between 改为 flex-end，让内容靠右 */
+	    justify-content: flex-end; 
+	    padding: 0 80px;
+	    position: relative;
+	    z-index: 1;
+	}
+	/* 只加背景图 + 20% 透明度，不影响任何内容、不移动登录框 */
+	.main-container::before {
+	    content: "";
+	    position: absolute;
+	    left: 0;
+	    top: 0;
+	    width: 100%;
+	    height: 100%;
+	    background-image: url(/images/1.png); /* 换成你的图片 */
+	    background-size: cover;
+	    background-position: center;
+	    background-repeat: no-repeat;
+	    opacity: 0.2;    /* 20% 透明度，非常淡 */
+	    z-index: -1;      /* 放在最底层，不挡表单 */
+	}
+        /* 左侧插画区域（即使无内容，也保留占位，避免布局塌陷） */
+	.illustration-area {
+	    /* 保留flex:1 占住左侧空间，让登录框自然靠右 */
+	    flex: 1;
+	    height: 100%;
+	}
+        
+        /* 右侧登录表单 */
+        .login-form-area {
+            width: 360px;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 40px 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .form-title {
+            text-align: center;
+            font-size: 18px;
+            color: #389e0d;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group input {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding-left: 35px;
+            font-size: 14px;
+            background-repeat: no-repeat;
+            background-position: 10px center;
+        }
+        .input-group input:focus {
+            border-color: #86c566;
+            outline: none;
+        }
+        .input-group.user {
+            background-image: url('/images/1077063.png');
+        }
+        .input-group.pwd {
+            background-image: url('/images/3674441.png');
+        }
+        .code-group {
+            display: flex;
+            gap: 10px;
+        }
+        .code-group input {
+            flex: 1;
+        }
+        .code-btn {
+            width: 100px;
+            height: 42px;
+            border: 1px solid #86c566;
+            background-color: #fff;
+            color: #86c566;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .login-btn {
+            width: 100%;
+            height: 42px;
+            background-color: #86c566;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        /* 底部白色区域（1.5倍高度） */
+        .bottom-footer {
+            height: 180px;
+            background-color: #fff;
+        }
+        /* 底部版权样式 */
+		.bottom-footer {
+		    height: 132px;
+		    background-color: #fff;
+		    display: flex;
+		    align-items: center;
+		    justify-content: center;
+		}
+		.copyright {
+		    font-size: 14px;
+		    color: #666;
+		    text-align: center;
+		}
+    </style>
+</head>
+<body>
+    <!-- 顶部白色栏 -->
+    <div class="top-header">
+        <div class="logo-area">
+            <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="#86c566"/>
+                <path d="M30 50 Q50 30 70 50 Q50 70 30 50" fill="#fff"/>
+                <path d="M40 50 Q50 40 60 50 Q50 60 40 50" fill="#86c566"/>
+            </svg>
+            <div>
+                <div class="logo-title">数字环保</div>
+                <div class="logo-subtitle">DIGITAL ENVIRONMENT PROTECTION</div>
+            </div>
+            <div style="margin-left: 30px; font-size: 24px; color: #333;">环龙集团项目全流程管控系统-欢迎登录</div>
+        </div>
+        <div class="login-type">
+            <a href="#">热爱人民</a> | 
+            <a href="#" class="active">报效国家</a> | 
+            <a href="#">崇尚荣誉</a> | 
+            <a href="#">献身事业</a> 
+        </div>
+    </div>
+ 
+    <!-- 中间草绿色区域 -->
+	<div class="main-container">
+	    <!-- 保留左侧占位（即使无插画，也需空容器占住左侧空间） -->
+	    <div class="illustration-area"></div>
+	    <!-- 右侧登录表单 -->
+	    <div class="login-form-area">
+	        <div class="form-title">账户登录</div>
+	        <form class="layui-form" lay-filter="loginForm">
+	            <div class="input-group user">
+	                <input type="text" name="username" placeholder="请输入账号" value="admin">
+	            </div>
+	            <div class="input-group pwd">
+	                <input type="password" name="password" placeholder="请输入登录密码" value="123456">
+	            </div>
+	            <div class="input-group code-group">
+	                <input type="text" placeholder="请输入验证码">
+	                <button type="button" class="code-btn">获取验证码</button>
+	            </div>
+	            <button type="submit" class="login-btn" lay-submit lay-filter="login">登录</button>
+	        </form>
+	    </div>
+	</div>
+
+    <!-- 底部白色栏 -->
+    <div class="bottom-footer">
+      <div class="copyright">© 2026 项目全流程管控系统 版权所有：浙江环龙环境有限公司 | 技术支持：杭州汪庄数据科技有限公司
+      </div>
+    </div>
+
+<script src="/layui/layui.js"></script>
+<script>
+layui.use(['form','layer','jquery'],function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+
+    form.on('submit(login)',function(data){
+        $.ajax({
+            url:'/login',
+            type:'post',
+            data:data.field,
+            success:function(res){
+                if(res.code === 200){
+                    localStorage.setItem("token",res.token);
+                    layer.msg("登录成功",{icon:1,time:800},function(){
+                        window.location.href="/index.html";
+                    })
+                }else{
+                    layer.msg(res.msg,{icon:2})
+                }
+            }
+        })
+        return false;
+    })
+})
+</script>
+</body>
+</html>

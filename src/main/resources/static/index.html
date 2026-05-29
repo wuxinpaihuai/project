@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目全流程管控系统</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #ffffff;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        /* 顶部导航栏 - 草绿色简约风格 */
+        .header {
+            height: 56px;
+            background-color: #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            background-color: #86c566;
+            border-radius: 4px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-logo svg {
+            width: 20px;
+            height: 20px;
+        }
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #333;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: #86c566;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+        }
+        .user-name {
+            font-size: 14px;
+            color: #333;
+        }
+        .logout-btn {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .logout-btn:hover {
+            color: #86c566;
+        }
+        /* 主内容区 */
+        .main-container {
+            display: flex;
+            margin-top: 56px;
+            height: calc(100vh - 56px - 40px);
+        }
+        /* 左侧菜单区域 */
+        .menu-frame {
+            width: 200px;
+            height: 100%;
+            border: none;
+            border-right: 1px solid #e8e8e8;
+        }
+        /* 右侧内容区域 */
+        .content-frame {
+            flex: 1;
+            height: 100%;
+            border: none;
+        }
+        /* 底部栏 */
+        .footer {
+            height: 40px;
+            background-color: #ffffff;
+            border-top: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 13px;
+        }
+        /* 页面标题栏 */
+        .content-header {
+            height: 50px;
+            background-color: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+        .content-title {
+            font-size: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+        .content-title i {
+            color: #86c566;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-logo">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
+                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="header-title">浙江环龙项目全流程管控系统</div>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <div class="user-avatar">管</div>
+                <span class="user-name">系统管理员</span>
+            </div>
+            <a class="logout-btn" href="javascript:logout();">
+                <i class="layui-icon layui-icon-logout" style="font-size: 18px; vertical-align: middle;"></i> 退出
+            </a>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧菜单 iframe -->
+        <iframe src="/sys_menu.html" class="menu-frame" frameborder="0"></iframe>
+        <!-- 右侧内容 iframe -->
+        <iframe src="/sys_user.html" class="content-frame" id="contentFrame" frameborder="0"></iframe>
+    </div>
+
+    <!-- 底部栏 -->
+    <div class="footer">
+        © 2025 政务项目管理系统 版权所有 | 技术运维部
+    </div>
+
+    <script src="/layui/layui.js"></script>
+    <script>
+    // 检查登录状态
+    var token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+    }
+
+    // 切换内容页面
+    function switchContent(url, title) {
+        document.getElementById('contentFrame').src = url;
+    }
+
+    // 退出登录
+    function logout() {
+        layui.use(['layer'], function() {
+            var layer = layui.layer;
+            layer.confirm('确定要退出登录吗？', function(index) {
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+                layer.close(index);
+            });
+        });
+    }
+    </script>
+</body>
+</html>

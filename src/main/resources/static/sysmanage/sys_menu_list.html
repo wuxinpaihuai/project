@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单管理</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #f5f5f5;
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+        }
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e8e8e8;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 4px 4px 0 0;
+        }
+        .search-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 0;
+            margin-bottom: 0;
+        }
+        .search-form .layui-form-item {
+            display: inline-block;
+            margin-bottom: 0;
+            margin-right: 15px;
+            vertical-align: middle;
+        }
+        .search-form .layui-form-label {
+            width: 80px;
+            padding: 9px 10px 9px 0;
+        }
+        .search-form .layui-input-inline {
+            width: 180px;
+        }
+        .btn-green {
+            background-color: #86c566 !important;
+            color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover {
+            background-color: #7ab857 !important;
+            border-color: #7ab857 !important;
+        }
+        .btn-outline-green {
+            background-color: #fff !important;
+            color: #86c566 !important;
+            border-color: #86c566 !important;
+        }
+        .btn-outline-green:hover {
+            background-color: #f0fff0 !important;
+        }
+        .table-toolbar {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .status-enabled {
+            background-color: #e8f5e9;
+            color: #4caf50;
+        }
+        .status-disabled {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+        .table-container {
+            background-color: #fff;
+            padding: 0 20px;
+        }
+        .layui-laypage {
+            margin: 15px 0;
+        }
+        .layui-laypage .layui-laypage-curr .layui-laypage-em {
+            background-color: #86c566 !important;
+        }
+        .layui-laypage a, .layui-laypage span {
+            color: #666;
+        }
+        .layui-laypage .layui-laypage-curr span {
+            color: #fff !important;
+        }
+        /* 弹窗样式 */
+        .form-container {
+            padding: 20px;
+        }
+        .layui-form-label {
+            width: 100px !important;
+        }
+        .layui-input-block {
+            margin-left: 100px !important;
+        }
+        /* 图标选择器样式 */
+        .icon-picker {
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 180px;
+            overflow-y: auto;
+            background: #fff;
+        }
+        .icon-item {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #e8e8e8;
+            margin: 2px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .icon-item:hover {
+            border-color: #86c566;
+            background-color: #f0fff0;
+        }
+        .icon-item.selected {
+            border-color: #86c566;
+            background-color: #86c566;
+            color: #fff;
+        }
+        .icon-item i {
+            font-size: 18px;
+        }
+        /* 父菜单选择样式 */
+        .parent-radio-group {
+            margin-bottom: 10px;
+        }
+        .parent-select-wrapper {
+            display: none;
+            margin-top: 10px;
+        }
+        .parent-select-wrapper.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="page-title">菜单管理</div>
+
+<!-- 搜索表单 -->
+<div class="search-form">
+    <form class="layui-form" lay-filter="searchForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">菜单名称</label>
+            <div class="layui-input-inline">
+                <input type="text" name="menuName" placeholder="请输入菜单名称" class="layui-input" id="searchMenuName">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否禁用</label>
+            <div class="layui-input-inline">
+                <select name="status" class="layui-input" id="searchStatus">
+                    <option value="">全部</option>
+                    <option value="1">正常</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <button type="button" class="layui-btn btn-green" onclick="doSearch()">
+                <i class="layui-icon layui-icon-search"></i> 查询
+            </button>
+            <button type="button" class="layui-btn btn-outline-green" onclick="doReset()">
+                <i class="layui-icon layui-icon-refresh"></i> 重置
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 工具栏 -->
+<div class="table-toolbar">
+    <button class="layui-btn btn-green" onclick="addMenu()">
+        <i class="layui-icon layui-icon-add-1"></i> 新增
+    </button>
+</div>
+
+<!-- 数据表格 -->
+<div class="table-container">
+    <table class="layui-hide" id="menuTable" lay-filter="menuTable"></table>
+</div>
+
+<!-- 表格工具栏模板 -->
+<script type="text/html" id="toolbarTpl">
+    <a class="layui-btn layui-btn-xs btn-green" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+<!-- 状态模板 -->
+<script type="text/html" id="statusTpl">
+    {{# if(d.status === 1){ }}
+        <span class="status-tag status-enabled">正常</span>
+    {{# } else { }}
+        <span class="status-tag status-disabled">禁用</span>
+    {{# } }}
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+// 获取token
+var token = localStorage.getItem('token');
+
+// 50个layui图标
+var iconList = [
+    'layui-icon-set', 'layui-icon-set-fill', 'layui-icon-engine', 'layui-icon-layer',
+    'layui-icon-util', 'layui-icon-templeate-1', 'layui-icon-app', 'layui-icon-website',
+    'layui-icon-user', 'layui-icon-find-fill', 'layui-icon-help', 'layui-icon-chat',
+    'layui-icon-survey', 'layui-icon-chart', 'layui-icon-chart-screen', 'layui-icon-engine',
+    'layui-icon-transfer', 'layui-icon-senior', 'layui-icon-refresh', 'layui-icon-refresh-1',
+    'layui-icon-face', 'layui-icon-cart-simple', 'layui-icon-cart', 'layui-icon-next',
+    'layui-icon-prev', 'layui-icon-upload', 'layui-icon-upload-drag', 'layui-icon-down',
+    'layui-icon-up', 'layui-icon-add-circle', 'layui-icon-add-1', 'layui-icon-play',
+    'layui-icon-pause', 'layui-icon-404', 'layui-icon-about', 'layui-icon-location',
+    'layui-icon-read', 'layui-icon-survey', 'layui-icon-dollar', 'layui-icon-fire',
+    'layui-icon-return', 'layui-icon-screen-full', 'layui-icon-screen-restore', 'layui-icon-note',
+    'layui-icon-home', 'layui-icon-log', 'layui-icon-login', 'layui-icon-logout',
+    'layui-icon-list', 'layui-icon-tree', 'layui-icon-table', 'layui-icon-form'
+];
+
+layui.use(['table', 'form', 'layer'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+    
+    // 渲染表格
+    table.render({
+        elem: '#menuTable',
+        url: '/sys/menu/list',
+        method: 'get',
+        headers: {token: token},
+        cols: [[
+            {type: 'checkbox', fixed: 'left'},
+            {field: 'id', title: 'ID', width: 60, sort: true, fixed: 'left'},
+            {field: 'menuName', title: '菜单名称', minWidth: 150},
+            {field: 'menuIcon', title: '图标', width: 100, templet: function(d) {
+                return '<i class="layui-icon ' + (d.menuIcon || '') + '"></i>';
+            }},
+            {field: 'menuPath', title: '访问路径', minWidth: 180},
+            {field: 'parentId', title: '父菜单ID', width: 100, templet: function(d) {
+                return d.parentId == 0 ? '-' : d.parentId;
+            }},
+            {field: 'sortNum', title: '排序号', width: 80},
+            {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
+            {field: 'createTime', title: '创建时间', minWidth: 160},
+            {fixed: 'right', title: '操作', width: 120, align: 'center', toolbar: '#toolbarTpl'}
+        ]],
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50],
+        even: true,
+        skin: 'line',
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            msgName: 'msg',
+            countName: 'total',
+            dataName: 'records'
+        },
+        done: function(res, curr, count){
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5});
+                setTimeout(function() {
+                    window.parent.location.href = '/login.html';
+                }, 1500);
+            }
+        }
+    });
+    
+    // 监听工具条
+    table.on('tool(menuTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'del'){
+            layer.confirm('确定删除菜单【' + data.menuName + '】吗？', function(index){
+                $.ajax({
+                    url: '/sys/menu/delete/' + data.id,
+                    type: 'DELETE',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res.code === 200) {
+                            obj.del();
+                            layer.close(index);
+                            layer.msg('删除成功', {icon: 1});
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    }
+                });
+            });
+        } else if(obj.event === 'edit'){
+            // 编辑菜单
+            layer.open({
+                type: 2,
+                title: '编辑菜单',
+                area: ['650px', '550px'],
+                shadeClose: true,
+                content: '/sysmanage/sys_menu_add.html?id=' + data.id,
+                end: function() {
+                    layui.use('table', function(){
+                        var table = layui.table;
+                        table.reload('menuTable');
+                    });
+                }
+            });
+        }
+    });
+});
+
+// 查询方法
+function doSearch() {
+    var menuName = document.getElementById('searchMenuName').value.trim();
+    var status = document.getElementById('searchStatus').value;
+    
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('menuTable', {
+            where: {
+                menuName: menuName,
+                status: status === '' ? null : status
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+// 重置方法
+function doReset() {
+    document.getElementById('searchMenuName').value = '';
+    document.getElementById('searchStatus').value = '';
+    
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('menuTable', {
+            where: {
+                menuName: '',
+                status: null
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+// 新增菜单
+function addMenu() {
+    layer.open({
+        type: 2,
+        title: '新增菜单',
+        area: ['650px', '550px'],
+        shadeClose: true,
+        content: '/sysmanage/sys_menu_add.html',
+        end: function() {
+            // 关闭后刷新表格
+            layui.use('table', function(){
+                var table = layui.table;
+                table.reload('menuTable');
+            });
+        }
+    });
+}
+
+// 加载父菜单列表
+function loadParentMenus(callback) {
+    layui.use('layer', function(){
+        var $ = layui.jquery;
+        $.ajax({
+            url: '/sys/menu/all',
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200) {
+                    callback(res.data || []);
+                } else {
+                    callback([]);
+                }
+            },
+            error: function() {
+                callback([]);
+            }
+        });
+    });
+}
+
+// 生成图标选择器HTML
+function generateIconPicker(selectedIcon) {
+    var html = '<div class="icon-picker" id="iconPicker">';
+    iconList.forEach(function(icon) {
+        var isSelected = icon === selectedIcon ? ' selected' : '';
+        html += '<div class="icon-item' + isSelected + '" data-icon="' + icon + '">';
+        html += '<i class="layui-icon ' + icon + '"></i>';
+        html += '</div>';
+    });
+    html += '</div>';
+    return html;
+}
+
+// 打开编辑弹窗
+function openEditForm(data) {
+    var isEdit = data !== null;
+    var title = isEdit ? '编辑菜单' : '新增菜单';
+    
+    loadParentMenus(function(parentMenus) {
+        // 生成父菜单下拉选项
+        var parentOptions = '<option value="">请选择父菜单</option>';
+        parentMenus.forEach(function(menu) {
+            var isSelected = isEdit && data.parentId == menu.id ? 'selected' : '';
+            parentOptions += '<option value="' + menu.id + '" ' + isSelected + '>' + menu.menuName + '</option>';
+        });
+        
+        // 生成图标选择器
+        var selectedIcon = data ? data.menuIcon : 'layui-icon-set';
+        var iconPickerHtml = generateIconPicker(selectedIcon);
+        
+        var hasParent = isEdit && data.parentId != 0;
+        
+        layui.use('layer', function(){
+            var layer = layui.layer;
+            
+            layer.open({
+                type: 1,
+                title: title,
+                area: ['550px', '520px'],
+                shadeClose: true,
+                content: '<form class="layui-form form-container" lay-filter="menuForm" id="menuForm">\
+                    <input type="hidden" name="id" value="' + (data ? data.id : '') + '">\
+                    <input type="hidden" name="selectedIcon" id="selectedIcon" value="' + selectedIcon + '">\
+                    \
+                    <div class="layui-form-item">\
+                        <label class="layui-form-label"><span style="color: red;">*</span>菜单名称</label>\
+                        <div class="layui-input-block">\
+                            <input type="text" name="menuName" lay-verify="required|menuName" placeholder="请输入菜单名称"\
+                                   class="layui-input" value="' + (data ? data.menuName : '') + '" style="width: 400px;">\
+                        </div>\
+                    </div>\
+                    \
+                    <div class="layui-form-item">\
+                        <label class="layui-form-label"><span style="color: red;">*</span>访问路径</label>\
+                        <div class="layui-input-block">\
+                            <input type="text" name="menuPath" lay-verify="required|menuPath" placeholder="请输入访问路径，如: sys_user.html"\
+                                   class="layui-input" value="' + (data ? data.menuPath : '') + '" style="width: 400px;">\
+                        </div>\
+                    </div>\
+                    \
+                    <div class="layui-form-item">\
+                        <label class="layui-form-label">菜单图标</label>\
+                        <div class="layui-input-block">\
+                            ' + iconPickerHtml + '\
+                        </div>\
+                    </div>\
+                    \
+                    <div class="layui-form-item">\
+                        <label class="layui-form-label">父菜单</label>\
+                        <div class="layui-input-block parent-radio-group">\
+                            <input type="radio" name="hasParent" value="0" title="无（一级菜单）" ' + (isEdit && data.parentId == 0 ? 'checked' : (!isEdit ? 'checked' : '')) + '>\
+                            <input type="radio" name="hasParent" value="1" title="有" ' + (isEdit && data.parentId != 0 ? 'checked' : '') + '>\
+                        </div>\
+                        <div class="parent-select-wrapper ' + (hasParent ? 'show' : '') + '" id="parentSelectWrapper">\
+                            <select name="parentId" id="parentIdSelect" lay-search style="width: 400px;">\
+                                ' + parentOptions + '\
+                            </select>\
+                        </div>\
+                    </div>\
+                    \
+                    <div class="layui-form-item">\
+                        <label class="layui-form-label">排序号</label>\
+                        <div class="layui-input-block">\
+                            <input type="number" name="sortNum" lay-verify="number" placeholder="数字越小越靠前"\
+                                   class="layui-input" value="' + (data ? data.sortNum : 0) + '" style="width: 400px;">\
+                        </div>\
+                    </div>\
+                    \
+                    <div class="layui-form-item">\
+                        <div class="layui-input-block">\
+                            <button type="button" class="layui-btn btn-green" lay-submit lay-filter="menuSubmit">保存</button>\
+                            <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll();">取消</button>\
+                        </div>\
+                    </div>\
+                </form>',
+                success: function(layero, index){
+                    // 渲染表单
+                    layui.use('form', function(){
+                        var form = layui.form;
+                        form.render();
+                        
+                        // 监听图标选择
+                        layero.find('.icon-item').click(function(){
+                            layero.find('.icon-item').removeClass('selected');
+                            $(this).addClass('selected');
+                            layero.find('#selectedIcon').val($(this).data('icon'));
+                        });
+                        
+                        // 监听父菜单单选框变化
+                        form.on('radio(hasParent)', function(data){
+                            if (data.value === '0') {
+                                layero.find('#parentSelectWrapper').removeClass('show');
+                                layero.find('#parentIdSelect').val(0);
+                            } else {
+                                layero.find('#parentSelectWrapper').addClass('show');
+                            }
+                        });
+                        
+                        // 自定义验证规则
+                        form.verify({
+                            menuName: function(value) {
+                                if (!value || value.trim() === '') {
+                                    return '请输入菜单名称';
+                                }
+                                if (value.length > 50) {
+                                    return '菜单名称不能超过50个字符';
+                                }
+                            },
+                            menuPath: function(value) {
+                                if (!value || value.trim() === '') {
+                                    return '请输入访问路径';
+                                }
+                                if (value.length > 100) {
+                                    return '访问路径不能超过100个字符';
+                                }
+                            }
+                        });
+                        
+                        // 监听提交
+                        form.on('submit(menuSubmit)', function(formData){
+                            var fieldData = formData.field;
+                            
+                            // 处理父菜单ID
+                            if (fieldData.hasParent === '0') {
+                                fieldData.parentId = 0;
+                            } else {
+                                fieldData.parentId = fieldData.parentId || 0;
+                            }
+                            
+                            // 设置图标
+                            fieldData.menuIcon = layero.find('#selectedIcon').val();
+                            
+                            // 移除临时字段
+                            delete fieldData.hasParent;
+                            
+                            var url = isEdit ? '/sys/menu/update' : '/sys/menu/add';
+                            var method = isEdit ? 'PUT' : 'POST';
+                            
+                            $.ajax({
+                                url: url,
+                                type: method,
+                                headers: {token: token},
+                                contentType: 'application/json',
+                                data: JSON.stringify(fieldData),
+                                success: function(res) {
+                                    if (res.code === 200) {
+                                        layer.close(index);
+                                        layer.msg(isEdit ? '更新成功' : '新增成功', {icon: 1});
+                                        layui.use('table', function(){
+                                            var table = layui.table;
+                                            table.reload('menuTable');
+                                        });
+                                    } else {
+                                        layer.msg(res.msg || '操作失败', {icon: 2});
+                                    }
+                                }
+                            });
+                            return false;
+                        });
+                    });
+                }
+            });
+        });
+    });
+}
+</script>
+</body>
+</html>

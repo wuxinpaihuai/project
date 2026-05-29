@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统菜单</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #ffffff;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .menu-container {
+            height: 100vh;
+            background-color: #ffffff;
+            border-right: 1px solid #e8e8e8;
+        }
+        .menu-header {
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        .menu-content {
+            padding: 10px 0;
+        }
+        .first-menu {
+            width: 100%;
+        }
+        .first-menu-item {
+            width: 100%;
+        }
+        .first-menu-btn {
+            display: block;
+            width: 100%;
+            height: 44px;
+            line-height: 44px;
+            text-align: center;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            background-color: #ffffff;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .first-menu-btn:hover {
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        .first-menu-btn.active,
+        .first-menu-btn.default-active {
+            background-color: #ffffff;
+            color: #333;
+            font-weight: 500;
+        }
+        .first-menu-btn .arrow-icon {
+            transition: transform 0.2s;
+        }
+        .first-menu-btn .arrow-icon.expanded {
+            transform: rotate(180deg);
+        }
+        .second-menu {
+            display: none;
+            background-color: #fafafa;
+        }
+        .second-menu.show {
+            display: block;
+        }
+        .second-menu-item {
+            display: block;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            color: #555;
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #fff;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .second-menu-item:hover {
+            color: #86c566;
+            background-color: #f0fff0;
+        }
+        .second-menu-item.active {
+            color: #fff;
+            background-color: #86c566;
+        }
+        .menu-divider {
+            height: 1px;
+            background-color: #e8e8e8;
+            margin: 5px 15px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+<div class="menu-container">
+    <div class="menu-content" id="menuContainer">
+        <div class="loading">加载中...</div>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+// 获取token
+var token = localStorage.getItem('token');
+
+// 页面加载时获取菜单
+document.addEventListener('DOMContentLoaded', function() {
+    loadMenu();
+});
+
+function loadMenu() {
+    var container = document.getElementById('menuContainer');
+    
+    layui.use('layer', function(){
+        var $ = layui.jquery;
+        
+        $.ajax({
+            url: '/getMenuTree',
+            type: 'GET',
+            headers: {token: token},
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    renderMenu(res.data);
+                } else if (res.code === 401) {
+                    container.innerHTML = '<div class="loading">请先登录</div>';
+                    setTimeout(function() {
+                        window.parent.location.href = '/login.html';
+                    }, 1500);
+                } else {
+                    container.innerHTML = '<div class="loading">加载失败</div>';
+                }
+            },
+            error: function() {
+                container.innerHTML = '<div class="loading">加载失败</div>';
+            }
+        });
+    });
+}
+
+function renderMenu(menuList) {
+    var container = document.getElementById('menuContainer');
+    var html = '<div class="first-menu">';
+    
+    if (menuList && menuList.length > 0) {
+        menuList.forEach(function(menu, index) {
+            var isDefault = index === 0 ? ' default-active' : '';
+            var isShow = index === 0 ? ' show' : '';
+            var icon = menu.menuIcon || 'layui-icon-set';
+            
+            html += '<div class="first-menu-item">';
+            html += '<div class="first-menu-btn' + isDefault + '" onclick="toggleMenu(this)">';
+            html += '<i class="layui-icon ' + icon + '"></i> ' + menu.menuName;
+            html += '<i class="layui-icon layui-icon-down arrow-icon' + (index === 0 ? ' expanded' : '') + '" style="margin-left: 5px; font-size: 10px;"></i>';
+            html += '</div>';
+            
+            // 渲染子菜单
+            if (menu.children && menu.children.length > 0) {
+                html += '<div class="second-menu' + isShow + '">';
+                menu.children.forEach(function(child, childIndex) {
+                    var childActive = index === 0 && childIndex === 0 ? ' active' : '';
+                    var childUrl = child.menuPath || (child.menuName + '.html');
+                    var pageName = childUrl.replace('.html', '').replace('/', '') + '.html';
+                    html += '<div class="second-menu-item' + childActive + '" onclick="selectMenu(this, \'' + pageName + '\', \'' + child.menuName + '\')">' + child.menuName + '</div>';
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+        });
+    } else {
+        html += '<div class="loading">暂无菜单</div>';
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function toggleMenu(btn) {
+    var subMenu = btn.nextElementSibling;
+    var icon = btn.querySelector('.arrow-icon');
+    
+    if (subMenu) {
+        if (subMenu.classList.contains('show')) {
+            subMenu.classList.remove('show');
+            if (icon) icon.classList.remove('expanded');
+        } else {
+            subMenu.classList.add('show');
+            if (icon) icon.classList.add('expanded');
+        }
+    }
+}
+
+function selectMenu(item, url, title) {
+    // 移除所有active
+    var items = document.querySelectorAll('.second-menu-item');
+    items.forEach(function(el) {
+        el.classList.remove('active');
+    });
+    // 添加当前active
+    item.classList.add('active');
+    
+    // 通知父窗口切换iframe
+    if (window.parent) {
+        window.parent.switchContent(url, title);
+    }
+}
+</script>
+</body>
+</html>
