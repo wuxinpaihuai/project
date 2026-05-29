@@ -1,5 +1,6 @@
 package com.zjhl.project.entity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -20,6 +21,7 @@ public class SysMenu {
     private String menuPath;
     private Integer sortNum;
     private Integer status;
+    private LocalDateTime createTime;
     @TableField(exist = false)
     private List<SysMenu> children;
 	public Long getId() {
@@ -69,6 +71,12 @@ public class SysMenu {
 	}
 	public void setChildren(List<SysMenu> children) {
 		this.children = children;
+	}
+	public LocalDateTime getCreateTime() {
+		return createTime;
+	}
+	public void setCreateTime(LocalDateTime createTime) {
+		this.createTime = createTime;
 	}
     
     

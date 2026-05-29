@@ -279,46 +279,48 @@ layui.use(['form', 'layer'], function(){
     var layer = layui.layer;
     var $ = layui.jquery;
 
-    // 页面加载时立即加载父菜单（确保点击时有数据）
+    // 先加载父菜单，完成后再处理编辑数据回显
     loadParentMenus($).done(function() {
         console.log('父菜单加载完成，开始渲染下拉框');
         fillParentMenus(form);
+
+        // 父菜单加载完后，再加载编辑数据（确保下拉框有选项时才设置值）
+        var menuId = getQueryString('id');
+        if (menuId) {
+            document.getElementById('menuId').value = menuId;
+            $.ajax({
+                url: '/sys/menu/get/' + menuId,
+                type: 'GET',
+                headers: {token: token},
+                success: function(res) {
+                    if (res.code === 200 && res.data) {
+                        var data = res.data;
+                        document.getElementById('menuName').value = data.menuName || '';
+                        document.getElementById('menuPath').value = data.menuPath || '';
+                        document.getElementById('sortNum').value = data.sortNum || 0;
+                        document.getElementById('selectedIcon').value = data.menuIcon || 'layui-icon-set';
+                        
+                        // 生成图标选择器（选中当前图标）
+                        generateIconPicker(data.menuIcon || 'layui-icon-set');
+                        
+                        // 设置父菜单
+                        if (data.parentId && data.parentId != 0) {
+                            $('input[name="hasParent"][value="1"]').prop('checked', true);
+                            $('input[name="hasParent"][value="0"]').prop('checked', false);
+                            $('#parentSelectWrapper').show();
+                            // 设置select的值并重新渲染Layui组件
+                            $('#parentIdSelect').val(data.parentId);
+                            form.render('select');
+                        }
+                        form.render('radio');
+                    }
+                }
+            });
+        }
     });
 
     // 生成图标选择器
     generateIconPicker('layui-icon-set');
-
-    // 获取编辑数据
-    var menuId = getQueryString('id');
-    if (menuId) {
-        document.getElementById('menuId').value = menuId;
-        $.ajax({
-            url: '/sys/menu/get/' + menuId,
-            type: 'GET',
-            headers: {token: token},
-            success: function(res) {
-                if (res.code === 200 && res.data) {
-                    var data = res.data;
-                    document.getElementById('menuName').value = data.menuName || '';
-                    document.getElementById('menuPath').value = data.menuPath || '';
-                    document.getElementById('sortNum').value = data.sortNum || 0;
-                    document.getElementById('selectedIcon').value = data.menuIcon || 'layui-icon-set';
-                    
-                    // 生成图标选择器（选中当前图标）
-                    generateIconPicker(data.menuIcon || 'layui-icon-set');
-                    
-                    // 设置父菜单
-                    if (data.parentId && data.parentId != 0) {
-                        $('input[name="hasParent"][value="1"]').prop('checked', true);
-                        $('input[name="hasParent"][value="0"]').prop('checked', false);
-                        $('#parentSelectWrapper').addClass('show');
-                        $('#parentIdSelect').val(data.parentId);
-                    }
-                    form.render();
-                }
-            }
-        });
-    }
 
     // 监听图标选择
     $('#iconPicker').on('click', '.icon-item', function(){
@@ -370,7 +372,7 @@ layui.use(['form', 'layer'], function(){
         
         var isEdit = !!id;
         var url = isEdit ? '/sys/menu/update' : '/sys/menu/add';
-        var method = 'POST';
+        var method = isEdit ? 'PUT' : 'POST';
         
         var data = {
             menuName: menuName,
