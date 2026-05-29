@@ -361,7 +361,11 @@ layui.use(['form', 'layer'], function(){
     });
 
     // 监听提交
+    var isSubmitting = false;
     form.on('submit(menuSubmit)', function(){
+        if (isSubmitting) return false;
+        isSubmitting = true;
+
         var menuName = document.getElementById('menuName').value.trim();
         var menuPath = document.getElementById('menuPath').value.trim();
         var sortNum = document.getElementById('sortNum').value || 0;
@@ -373,7 +377,11 @@ layui.use(['form', 'layer'], function(){
         var isEdit = !!id;
         var url = isEdit ? '/sys/menu/update' : '/sys/menu/add';
         var method = isEdit ? 'PUT' : 'POST';
-        
+
+        // 禁用保存按钮，显示加载提示
+        var $saveBtn = $('button[lay-filter="menuSubmit"]');
+        $saveBtn.prop('disabled', true).addClass('layui-btn-disabled').text('保存中...');
+
         var data = {
             menuName: menuName,
             menuPath: menuPath,
@@ -399,7 +407,16 @@ layui.use(['form', 'layer'], function(){
                     });
                 } else {
                     layer.msg(res.msg || '操作失败', {icon: 2});
+                    // 恢复按钮
+                    isSubmitting = false;
+                    $saveBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
                 }
+            },
+            error: function() {
+                layer.msg('请求失败，请重试', {icon: 2});
+                // 恢复按钮
+                isSubmitting = false;
+                $saveBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
             }
         });
         return false;
