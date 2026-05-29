@@ -105,6 +105,28 @@ public class SysMenuController {
     }
 
     /**
+     * 获取一级菜单（parentId=0，用于新增菜单时的父菜单下拉框）
+     */
+    @GetMapping("/parents")
+    public Map<String, Object> getParentMenus() {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+        QueryWrapper<SysMenu> wrapper = new QueryWrapper<>();
+        wrapper.eq("parent_id", 0);
+        wrapper.eq("status", 1);
+        wrapper.orderByAsc("sort_num");
+        List<SysMenu> list = sysMenuService.list(wrapper);
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", list);
+        return result;
+    }
+
+    /**
      * 新增菜单
      */
     @PostMapping("/add")

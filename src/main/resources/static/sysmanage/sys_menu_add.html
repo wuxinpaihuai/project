@@ -76,13 +76,19 @@
         .icon-item i {
             font-size: 18px;
         }
-        /* 父菜单单选框样式 */
+        /* 父菜单同行布局 */
+        .parent-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         .parent-radio-group {
-            margin-bottom: 10px;
+            flex-shrink: 0;
         }
         .parent-select-wrapper {
             display: none;
-            margin-top: 10px;
+            flex: 1;
+            max-width: 220px;
         }
         .parent-select-wrapper.show {
             display: block;
@@ -143,14 +149,16 @@
     <div class="layui-form-item">
         <label class="layui-form-label">父菜单</label>
         <div class="layui-input-block">
-            <div class="parent-radio-group">
-                <input type="radio" name="hasParent" value="0" title="无（一级菜单）" checked>
-                <input type="radio" name="hasParent" value="1" title="有">
-            </div>
-            <div class="parent-select-wrapper" id="parentSelectWrapper">
-                <select name="parentId" id="parentIdSelect" lay-search style="width: 400px;">
-                    <option value="">请选择父菜单</option>
-                </select>
+            <div class="parent-row">
+                <div class="parent-radio-group">
+                    <input type="radio" name="hasParent" value="0" title="无（一级菜单）" lay-filter="hasParent" checked>
+                    <input type="radio" name="hasParent" value="1" title="有" lay-filter="hasParent">
+                </div>
+                <div class="parent-select-wrapper" id="parentSelectWrapper">
+                    <select name="parentId" id="parentIdSelect" lay-search>
+                        <option value="">请选择父菜单</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -222,21 +230,21 @@ function generateIconPicker(selectedIcon) {
     document.getElementById('iconPicker').innerHTML = html;
 }
 
-// 加载父菜单列表
-function loadParentMenus() {
-    console.log('开始加载父菜单...');
+// 加载一级菜单列表（parentId=0）
+function loadParentMenus($) {
+    console.log('开始加载一级菜单...');
     console.log('token:', token);
-    console.log('请求URL:', '/sys/menu/all');
+    console.log('请求URL:', '/sys/menu/parents');
     
     return $.ajax({
-        url: '/sys/menu/all',
+        url: '/sys/menu/parents',
         type: 'GET',
         headers: {token: token},
         success: function(res) {
-            console.log('父菜单数据响应:', res);
+            console.log('一级菜单数据响应:', res);
             if (res.code === 200) {
                 parentMenus = res.data || [];
-                console.log('已加载父菜单数量:', parentMenus.length);
+                console.log('已加载一级菜单数量:', parentMenus.length);
             } else if (res.code === 401) {
                 layer.msg('请先登录', {icon: 2}, function() {
                     parent.location.href = '/login.html';
@@ -244,16 +252,16 @@ function loadParentMenus() {
             }
         },
         error: function(xhr, status, error) {
-            console.error('加载父菜单失败:', status, error);
+            console.error('加载一级菜单失败:', status, error);
             console.error('响应状态:', xhr.status);
             console.error('响应内容:', xhr.responseText);
-            layer.msg('加载父菜单失败: ' + error, {icon: 2});
+            layer.msg('加载一级菜单失败: ' + error, {icon: 2});
         }
     });
 }
 
 // 填充父菜单下拉框
-function fillParentMenus() {
+function fillParentMenus(form) {
     var select = document.getElementById('parentIdSelect');
     var options = '<option value="">请选择父菜单</option>';
     parentMenus.forEach(function(menu) {
@@ -261,8 +269,8 @@ function fillParentMenus() {
     });
     select.innerHTML = options;
     // 渲染下拉框
-    if (typeof layui !== 'undefined') {
-        layui.form.render('select');
+    if (form) {
+        form.render('select');
     }
 }
 
@@ -272,9 +280,9 @@ layui.use(['form', 'layer'], function(){
     var $ = layui.jquery;
 
     // 页面加载时立即加载父菜单（确保点击时有数据）
-    loadParentMenus().done(function() {
+    loadParentMenus($).done(function() {
         console.log('父菜单加载完成，开始渲染下拉框');
-        fillParentMenus();
+        fillParentMenus(form);
     });
 
     // 生成图标选择器
