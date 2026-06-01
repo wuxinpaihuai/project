@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色管理</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #f5f5f5;
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+        }
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e8e8e8;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 4px 4px 0 0;
+        }
+        .search-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 0;
+            margin-bottom: 0;
+        }
+        .search-form .layui-form-item {
+            display: inline-block;
+            margin-bottom: 0;
+            margin-right: 15px;
+            vertical-align: middle;
+        }
+        .search-form .layui-form-label {
+            width: 80px;
+            padding: 9px 10px 9px 0;
+        }
+        .search-form .layui-input-inline {
+            width: 180px;
+        }
+        .btn-green {
+            background-color: #86c566 !important;
+            color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover {
+            background-color: #7ab857 !important;
+            border-color: #7ab857 !important;
+        }
+        .btn-outline-green {
+            background-color: #fff !important;
+            color: #86c566 !important;
+            border-color: #86c566 !important;
+        }
+        .btn-outline-green:hover {
+            background-color: #f0fff0 !important;
+        }
+        .table-toolbar {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .status-enabled {
+            background-color: #e8f5e9;
+            color: #4caf50;
+        }
+        .status-disabled {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+        .table-container {
+            background-color: #fff;
+            padding: 0 20px;
+        }
+        .layui-laypage {
+            margin: 15px 0;
+        }
+        .layui-laypage .layui-laypage-curr .layui-laypage-em {
+            background-color: #86c566 !important;
+        }
+        .layui-laypage a, .layui-laypage span {
+            color: #666;
+        }
+        .layui-laypage .layui-laypage-curr span {
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+<div class="page-title">角色管理</div>
+
+<!-- 搜索表单 -->
+<div class="search-form">
+    <form class="layui-form" lay-filter="searchForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色名称</label>
+            <div class="layui-input-inline">
+                <input type="text" name="roleName" placeholder="请输入角色名称" class="layui-input" id="searchRoleName">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否禁用</label>
+            <div class="layui-input-inline">
+                <select name="status" class="layui-input" id="searchStatus">
+                    <option value="">全部</option>
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <button type="button" class="layui-btn btn-green" onclick="doSearch()">
+                <i class="layui-icon layui-icon-search"></i> 查询
+            </button>
+            <button type="button" class="layui-btn btn-outline-green" onclick="doReset()">
+                <i class="layui-icon layui-icon-refresh"></i> 重置
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 工具栏 -->
+<div class="table-toolbar">
+    <button type="button" class="layui-btn btn-green btn-sm" onclick="addRole()">
+        <i class="layui-icon layui-icon-add-1"></i> 新增角色
+    </button>
+</div>
+
+<!-- 数据表格 -->
+<div class="table-container">
+    <table id="roleTable" lay-filter="roleTable"></table>
+</div>
+
+<!-- 状态模板 -->
+<script type="text/html" id="statusTpl">
+    {{# if(d.status === 1){ }}
+        <span class="status-tag status-enabled">启用</span>
+    {{# } else { }}
+        <span class="status-tag status-disabled">禁用</span>
+    {{# } }}
+</script>
+
+<!-- 操作模板 -->
+<script type="text/html" id="toolbarTpl">
+    <a class="layui-btn layui-btn-xs btn-green" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'form', 'layer'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+    
+    // 渲染表格
+    table.render({
+        elem: '#roleTable',
+        url: '/sys/role/list',
+        method: 'get',
+        headers: {token: token},
+        cols: [[
+            {type: 'checkbox', fixed: 'left'},
+            {field: 'id', title: 'ID', width: 60, sort: true, fixed: 'left'},
+            {field: 'roleName', title: '角色名称', minWidth: 120},
+            {field: 'roleCode', title: '角色编码', minWidth: 120},
+            {field: 'roleDesc', title: '角色描述', minWidth: 150},
+            {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
+            {field: 'createTime', title: '创建时间', minWidth: 160},
+            {field: 'updateTime', title: '更新时间', minWidth: 160},
+            {fixed: 'right', title: '操作', width: 120, align: 'center', toolbar: '#toolbarTpl'}
+        ]],
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50],
+        even: true,
+        skin: 'line',
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            msgName: 'msg',
+            countName: 'total',
+            dataName: 'records'
+        },
+        done: function(res, curr, count){
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5});
+                setTimeout(function() {
+                    window.parent.location.href = '/login.html';
+                }, 1500);
+            }
+        }
+    });
+    
+    // 监听工具条
+    table.on('tool(roleTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'del'){
+            layer.confirm('确定删除角色【' + data.roleName + '】吗？删除后该角色的菜单权限也将清除！', function(index){
+                $.ajax({
+                    url: '/sys/role/delete/' + data.id,
+                    type: 'DELETE',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res.code === 200) {
+                            obj.del();
+                            layer.close(index);
+                            layer.msg('删除成功', {icon: 1});
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    }
+                });
+            });
+        } else if(obj.event === 'edit'){
+            layer.open({
+                type: 2,
+                title: '编辑角色',
+                area: ['700px', '600px'],
+                shadeClose: true,
+                content: '/sysmanage/sys_role_add.html?id=' + data.id,
+                end: function() {
+                    table.reload('roleTable');
+                }
+            });
+        }
+    });
+});
+
+// 查询方法
+function doSearch() {
+    var roleName = document.getElementById('searchRoleName').value.trim();
+    var status = document.getElementById('searchStatus').value;
+    
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('roleTable', {
+            where: {
+                roleName: roleName,
+                status: status === '' ? null : status
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+// 重置方法
+function doReset() {
+    document.getElementById('searchRoleName').value = '';
+    document.getElementById('searchStatus').value = '';
+    
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('roleTable', {
+            where: {
+                roleName: '',
+                status: null
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+// 新增角色
+function addRole() {
+    layui.use('layer', function(){
+        var layer = layui.layer;
+        layer.open({
+            type: 2,
+            title: '新增角色',
+            area: ['700px', '600px'],
+            shadeClose: true,
+            content: '/sysmanage/sys_role_add.html',
+            end: function() {
+                layui.use('table', function(){
+                    var table = layui.table;
+                    table.reload('roleTable');
+                });
+            }
+        });
+    });
+}
+</script>
+</body>
+</html>
