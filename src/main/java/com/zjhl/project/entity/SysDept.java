@@ -1,6 +1,7 @@
 package com.zjhl.project.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -15,12 +16,14 @@ public class SysDept {
     private Long parentId;
     private String deptName;
     private String deptCode;
+    private String deptLevel;
     private String leader;
     private String phone;
     private Integer sortNum;
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    @TableField(exist = false)
     private List<SysDept> children;
 	public Long getId() {
 		return id;
@@ -87,6 +90,12 @@ public class SysDept {
 	}
 	public void setChildren(List<SysDept> children) {
 		this.children = children;
+	}
+	public String getDeptLevel() {
+		return deptLevel;
+	}
+	public void setDeptLevel(String deptLevel) {
+		this.deptLevel = deptLevel;
 	}
     
     
