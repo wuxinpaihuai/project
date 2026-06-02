@@ -1,0 +1,94 @@
+ 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #f5f5f5;
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+        }
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e8e8e8;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 4px 4px 0 0;
+        }
+        .search-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 0;
+            margin-bottom: 0;
+        }
+        .search-form .layui-form-item {
+            display: inline-block;
+            margin-bottom: 0;
+            margin-right: 15px;
+            vertical-align: middle;
+        }
+        .search-form .layui-form-label {
+            width: 80px;
+            padding: 9px 10px 9px 0;
+        }
+        .search-form .layui-input-inline {
+            width: 180px;
+        }
+        .btn-green {
+            background-color: #86c566 !important;
+            color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover {
+            background-color: #7ab857 !important;
+            border-color: #7ab857 !important;
+        }
+        .btn-outline-green {
+            background-color: #fff !important;
+            color: #86c566 !important;
+            border-color: #86c566 !important;
+        }
+        .btn-outline-green:hover {
+            background-color: #f0fff0 !important;
+        }
+        .table-toolbar {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .status-enabled {
+            background-color: #e8f5e9;
+            color: #4caf50;
+        }
+        .status-disabled {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+        .table-container {
+            background-color: #fff;
+            padding: 0 20px;
+        }
+        .layui-laypage {
+            margin: 15px 0;
+        }
+        .layui-laypage .layui-laypage-curr .layui-laypage-em {
+            background-color: #86c566 !important;
+        }
+        .layui-laypage a, .layui-laypage span {
+            color: #666;
+        }
+        .layui-laypage .layui-laypage-curr span {
+            color: #fff !important;
+        }
+ 

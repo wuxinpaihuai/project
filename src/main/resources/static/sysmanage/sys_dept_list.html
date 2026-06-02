@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="page-title">组织机构管理</div>
+
+
+     <!-- 查询条件：只保留 部门名称、部门编码、状态 -->
+     <div class="search-form">
+     	 <form class="layui-form" lay-filter="searchForm">
+	        <div class="layui-form-item">
+	            <label class="layui-form-label">部门名称</label>
+	            <div class="layui-input-inline">
+	                <input type="text" name="deptName"  placeholder="请输入部门名称" class="layui-input" id="searchDeptName">
+	            </div>
+	        </div>
+	         <div class="layui-form-item">
+	            <label class="layui-form-label">部门编码</label>
+	            <div class="layui-input-inline">
+	                <input type="text" name="deptCode"  placeholder="请输入部门名称" class="layui-input" id="searchDeptCode">
+	            </div>
+	        </div>
+	        <div class="layui-form-item">
+            <label class="layui-form-label">是否禁用</label>
+            <div class="layui-input-inline">
+                <select name="status" class="layui-input" id="searchStatus">
+                    <option value="">全部</option>
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+        </div>
+	    <div class="layui-form-item">
+            <button type="button" class="layui-btn btn-green" onclick="doSearch()">
+                <i class="layui-icon layui-icon-search"></i> 查询
+            </button>
+            <button type="button" class="layui-btn btn-outline-green" onclick="doReset()">
+                <i class="layui-icon layui-icon-refresh"></i> 重置
+            </button>
+        </div>
+	    </form>
+         
+     </div>
+
+     <!-- 工具栏 -->
+	<div class="table-toolbar">
+	    <button type="button" class="layui-btn btn-green btn-sm" onclick="addDept()">
+	        <i class="layui-icon layui-icon-add-1"></i> 新增部门
+	    </button>
+	</div>
+
+     <!-- 数据表格 -->
+	<div class="table-container">
+	    <table id="deptTable" lay-filter="deptTable"></table>
+	</div>
+
+ 
+    <!-- 操作模板 -->
+<script type="text/html" id="toolbarTpl">
+   <a class="layui-btn layui-btn-xs btn-green" lay-event="edit">编辑</a>
+   <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+</script>
+
+
+
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+layui.use(['table', 'form', 'layer'],function(){
+	var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+
+    // 表格渲染
+    table.render({
+        elem:'#deptTable',
+        url:'/sys/dept/list',
+        method: 'get',
+        headers: {token: token},
+        cols:[[
+            {type:'checkbox',fixed:'left'},
+            {field: 'id', title: 'ID', width: 60, sort: true, fixed: 'left'},
+            {field:'deptName',title:'部门名称',minWidth:150},
+            {field:'deptCode',title:'部门编码',minWidth:150},
+            {field:'leader',title:'负责人',width:120},
+            {field:'phone',title:'联系电话',width:130},
+            {field:'status',title:'状态',width:100,templet:function(d){
+                return d.status==1?'<span class="status-tag status-enabled">启用</span>':' <span class="status-tag status-disabled">禁用</span>';
+            }},
+            {field:'createTime',title:'创建时间',width:180},
+            {fixed: 'right', title: '操作', width: 120, align: 'center', toolbar: '#toolbarTpl'}
+        ]],
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50],
+        even: true,
+        skin: 'line',
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            msgName: 'msg',
+            countName: 'total',
+            dataName: 'records'
+        },
+        done: function(res, curr, count){
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5});
+                setTimeout(function() {
+                    window.parent.location.href = '/login.html';
+                }, 1500);
+            }
+        }
+    });
+
+
+    // 编辑/删除
+    table.on('tool(dataTable)',function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            form.val("dataForm",data);
+            layer.open({
+                type:1,title:'编辑部门',area:['650px','600px'],content:$('#formLayer'),
+                btn:['确定','取消'],yes:function(){
+                    $("#submitBtn").click();
+                }
+            });
+        }else if(obj.event === 'delete'){
+            layer.confirm('确定删除该部门？',function(index){
+                $.ajax({
+                    url:'/sys/dept/delete/'+data.id,
+                    type:'DELETE',
+                    success:function(res){
+                        if(res.code===200){
+                            layer.msg('删除成功');
+                            table.reload('dataTable');
+                        }else{
+                            layer.msg(res.msg);
+                        }
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+
+ // 新增
+    $("#addBtn").click(function(){
+        $("#dataForm")[0].reset();
+        form.val("dataForm",{status:1});
+        layer.open({
+            type:1,title:'新增部门',area:['650px','600px'],content:$('#formLayer'),
+            btn:['确定','取消'],yes:function(){
+                $("#submitBtn").click();
+            }
+        });
+    });
+    // 提交
+    form.on('submit(submitBtn)',function(data){
+        var url = data.field.id ? '/sys/dept/update' : '/sys/dept/add';
+        var type = data.field.id ? 'PUT' : 'POST';
+        $.ajax({
+            url:url,
+            type:type,
+            data:JSON.stringify(data.field),
+            contentType:'application/json',
+            success:function(res){
+                if(res.code===200){
+                    layer.msg('操作成功');
+                    layer.closeAll();
+                    table.reload('dataTable');
+                }else{
+                    layer.msg(res.msg);
+                }
+            }
+        });
+        return false;
+    });
+});
+
+//查询方法
+function doSearch() {
+    var deptName = document.getElementById('searchDeptName').value.trim();
+    var status = document.getElementById('searchStatus').value;
+    var deptCode = document.getElementById('searchDeptCode').value.trim();
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('deptTable', {
+            where: {
+            	deptName: deptName,
+            	deptCode: deptCode,
+                status: status === '' ? null : status
+            },
+            page: {curr: 1}
+        });
+    });
+}
+//重置
+function doReset() {
+    document.getElementById('searchDeptName').value = '';
+    document.getElementById('searchStatus').value = '';
+    document.getElementById('searchDeptCode').value = '';
+    
+    layui.use('table', function(){
+        var table = layui.table;
+        table.reload('deptTable', {
+            where: {
+                deptName: '',
+                deptCode:'',
+                status: null
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+
+
+//新增角色
+function addDept() {
+    layui.use('layer', function(){
+        var layer = layui.layer;
+        layer.open({
+            type: 2,
+            title: '新增角色',
+            area: ['700px', '600px'],
+            shadeClose: true,
+            content: '/sysmanage/sys_dept_add.html',
+            end: function() {
+                layui.use('table', function(){
+                    var table = layui.table;
+                    table.reload('deptTable');
+                });
+            }
+        });
+    });
+}
+</script>
+</body>
+</html>
