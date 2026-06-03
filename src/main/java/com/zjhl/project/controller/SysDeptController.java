@@ -8,6 +8,7 @@ import com.zjhl.project.service.SysDeptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +94,8 @@ public class SysDeptController {
             result.put("msg", "未登录");
             return result;
         }
+        dept.setCreateTime(LocalDateTime.now());
+        dept.setUpdateTime(LocalDateTime.now());
         boolean success = sysDeptService.save(dept);
         result.put("code", success ? 200 : 500);
         result.put("msg", success ? "新增成功" : "新增失败");
@@ -110,6 +113,7 @@ public class SysDeptController {
             result.put("msg", "未登录");
             return result;
         }
+        dept.setUpdateTime(LocalDateTime.now());
         boolean success = sysDeptService.updateById(dept);
         result.put("code", success ? 200 : 500);
         result.put("msg", success ? "更新成功" : "更新失败");
@@ -127,11 +131,21 @@ public class SysDeptController {
             result.put("msg", "未登录");
             return result;
         }
+        // 检查是否存在子部门
+        QueryWrapper<SysDept> childWrapper = new QueryWrapper<>();
+        childWrapper.eq("parent_id", id);
+        long childCount = sysDeptService.count(childWrapper);
+        if (childCount > 0) {
+            result.put("code", 500);
+            result.put("msg", "该部门下存在子部门，无法删除");
+            return result;
+        }
         boolean success = sysDeptService.removeById(id);
         result.put("code", success ? 200 : 500);
         result.put("msg", success ? "删除成功" : "删除失败");
         return result;
     }
+
 
     /**
      * 根据ID获取部门详情
