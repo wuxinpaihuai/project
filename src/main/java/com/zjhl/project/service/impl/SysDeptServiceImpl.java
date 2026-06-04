@@ -24,6 +24,24 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         return buildTree(allDepts);
     }
 
+ // 假设你的 SysDeptService 里有这个方法，如果没有请加上
+    public List<Long> getAllChildDeptIds(Long deptId) {
+        List<Long> allIds = new ArrayList<>();
+        allIds.add(deptId); // 包含自身
+        
+        // 查出直接子部门
+        QueryWrapper<SysDept> wrapper = new QueryWrapper<>();
+        wrapper.eq("parent_id", deptId);
+        List<SysDept> children = this.list(wrapper);
+        
+        // 递归查孙子部门
+        for (SysDept child : children) {
+            allIds.addAll(getAllChildDeptIds(child.getId()));
+        }
+        
+        return allIds;
+    }
+    
     @Override
     public List<SysDept> getDeptList(SysDept dept) {
         QueryWrapper<SysDept> wrapper = new QueryWrapper<>();

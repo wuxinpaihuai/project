@@ -379,7 +379,7 @@
 var token = localStorage.getItem('token');
 var deptTreeData = [];
 var selectedDeptId = null;   // 当前选中的部门ID，null=全部
-
+var $ = null;
 /* ========== 部门树相关 ========== */
 
 // 加载部门树数据
@@ -396,32 +396,38 @@ function loadDeptTree($) {
     });
 }
 
-// 递归构建部门树 HTML（纯展示，无 radio）
-function buildDeptTreeHtml(depts) {
+//========== 修改1：递归构建树，支持默认展开层级 ==========
+function buildDeptTreeHtml(depts, level) {
+    level = level || 0;
     var html = '';
     if (!depts || depts.length === 0) return html;
 
     depts.forEach(function(dept) {
-        var hasChildren = dept.children && dept.children.length > 0;
+        // 【注意】如果后端字段名不是 children，请改成实际的字段名，如 dept.childList
+        var childField = dept.children;  
+        var hasChildren = childField && childField.length > 0;
+        
+        // 默认展开第一级（level === 0），如果你想全部展开，改成 true
+        var isExpanded = (level === 0) && hasChildren;
 
         html += '<div class="dept-node" data-id="' + dept.id + '">';
         html += '<div class="dept-node-header" data-id="' + dept.id + '">';
 
-        // 缩进占位（与"全部"节点对齐）
+        // 缩进占位
         html += '<span style="display:inline-block;width:15px;"></span>';
 
-        // 展开箭头
-        html += '<span class="arrow ' + (hasChildren ? '' : 'empty') + '">&#9654;</span>';
+        // 展开箭头：有子节点且默认展开时，加上 expanded 类
+        html += '<span class="arrow ' + (hasChildren ? (isExpanded ? 'expanded' : '') : 'empty') + '">&#9654;</span>';
 
         // 部门名称
         html += '<span class="dept-name">' + (dept.deptName || '') + '</span>';
 
         html += '</div>'; // .dept-node-header
 
-        // 子节点
+        // 子节点：默认展开第一级时加上 show 类
         if (hasChildren) {
-            html += '<div class="dept-children">';
-            html += buildDeptTreeHtml(dept.children);
+            html += '<div class="dept-children ' + (isExpanded ? 'show' : '') + '">';
+            html += buildDeptTreeHtml(childField, level + 1);
             html += '</div>';
         }
 
@@ -430,6 +436,7 @@ function buildDeptTreeHtml(depts) {
 
     return html;
 }
+
 
 // 渲染部门树
 function renderDeptTree() {
@@ -441,7 +448,7 @@ function renderDeptTree() {
         return;
     }
 
-    container.innerHTML = buildDeptTreeHtml(deptTreeData);
+    container.innerHTML = buildDeptTreeHtml(deptTreeData,-1);
     // 统计部门总数
     var count = countDepts(deptTreeData);
     document.getElementById('deptCount').textContent = '共' + count + '个';
@@ -462,31 +469,38 @@ function countDepts(depts) {
 
 // 绑定树事件
 function bindDeptTreeEvents($) {
-    var $container = $('#deptTreeContainer');
+	 var $container = $('#deptTreeContainer');
 
-    // 点击部门节点：选中 + 展开/收起
-    $container.on('click', '.dept-node-header', function(e) {
-        var $header = $(this);
-        var deptId = $header.data('id');
+	    // 点击箭头：只展开/收起，不触发选中
+	    $container.on('click', '.arrow', function(e) {
+	        e.stopPropagation(); // 阻止冒泡到 dept-node-header
+	        
+	        var $arrow = $(this);
+	        // 空箭头不处理
+	        if ($arrow.hasClass('empty')) return;
+	        
+	        var $header = $arrow.closest('.dept-node-header');
+	        var $nodeDiv = $header.parent();
+	        var $children = $nodeDiv.find('> .dept-children');
+	        
+	        $children.toggleClass('show');
+	        $arrow.toggleClass('expanded');
+	    });
 
-        // 选中该部门
-        selectDept(deptId, $header.find('.dept-name').text());
-
-        // 展开/收起子节点
-        var $arrow = $header.find('.arrow');
-        var $nodeDiv = $header.parent();
-        var $children = $nodeDiv.find('> .dept-children');
-        if ($children.length > 0) {
-            $children.toggleClass('show');
-            $arrow.toggleClass('expanded');
-        }
-    });
+	    // 点击部门名称（或header空白处）：选中部门 + 刷新表格
+	    $container.on('click', '.dept-node-header', function(e) {
+	        // 如果点击的是箭头，上面已经处理过了，这里跳过
+	        if ($(e.target).closest('.arrow').length > 0) return;
+	        
+	        var $header = $(this);
+	        var deptId = $header.data('id');
+	        selectDept(deptId, $header.find('.dept-name').text());
+	    });
 }
 
 // 选中某个部门
 function selectDept(deptId, deptName) {
     selectedDeptId = deptId;
-
     // 高亮
     $('#deptTreeContainer .dept-node-header').removeClass('active');
     $('#deptAllNode').removeClass('active');
@@ -541,7 +555,7 @@ layui.use(['table', 'form', 'layer'], function(){
     var table = layui.table;
     var form = layui.form;
     var layer = layui.layer;
-    var $ = layui.jquery;
+    $ = layui.jquery;
 
     // 渲染表格
     table.render({
@@ -613,11 +627,8 @@ layui.use(['table', 'form', 'layer'], function(){
 
     // 加载部门树
     loadDeptTree($).done(function() {
-    	alert(1);
         renderDeptTree();
-        alert(2);
         bindDeptTreeEvents($);
-        alert(3);
     });
 });
 

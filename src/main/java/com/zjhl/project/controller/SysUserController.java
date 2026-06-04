@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zjhl.project.entity.SysUser;
 import com.zjhl.project.entity.SysUserDept;
 import com.zjhl.project.service.SysUserService;
+import com.zjhl.project.service.SysDeptService;
 import com.zjhl.project.service.SysUserDeptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -24,10 +25,10 @@ public class SysUserController {
 
     @Autowired
     private SysUserDeptService sysUserDeptService;
+    
+    @Autowired
+    private SysDeptService sysDeptService;
 
-    /**
-     * 用户列表（分页+条件查询）
-     */
     @GetMapping("/list")
     public Map<String, Object> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -39,7 +40,6 @@ public class SysUserController {
         
         Map<String, Object> result = new HashMap<>();
         
-        // 未登录则返回未授权
         if (!StpUtil.isLogin()) {
             result.put("code", 401);
             result.put("msg", "未登录");
@@ -58,20 +58,29 @@ public class SysUserController {
             wrapper.eq("status", disabled);
         }
         
-        // 按部门过滤：从中间表查出该部门下的用户ID列表
+        // ========== 按部门过滤（包含子部门） ==========
         if (deptId != null) {
+            // 1. 获取该部门及所有子部门ID
+            List<Long> allDeptIds = sysDeptService.getAllChildDeptIds(deptId);
+            
+            // 2. 从中间表查出这些部门下的所有用户ID
             QueryWrapper<SysUserDept> udWrapper = new QueryWrapper<>();
-            udWrapper.eq("dept_id", deptId);
+            udWrapper.in("dept_id", allDeptIds);
             List<SysUserDept> udList = sysUserDeptService.list(udWrapper);
-            List<Long> userIds = udList.stream().map(SysUserDept::getUserId).collect(Collectors.toList());
+            
+            List<Long> userIds = udList.stream()
+                    .map(SysUserDept::getUserId)
+                    .distinct()  // 去重，一个用户可能在多个子部门
+                    .collect(Collectors.toList());
+            
             if (userIds.isEmpty()) {
-                // 该部门下无用户，直接返回空
                 result.put("code", 200);
                 result.put("msg", "查询成功");
                 result.put("total", 0);
                 result.put("records", java.util.Collections.emptyList());
                 return result;
             }
+            
             wrapper.in("id", userIds);
         }
         
@@ -88,6 +97,7 @@ public class SysUserController {
         
         return result;
     }
+
 
     /**
      * 新增用户
