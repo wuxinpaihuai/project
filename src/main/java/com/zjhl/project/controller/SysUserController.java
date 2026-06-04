@@ -4,12 +4,16 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zjhl.project.entity.SysUser;
+import com.zjhl.project.entity.SysUserDept;
 import com.zjhl.project.service.SysUserService;
+import com.zjhl.project.service.SysUserDeptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/sys/user")
@@ -17,6 +21,9 @@ public class SysUserController {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private SysUserDeptService sysUserDeptService;
 
     /**
      * 用户列表（分页+条件查询）
@@ -27,7 +34,8 @@ public class SysUserController {
             @RequestParam(defaultValue = "5") Integer pageSize,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String phone,
-            @RequestParam(required = false) Integer disabled) {
+            @RequestParam(required = false) Integer disabled,
+            @RequestParam(required = false) Long deptId) {
         
         Map<String, Object> result = new HashMap<>();
         
@@ -49,6 +57,24 @@ public class SysUserController {
         if (disabled != null) {
             wrapper.eq("status", disabled);
         }
+        
+        // 按部门过滤：从中间表查出该部门下的用户ID列表
+        if (deptId != null) {
+            QueryWrapper<SysUserDept> udWrapper = new QueryWrapper<>();
+            udWrapper.eq("dept_id", deptId);
+            List<SysUserDept> udList = sysUserDeptService.list(udWrapper);
+            List<Long> userIds = udList.stream().map(SysUserDept::getUserId).collect(Collectors.toList());
+            if (userIds.isEmpty()) {
+                // 该部门下无用户，直接返回空
+                result.put("code", 200);
+                result.put("msg", "查询成功");
+                result.put("total", 0);
+                result.put("records", java.util.Collections.emptyList());
+                return result;
+            }
+            wrapper.in("id", userIds);
+        }
+        
         wrapper.orderByDesc("create_time");
         
         // 分页查询

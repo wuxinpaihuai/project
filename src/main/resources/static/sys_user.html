@@ -12,7 +12,7 @@
             box-sizing: border-box;
         }
         body {
-            background-color: #ffffff;
+            background-color: #f5f5f5;
             font-family: "Microsoft YaHei", sans-serif;
             padding: 20px;
         }
@@ -23,12 +23,143 @@
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 1px solid #e8e8e8;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 4px 4px 0 0;
         }
+
+        /* ========== 左右布局 ========== */
+        .main-layout {
+            display: flex;
+            gap: 0;
+            background-color: #fff;
+            border-radius: 0 0 4px 4px;
+            min-height: 600px;
+        }
+        /* 左侧部门树 */
+        .left-panel {
+            width: 240px;
+            min-width: 240px;
+            border-right: 1px solid #e8e8e8;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .left-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .left-panel-title .dept-count {
+            font-size: 12px;
+            color: #999;
+            font-weight: normal;
+        }
+        .dept-tree-wrap {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        .dept-tree-wrap::-webkit-scrollbar {
+            width: 5px;
+        }
+        .dept-tree-wrap::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+        /* "全部"节点 */
+        .dept-all-node {
+            padding: 8px 15px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            color: #333;
+            border-radius: 0;
+            transition: background 0.15s;
+        }
+        .dept-all-node:hover {
+            background: #eaeaea;
+        }
+        .dept-all-node.active {
+            background: #d4edda;
+            color: #333;
+            font-weight: 600;
+        }
+        /* 树节点 */
+        .dept-node {
+            margin-bottom: 0;
+        }
+        .dept-node-header {
+            display: flex;
+            align-items: center;
+            padding: 7px 10px 7px 0;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 0;
+            transition: background 0.15s;
+        }
+        .dept-node-header:hover {
+            background: #eaeaea;
+        }
+        .dept-node-header.active {
+            background: #d4edda;
+        }
+        /* 展开箭头 */
+        .dept-node-header .arrow {
+            margin-right: 4px;
+            font-size: 12px;
+            color: #999;
+            transition: transform 0.2s;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .dept-node-header .arrow.expanded {
+            transform: rotate(90deg);
+        }
+        .dept-node-header .arrow.empty {
+            visibility: hidden;
+        }
+        /* 部门名 */
+        .dept-node-header .dept-name {
+            font-size: 14px;
+            color: #333;
+            margin-left: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dept-node-header.active .dept-name {
+            font-weight: 600;
+        }
+        /* 子节点缩进 */
+        .dept-children {
+            padding-left: 18px;
+            display: none;
+        }
+        .dept-children.show {
+            display: block;
+        }
+
+        /* 右侧内容区 */
+        .right-panel {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 搜索表单 */
         .search-form {
             background-color: #fafafa;
-            padding: 20px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
         }
         .search-form .layui-form-item {
             display: inline-block;
@@ -37,12 +168,14 @@
             vertical-align: middle;
         }
         .search-form .layui-form-label {
-            width: 80px;
-            padding: 9px 10px 9px 0;
+            width: 70px;
+            padding: 9px 8px 9px 0;
         }
         .search-form .layui-input-inline {
-            width: 180px;
+            width: 110px;
         }
+
+        /* 按钮 */
         .btn-green {
             background-color: #86c566 !important;
             color: #fff !important;
@@ -60,9 +193,14 @@
         .btn-outline-green:hover {
             background-color: #f0fff0 !important;
         }
+
+        /* 工具栏 */
         .table-toolbar {
-            margin-bottom: 15px;
+            padding: 10px 20px;
+            border-bottom: 1px solid #f0f0f0;
         }
+
+        /* 状态标签 */
         .status-tag {
             display: inline-block;
             padding: 2px 8px;
@@ -77,12 +215,34 @@
             background-color: #ffebee;
             color: #f44336;
         }
+
         /* 表格容器 */
         .table-container {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 4px;
+            padding: 0 15px 15px;
         }
+
+        /* 当前选中部门提示 */
+        .dept-filter-tip {
+            padding: 8px 20px;
+            background: #f0fff0;
+            border-bottom: 1px solid #d4edda;
+            font-size: 13px;
+            color: #666;
+            display: none;
+        }
+        .dept-filter-tip .dept-filter-name {
+            color: #333;
+            font-weight: 600;
+        }
+        .dept-filter-tip .dept-filter-clear {
+            color: #86c566;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .dept-filter-tip .dept-filter-clear:hover {
+            text-decoration: underline;
+        }
+
         /* 分页样式覆盖 */
         .layui-laypage {
             margin: 15px 0 0 0;
@@ -101,55 +261,84 @@
 <body>
 <div class="page-title">用户管理</div>
 
-<!-- 搜索表单 -->
-<div class="search-form">
-    <form class="layui-form" lay-filter="searchForm">
-        <div class="layui-form-item">
-            <label class="layui-form-label">用户名</label>
-            <div class="layui-input-inline">
-                <input type="text" name="username" placeholder="请输入用户名" class="layui-input" id="searchUsername">
+<div class="main-layout">
+    <!-- ========== 左侧部门树 ========== -->
+    <div class="left-panel">
+        <div class="left-panel-title">
+            <span>组织架构</span>
+            <span class="dept-count" id="deptCount"></span>
+        </div>
+        <div class="dept-tree-wrap" id="deptTreeWrap">
+            <!-- "全部"节点 -->
+            <div class="dept-all-node active" id="deptAllNode" onclick="selectAllDept()">
+                <i class="layui-icon layui-icon-group" style="margin-right:5px;font-size:14px;"></i>全部用户
+            </div>
+            <!-- 部门树容器 -->
+            <div id="deptTreeContainer">
+                <div style="text-align:center;color:#999;padding:20px;">加载中...</div>
             </div>
         </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">手机号</label>
-            <div class="layui-input-inline">
-                <input type="text" name="phone" placeholder="请输入手机号" class="layui-input" id="searchPhone">
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">是否禁用</label>
-            <div class="layui-input-inline">
-                <select name="disabled" class="layui-input" id="searchDisabled">
-                    <option value="">全部</option>
-                    <option value="0">否</option>
-                    <option value="1">是</option>
-                </select>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <button type="button" class="layui-btn btn-green" onclick="doSearch()">
-                <i class="layui-icon layui-icon-search"></i> 查询
-            </button>
-            <button type="button" class="layui-btn btn-outline-green" onclick="doReset()">
-                <i class="layui-icon layui-icon-refresh"></i> 重置
-            </button>
-        </div>
-    </form>
-</div>
+    </div>
 
-<!-- 工具栏 -->
-<div class="table-toolbar">
-    <button class="layui-btn btn-green" onclick="addUser()">
-        <i class="layui-icon layui-icon-add-1"></i> 新增
-    </button>
-    <button class="layui-btn btn-outline-green" onclick="batchDelete()">
-        <i class="layui-icon layui-icon-delete"></i> 批量删除
-    </button>
-</div>
+    <!-- ========== 右侧内容区 ========== -->
+    <div class="right-panel">
+        <!-- 部门筛选提示 -->
+        <div class="dept-filter-tip" id="deptFilterTip">
+            当前部门：<span class="dept-filter-name" id="deptFilterName"></span>
+            <span class="dept-filter-clear" onclick="selectAllDept()">清除筛选</span>
+        </div>
 
-<!-- 数据表格 -->
-<div class="table-container">
-    <table class="layui-hide" id="userTable" lay-filter="userTable"></table>
+        <!-- 搜索表单 -->
+        <div class="search-form">
+            <form class="layui-form" lay-filter="searchForm">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">用户名</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="username" placeholder="请输入用户名" class="layui-input" id="searchUsername">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">手机号</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="phone" placeholder="请输入手机号" class="layui-input" id="searchPhone">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">是否禁用</label>
+                    <div class="layui-input-inline">
+                        <select name="disabled" class="layui-input" id="searchDisabled">
+                            <option value="">全部</option>
+                            <option value="0">否</option>
+                            <option value="1">是</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <button type="button" class="layui-btn btn-green" onclick="doSearch()">
+                        <i class="layui-icon layui-icon-search"></i> 查询
+                    </button>
+                    <button type="button" class="layui-btn btn-outline-green" onclick="doReset()">
+                        <i class="layui-icon layui-icon-refresh"></i> 重置
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="table-toolbar">
+            <button class="layui-btn btn-green btn-sm" onclick="addUser()">
+                <i class="layui-icon layui-icon-add-1"></i> 新增
+            </button>
+            <button class="layui-btn btn-outline-green btn-sm" onclick="batchDelete()">
+                <i class="layui-icon layui-icon-delete"></i> 批量删除
+            </button>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="table-container">
+            <table class="layui-hide" id="userTable" lay-filter="userTable"></table>
+        </div>
+    </div>
 </div>
 
 <!-- 表格工具栏模板 -->
@@ -187,15 +376,174 @@
 
 <script src="/layui/layui.js"></script>
 <script>
-// 获取token
 var token = localStorage.getItem('token');
+var deptTreeData = [];
+var selectedDeptId = null;   // 当前选中的部门ID，null=全部
+
+/* ========== 部门树相关 ========== */
+
+// 加载部门树数据
+function loadDeptTree($) {
+    return $.ajax({
+        url: '/sys/dept/tree',
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            if (res.code === 200) {
+                deptTreeData = res.data || [];
+            }
+        }
+    });
+}
+
+// 递归构建部门树 HTML（纯展示，无 radio）
+function buildDeptTreeHtml(depts) {
+    var html = '';
+    if (!depts || depts.length === 0) return html;
+
+    depts.forEach(function(dept) {
+        var hasChildren = dept.children && dept.children.length > 0;
+
+        html += '<div class="dept-node" data-id="' + dept.id + '">';
+        html += '<div class="dept-node-header" data-id="' + dept.id + '">';
+
+        // 缩进占位（与"全部"节点对齐）
+        html += '<span style="display:inline-block;width:15px;"></span>';
+
+        // 展开箭头
+        html += '<span class="arrow ' + (hasChildren ? '' : 'empty') + '">&#9654;</span>';
+
+        // 部门名称
+        html += '<span class="dept-name">' + (dept.deptName || '') + '</span>';
+
+        html += '</div>'; // .dept-node-header
+
+        // 子节点
+        if (hasChildren) {
+            html += '<div class="dept-children">';
+            html += buildDeptTreeHtml(dept.children);
+            html += '</div>';
+        }
+
+        html += '</div>'; // .dept-node
+    });
+
+    return html;
+}
+
+// 渲染部门树
+function renderDeptTree() {
+    var container = document.getElementById('deptTreeContainer');
+
+    if (!deptTreeData || deptTreeData.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无部门数据</div>';
+        document.getElementById('deptCount').textContent = '';
+        return;
+    }
+
+    container.innerHTML = buildDeptTreeHtml(deptTreeData);
+    // 统计部门总数
+    var count = countDepts(deptTreeData);
+    document.getElementById('deptCount').textContent = '共' + count + '个';
+}
+
+// 统计部门总数
+function countDepts(depts) {
+    var n = 0;
+    if (!depts) return n;
+    depts.forEach(function(d) {
+        n++;
+        if (d.children && d.children.length > 0) {
+            n += countDepts(d.children);
+        }
+    });
+    return n;
+}
+
+// 绑定树事件
+function bindDeptTreeEvents($) {
+    var $container = $('#deptTreeContainer');
+
+    // 点击部门节点：选中 + 展开/收起
+    $container.on('click', '.dept-node-header', function(e) {
+        var $header = $(this);
+        var deptId = $header.data('id');
+
+        // 选中该部门
+        selectDept(deptId, $header.find('.dept-name').text());
+
+        // 展开/收起子节点
+        var $arrow = $header.find('.arrow');
+        var $nodeDiv = $header.parent();
+        var $children = $nodeDiv.find('> .dept-children');
+        if ($children.length > 0) {
+            $children.toggleClass('show');
+            $arrow.toggleClass('expanded');
+        }
+    });
+}
+
+// 选中某个部门
+function selectDept(deptId, deptName) {
+    selectedDeptId = deptId;
+
+    // 高亮
+    $('#deptTreeContainer .dept-node-header').removeClass('active');
+    $('#deptAllNode').removeClass('active');
+    $('#deptTreeContainer .dept-node-header[data-id="' + deptId + '"]').addClass('active');
+
+    // 显示筛选提示
+    document.getElementById('deptFilterTip').style.display = '';
+    document.getElementById('deptFilterName').textContent = deptName;
+
+    // 重新加载用户表格
+    reloadUserTable();
+}
+
+// 选中"全部"
+function selectAllDept() {
+    selectedDeptId = null;
+
+    // 高亮
+    $('#deptTreeContainer .dept-node-header').removeClass('active');
+    $('#deptAllNode').addClass('active');
+
+    // 隐藏筛选提示
+    document.getElementById('deptFilterTip').style.display = 'none';
+
+    // 重新加载用户表格
+    reloadUserTable();
+}
+
+// 重新加载用户表格（带当前筛选条件）
+function reloadUserTable() {
+    layui.use('table', function(){
+        var table = layui.table;
+        var username = document.getElementById('searchUsername').value.trim();
+        var phone = document.getElementById('searchPhone').value.trim();
+        var disabled = document.getElementById('searchDisabled').value;
+
+        table.reload('userTable', {
+            where: {
+                username: username,
+                phone: phone,
+                disabled: disabled === '' ? null : disabled,
+                deptId: selectedDeptId
+            },
+            page: {curr: 1}
+        });
+    });
+}
+
+/* ========== 表格相关 ========== */
 
 layui.use(['table', 'form', 'layer'], function(){
     var table = layui.table;
     var form = layui.form;
     var layer = layui.layer;
-    
-    // 渲染表格（从后端接口获取数据）
+    var $ = layui.jquery;
+
+    // 渲染表格
     table.render({
         elem: '#userTable',
         url: '/sys/user/list',
@@ -203,11 +551,11 @@ layui.use(['table', 'form', 'layer'], function(){
         headers: {token: token},
         cols: [[
             {type: 'checkbox', fixed: 'left'},
-            {field: 'id', title: 'ID', width: 60, sort: true, fixed: 'left'},
-            {field: 'username', title: '用户名', minWidth: 100},
+            {field: 'id', title: 'ID', width: 30, sort: true, fixed: 'left'},
+            {field: 'username', title: '用户名', minWidth: 80},
             {field: 'realName', title: '真实姓名', minWidth: 100},
-            {field: 'phone', title: '手机号', minWidth: 120},
-            {field: 'sysPosition', title: '岗位', minWidth: 150, templet: '#positionTpl'},
+            {field: 'phone', title: '手机号', minWidth: 130},
+            {field: 'sysPosition', title: '岗位', minWidth: 80, templet: '#positionTpl'},
             {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
             {field: 'createTime', title: '创建时间', minWidth: 160},
             {fixed: 'right', title: '操作', width: 120, align: 'center', toolbar: '#toolbarTpl'}
@@ -237,7 +585,7 @@ layui.use(['table', 'form', 'layer'], function(){
             }
         }
     });
-    
+
     // 监听工具条
     table.on('tool(userTable)', function(obj){
         var data = obj.data;
@@ -262,25 +610,20 @@ layui.use(['table', 'form', 'layer'], function(){
             layer.msg('编辑用户：' + data.username, {icon: 1});
         }
     });
+
+    // 加载部门树
+    loadDeptTree($).done(function() {
+    	alert(1);
+        renderDeptTree();
+        alert(2);
+        bindDeptTreeEvents($);
+        alert(3);
+    });
 });
 
 // 查询方法
 function doSearch() {
-    var username = document.getElementById('searchUsername').value.trim();
-    var phone = document.getElementById('searchPhone').value.trim();
-    var disabled = document.getElementById('searchDisabled').value;
-    
-    layui.use('table', function(){
-        var table = layui.table;
-        table.reload('userTable', {
-            where: {
-                username: username,
-                phone: phone,
-                disabled: disabled === '' ? null : disabled
-            },
-            page: {curr: 1}
-        });
-    });
+    reloadUserTable();
 }
 
 // 重置方法
@@ -288,18 +631,8 @@ function doReset() {
     document.getElementById('searchUsername').value = '';
     document.getElementById('searchPhone').value = '';
     document.getElementById('searchDisabled').value = '';
-    
-    layui.use('table', function(){
-        var table = layui.table;
-        table.reload('userTable', {
-            where: {
-                username: '',
-                phone: '',
-                disabled: null
-            },
-            page: {curr: 1}
-        });
-    });
+    // 同时清除部门筛选
+    selectAllDept();
 }
 
 // 新增用户

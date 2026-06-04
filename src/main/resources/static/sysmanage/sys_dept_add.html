@@ -396,7 +396,7 @@ function buildDeptTreeHtml(depts) {
         // 自定义 radio + 部门名称 + 级别标签
         html += '<label class="dept-radio">';
         html += '<input type="radio" name="parentDeptRadio" value="' + dept.id + '" ';
-        html += 'data-id="' + dept.id + '" data-level="' + deptLevel + '">';
+        html += 'data-id="' + dept.id + '" data-level="' + deptLevel + '" lay-ignore>';
         html += '<span class="radio-icon"></span>';
         html += '<span class="dept-name">' + (dept.deptName || '') + '</span>';
         html += '</label>';
@@ -541,7 +541,7 @@ layui.use(['form', 'layer'], function(){
                             $('input[name="status"][value="0"]').prop('checked', true);
                             $('input[name="status"][value="1"]').prop('checked', false);
                         }
-                        form.render('radio');
+                        form.render('radio', 'deptForm');
 
                         // 上级部门处理
                         if (data.parentId && data.parentId !== 0) {
