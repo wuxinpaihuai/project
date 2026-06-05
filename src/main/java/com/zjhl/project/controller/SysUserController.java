@@ -1,20 +1,33 @@
 package com.zjhl.project.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zjhl.project.entity.SysUser;
-import com.zjhl.project.entity.SysUserDept;
-import com.zjhl.project.service.SysUserService;
-import com.zjhl.project.service.SysDeptService;
-import com.zjhl.project.service.SysUserDeptService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zjhl.project.entity.SysUser;
+import com.zjhl.project.entity.SysUserDept;
+import com.zjhl.project.entity.SysUserRole;
+import com.zjhl.project.service.SysDeptService;
+import com.zjhl.project.service.SysUserDeptService;
+import com.zjhl.project.service.SysUserRoleService;
+import com.zjhl.project.service.SysUserService;
+
+import cn.dev33.satoken.stp.StpUtil;
 
 @RestController
 @RequestMapping("/sys/user")
@@ -28,6 +41,11 @@ public class SysUserController {
     
     @Autowired
     private SysDeptService sysDeptService;
+    
+    @Autowired
+    private SysUserRoleService sysUserRoleService;
+    
+    
 
     @GetMapping("/list")
     public Map<String, Object> list(
@@ -100,10 +118,10 @@ public class SysUserController {
 
 
     /**
-     * 新增用户
+     * 新增用户（同时保存部门、角色关联）
      */
     @PostMapping("/add")
-    public Map<String, Object> add(@RequestBody SysUser sysUser) {
+    public Map<String, Object> add(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
         if (!StpUtil.isLogin()) {
@@ -112,18 +130,44 @@ public class SysUserController {
             return result;
         }
         
+        String username = (String) params.get("username");
+        String password = (String) params.get("password");
+        String realName = (String) params.get("realName");
+        String phone = (String) params.get("phone");
+        String sysPosition = params.get("sysPosition") != null ? params.get("sysPosition").toString() : null;
+        List<Integer> deptIds = params.get("deptIds") != null ? (List<Integer>) params.get("deptIds") : null;
+        List<Integer> roleIds = params.get("roleIds") != null ? (List<Integer>) params.get("roleIds") : null;
+        Integer status = params.get("status") != null ? Integer.parseInt(params.get("status").toString()) : null;
+        
         // 检查用户名是否已存在
-        SysUser existUser = sysUserService.getByUsername(sysUser.getUsername());
+        SysUser existUser = sysUserService.getByUsername(username);
         if (existUser != null) {
             result.put("code", 400);
             result.put("msg", "用户名已存在");
             return result;
         }
         
-        sysUser.setStatus(0); // 默认启用
+        // 保存用户基本信息
+        SysUser sysUser = new SysUser();
+        sysUser.setUsername(username);
+        sysUser.setPassword(password);
+        sysUser.setRealName(realName);
+        sysUser.setPhone(phone);
+        sysUser.setSysPosition(sysPosition);
+        sysUser.setStatus(status); 
+        sysUser.setCreateTime(LocalDateTime.now());
+        
         boolean success = sysUserService.save(sysUser);
         
         if (success) {
+            // 保存用户-部门关联
+            if (deptIds != null && !deptIds.isEmpty()) {
+                saveUserDepts(sysUser.getId(), deptIds);
+            }
+            // 保存用户-角色关联
+            if (roleIds != null && !roleIds.isEmpty()) {
+                saveUserRoles(sysUser.getId(), roleIds);
+            }
             result.put("code", 200);
             result.put("msg", "新增成功");
         } else {
@@ -134,10 +178,10 @@ public class SysUserController {
     }
 
     /**
-     * 更新用户
+     * 更新用户（同时更新部门、角色关联）
      */
     @PutMapping("/update")
-    public Map<String, Object> update(@RequestBody SysUser sysUser) {
+    public Map<String, Object> update(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
         if (!StpUtil.isLogin()) {
@@ -146,15 +190,60 @@ public class SysUserController {
             return result;
         }
         
-        boolean success = sysUserService.updateById(sysUser);
+        Long id = Long.parseLong(params.get("id").toString());
+        String username = (String) params.get("username");
+        String password = (String) params.get("password");
+        String realName = (String) params.get("realName");
+        String phone = (String) params.get("phone");
+        String sysPosition = params.get("sysPosition") != null ? params.get("sysPosition").toString() : null;
+        Integer status = params.get("status") != null ? Integer.parseInt(params.get("status").toString()) : null;
+        List<Integer> deptIds = params.get("deptIds") != null ? (List<Integer>) params.get("deptIds") : null;
+        List<Integer> roleIds = params.get("roleIds") != null ? (List<Integer>) params.get("roleIds") : null;
         
-        if (success) {
-            result.put("code", 200);
-            result.put("msg", "更新成功");
-        } else {
-            result.put("code", 500);
-            result.put("msg", "更新失败");
+        // 检查用户名是否已被其他用户占用
+        if (username != null && !username.isEmpty()) {
+            SysUser existUser = sysUserService.getByUsername(username);
+            if (existUser != null && !existUser.getId().equals(id)) {
+                result.put("code", 400);
+                result.put("msg", "用户名已存在");
+                return result;
+            }
         }
+        
+        SysUser sysUser = new SysUser();
+        sysUser.setId(id);
+        sysUser.setUsername(username);
+        if (password != null && !password.isEmpty()) {
+            sysUser.setPassword(password);
+        }
+        sysUser.setRealName(realName);
+        sysUser.setPhone(phone);
+        sysUser.setSysPosition(sysPosition);
+        if (status != null) {
+            sysUser.setStatus(status);
+        }
+        
+        boolean success = sysUserService.updateById(sysUser);
+        if (success) {
+            // 先删除旧的部门关联，再保存新的
+            QueryWrapper<SysUserDept> delDeptWrapper = new QueryWrapper<>();
+            delDeptWrapper.eq("user_id", id);
+            sysUserDeptService.remove(delDeptWrapper);
+            if (deptIds != null && !deptIds.isEmpty()) {
+                saveUserDepts(id, deptIds);
+            }
+            
+            // 先删除旧的角色关联，再保存新的
+            QueryWrapper<SysUserRole> delRoleWrapper = new QueryWrapper<>();
+            delRoleWrapper.eq("user_id", id);
+            sysUserRoleService.remove(delRoleWrapper);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                saveUserRoles(id, roleIds);
+            }
+        }
+        
+        result.put("code", success ? 200 : 500);
+        result.put("msg", success ? "更新成功" : "更新失败");
         return result;
     }
 
@@ -206,5 +295,52 @@ public class SysUserController {
             result.put("msg", "用户不存在");
         }
         return result;
+    }
+    
+    /**
+     * 获取用户已分配的角色ID列表
+     */
+    @GetMapping("/roles/{userId}")
+    public Map<String, Object> getUserRoles(@PathVariable Long userId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+        QueryWrapper<SysUserRole> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId);
+        List<SysUserRole> list = sysUserRoleService.list(wrapper);
+        List<Long> roleIds = list.stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", roleIds);
+        return result;
+    }
+
+    /**
+     * 保存用户-部门关联
+     */
+    private void saveUserDepts(Long userId, List<Integer> deptIds) {
+        for (Integer deptId : deptIds) {
+            SysUserDept ud = new SysUserDept();
+            ud.setUserId(userId);
+            ud.setDeptId(Long.valueOf(deptId));
+            ud.setCreateTime(LocalDateTime.now());
+            sysUserDeptService.save(ud);
+        }
+    }
+
+    /**
+     * 保存用户-角色关联
+     */
+    private void saveUserRoles(Long userId, List<Integer> roleIds) {
+        for (Integer roleId : roleIds) {
+            SysUserRole ur = new SysUserRole();
+            ur.setUserId(userId);
+            ur.setRoleId(Long.valueOf(roleId));
+            ur.setCreateTime(LocalDateTime.now());
+            sysUserRoleService.save(ur);
+        }
     }
 }

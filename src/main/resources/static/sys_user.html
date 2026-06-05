@@ -621,7 +621,21 @@ layui.use(['table', 'form', 'layer'], function(){
                 });
             });
         } else if(obj.event === 'edit'){
-            layer.msg('编辑用户：' + data.username, {icon: 1});
+            //layer.msg('编辑用户：' + data.username, {icon: 1});
+         // 编辑菜单
+            layer.open({
+                type: 2,
+                title: '编辑菜单',
+                area: ['700px', '750px'],
+                shadeClose: true,
+                content: '/sysmanage/sys_user_add.html?id=' + data.id,
+                end: function() {
+                    layui.use('table', function(){
+                        var table = layui.table;
+                        table.reload('userTable');
+                    });
+                }
+            });
         }
     });
 
@@ -648,9 +662,19 @@ function doReset() {
 
 // 新增用户
 function addUser() {
-    layui.use('layer', function(){
-        var layer = layui.layer;
-        layer.msg('新增功能开发中', {icon: 0});
+    layer.open({
+        type: 2,
+        title: '新增菜单',
+        area: ['700px', '750px'],
+        shadeClose: true,
+        content: '/sysmanage/sys_user_add.html',
+        end: function() {
+            // 关闭后刷新表格
+            layui.use('table', function(){
+                var table = layui.table;
+                table.reload('userTable');
+            });
+        }
     });
 }
 
