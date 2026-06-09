@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增项目</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #fff; font-family: "Microsoft YaHei", sans-serif; padding: 15px 20px; }
+        .form-container { max-width: 850px; margin: 0 auto; }
+        .layui-form-item { margin-bottom: 12px; }
+        .layui-form-label { width: 100px !important; padding: 9px 10px 9px 0; }
+        .layui-input-block { margin-left: 100px !important; }
+        .layui-input { height: 38px; line-height: 38px; }
+        .required-star { color: red; margin-right: 3px; }
+        .btn-group { margin-top: 20px; padding-left: 100px; }
+        .btn-green { background-color: #86c566 !important; color: #fff !important; border-color: #86c566 !important; }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        /* 双列布局 */
+        .row-group { display: flex; gap: 0; }
+        .row-group .col-item { flex: 1; min-width: 0; }
+        .row-group .col-item .layui-form-item { margin-bottom: 12px; }
+        .row-group .col-item .layui-form-label { width: 100px !important; }
+        .row-group .col-item .layui-input-block { margin-left: 100px !important; }
+        /* 分割线标题 */
+        .section-title {
+            font-size: 14px; font-weight: bold; color: #333; padding: 10px 0 8px;
+            border-bottom: 2px solid #86c566; margin-bottom: 12px;
+        }
+        .section-title:first-child { margin-top: 0; }
+        /* 附件上传 */
+        .file-list { margin-top: 8px; }
+        .file-item {
+            display: flex; align-items: center; padding: 6px 10px; margin-bottom: 4px;
+            background: #f8f8f8; border-radius: 4px; border: 1px solid #e6e6e6;
+        }
+        .file-item .file-name { flex: 1; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item .file-remove { color: #ff5722; cursor: pointer; font-size: 18px; margin-left: 10px; }
+        .file-item .file-remove:hover { color: #d32f2f; }
+        .upload-btn-wrap { margin-top: 6px; }
+    </style>
+</head>
+<body>
+<form class="layui-form form-container" lay-filter="projectForm" id="projectForm">
+    <input type="hidden" name="id" id="projectId" value="">
+
+    <!-- 基本信息 -->
+    <div class="section-title">基本信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span class="required-star">*</span>项目名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="projectName" id="projectName" lay-verify="required" placeholder="请输入项目名称" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span class="required-star">*</span>项目编号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="projectNo" id="projectNo" lay-verify="required" placeholder="请输入项目编号" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目类型</label>
+                <div class="layui-input-block">
+                    <select name="projectType" id="projectType" lay-filter="projectTypeFilter">
+                        <option value="">请选择项目类型</option>
+                        <option value="1">环评</option>
+                        <option value="2">场调</option>
+                        <option value="3">应急预案</option>
+                        <option value="4">验收</option>
+                        <option value="5">环评入围</option>
+                        <option value="6">场调入围</option>
+                        <option value="99">其他</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目区域</label>
+                <div class="layui-input-block">
+                    <input type="text" name="area" id="area" placeholder="请输入项目所在区域" class="layui-input" maxlength="100">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">竞价类型</label>
+                <div class="layui-input-block">
+                    <select name="bidType" id="bidType">
+                        <option value="">请选择竞价类型</option>
+                        <option value="1">明标</option>
+                        <option value="2">暗标</option>
+                        <option value="3">两阶段标</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">竞价方式</label>
+                <div class="layui-input-block">
+                    <select name="bidWay" id="bidWay">
+                        <option value="">请选择竞价方式</option>
+                        <option value="1">邀请招标</option>
+                        <option value="2">竞争性谈判</option>
+                        <option value="3">竞争性磋商</option>
+                        <option value="4">询价采购</option>
+                        <option value="5">单一来源采购</option>
+                        <option value="6">框架协议采购</option>
+                        <option value="7">电子竞价</option>
+                        <option value="8">均价比选</option>
+                        <option value="9">最低价中标</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目来源</label>
+                <div class="layui-input-block">
+                    <input type="text" name="projectSource" id="projectSource" placeholder="请输入项目来源" class="layui-input" maxlength="100">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目周期</label>
+                <div class="layui-input-block">
+                    <select name="projectCycle" id="projectCycle">
+                        <option value="">请选择项目周期</option>
+                        <option value="1">1个月</option>
+                        <option value="2">3个月</option>
+                        <option value="3">6个月</option>
+                        <option value="4">1年</option>
+                        <option value="5">1年以上</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 业主信息 -->
+    <div class="section-title">业主信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">业主单位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerCompany" id="ownerCompany" placeholder="请输入业主单位" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系人</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerContact" id="ownerContact" placeholder="请输入联系人" class="layui-input" maxlength="50">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系方式</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerPhone" id="ownerPhone" placeholder="请输入联系方式" class="layui-input" maxlength="20">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">职位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerPost" id="ownerPost" placeholder="请输入职位" class="layui-input" maxlength="50">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 招标信息 -->
+    <div class="section-title">招标信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">招标网站</label>
+                <div class="layui-input-block">
+                    <input type="text" name="bidWebsite" id="bidWebsite" placeholder="请输入招标网站" class="layui-input" maxlength="100">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">报价类型</label>
+                <div class="layui-input-block">
+                    <select name="priceType" id="priceType">
+                        <option value="">请选择报价类型</option>
+                        <option value="1">金额</option>
+                        <option value="2">费率</option>
+                        <option value="0">其他</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">招标网址</label>
+        <div class="layui-input-block">
+            <input type="text" name="bidUrl" id="bidUrl" placeholder="请输入招标网址" class="layui-input" maxlength="500">
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">质疑截止时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="questionEndTime" id="questionEndTime" placeholder="请选择时间" class="layui-input" readonly>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span class="required-star">*</span>投标时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="bidTime" id="bidTime" placeholder="请选择投标时间" class="layui-input" readonly lay-verify="required">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 费用信息 -->
+    <div class="section-title">费用信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目金额</label>
+                <div class="layui-input-block">
+                    <input type="number" name="projectAmount" id="projectAmount" placeholder="请输入项目金额" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">限价单位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="priceUnit" id="priceUnit" placeholder="请输入限价单位" class="layui-input" maxlength="20">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">最高限价</label>
+                <div class="layui-input-block">
+                    <input type="number" name="maxPrice" id="maxPrice" placeholder="请输入最高限价" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">最低限价</label>
+                <div class="layui-input-block">
+                    <input type="number" name="minPrice" id="minPrice" placeholder="请输入最低限价" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">标书费</label>
+                <div class="layui-input-block">
+                    <input type="number" name="bidDocumentFee" id="bidDocumentFee" placeholder="请输入标书费" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">标书装订费</label>
+                <div class="layui-input-block">
+                    <input type="number" name="documentBindingFee" id="documentBindingFee" placeholder="请输入标书装订费" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">平台使用费</label>
+                <div class="layui-input-block">
+                    <input type="number" name="platformFee" id="platformFee" placeholder="请输入平台使用费" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">中标代理费</label>
+                <div class="layui-input-block">
+                    <input type="number" name="agencyFee" id="agencyFee" placeholder="请输入中标代理费" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">投标保证金</label>
+                <div class="layui-input-block">
+                    <input type="number" name="bidDeposit" id="bidDeposit" placeholder="请输入投标保证金" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">合同履约保证金</label>
+                <div class="layui-input-block">
+                    <input type="number" name="contractDeposit" id="contractDeposit" placeholder="请输入合同履约保证金" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 其他信息 -->
+    <div class="section-title">其他信息</div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">资质要求</label>
+        <div class="layui-input-block">
+            <textarea name="qualificationRequire" id="qualificationRequire" placeholder="请输入资质要求" class="layui-textarea" maxlength="1000"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">评分方式</label>
+        <div class="layui-input-block">
+            <textarea name="scoreMethod" id="scoreMethod" placeholder="请输入评分方式" class="layui-textarea"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">项目详细内容</label>
+        <div class="layui-input-block">
+            <textarea name="contentDetail" id="contentDetail" placeholder="请输入项目详细内容" class="layui-textarea" style="height:120px;"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">备注</label>
+        <div class="layui-input-block">
+            <textarea name="remark" id="remark" placeholder="请输入备注" class="layui-textarea" maxlength="1000"></textarea>
+        </div>
+    </div>
+
+    <!-- 附件上传 -->
+    <div class="section-title">附件上传</div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">项目附件</label>
+        <div class="layui-input-block">
+            <div class="upload-btn-wrap">
+                <button type="button" class="layui-btn btn-green layui-btn-sm" id="uploadBtn"><i class="layui-icon">&#xe67c;</i> 选择文件</button>
+                <span style="color:#999; font-size:12px; margin-left:8px;">支持多文件上传</span>
+            </div>
+            <div class="file-list" id="fileList"></div>
+        </div>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="layui-form-item btn-group">
+        <button type="button" class="layui-btn btn-green" lay-submit lay-filter="projectSubmit" id="submitBtn">保存</button>
+        <button type="button" class="layui-btn layui-btn-primary" onclick="closeWindow()">取消</button>
+    </div>
+</form>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var isEditMode = false;
+var uploadedFiles = []; // 已上传的附件列表 [{filePath, originalName}]
+
+// 获取URL参数
+function getQueryString(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+    var r = window.location.search.substr(1).match(reg);
+    if (r != null) return decodeURIComponent(r[2]);
+    return null;
+}
+
+// 关闭窗口
+function closeWindow() {
+    var index = parent.layer.getFrameIndex(window.name);
+    parent.layer.close(index);
+}
+
+// 渲染附件列表
+function renderFileList() {
+    var html = '';
+    uploadedFiles.forEach(function(file, idx) {
+        html += '<div class="file-item">';
+        html += '  <span class="file-name" title="' + file.originalName + '">' + file.originalName + '</span>';
+        html += '  <i class="layui-icon file-remove" data-idx="' + idx + '">&#xe640;</i>';
+        html += '</div>';
+    });
+    document.getElementById('fileList').innerHTML = html;
+
+    // 绑定删除事件
+    document.querySelectorAll('.file-remove').forEach(function(el) {
+        el.addEventListener('click', function() {
+            var idx = parseInt(this.getAttribute('data-idx'));
+            uploadedFiles.splice(idx, 1);
+            renderFileList();
+        });
+    });
+}
+
+layui.use(['form', 'layer', 'laydate', 'upload'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+
+    // 判断是否编辑模式
+    var projectId = getQueryString('id');
+    isEditMode = !!projectId;
+
+    if (isEditMode) {
+        document.getElementById('projectId').value = projectId;
+        document.title = '编辑项目';
+    }
+
+    // 日期选择器
+    laydate.render({ elem: '#questionEndTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
+    laydate.render({ elem: '#bidTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
+
+    // 文件上传
+    var uploadInst = upload.render({
+        elem: '#uploadBtn',
+        url: '/file/upload',
+        headers: {token: token},
+        accept: 'file',
+        multiple: true,
+        auto: true,
+        before: function(obj) {
+            layer.load(1);
+        },
+        done: function(res) {
+            layer.closeAll('loading');
+            if (res.code === 200) {
+                uploadedFiles.push({
+                    filePath: res.data,
+                    originalName: res.originalName || res.data
+                });
+                renderFileList();
+            } else {
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+        },
+        error: function() {
+            layer.closeAll('loading');
+            layer.msg('上传出错', {icon: 2});
+        }
+    });
+
+    // 编辑模式：加载项目数据
+    if (isEditMode) {
+        // 加载项目基本信息
+        $.ajax({
+            url: '/project/info/get/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    var data = res.data;
+                    document.getElementById('projectName').value = data.projectName || '';
+                    document.getElementById('projectNo').value = data.projectNo || '';
+                    document.getElementById('area').value = data.area || '';
+                    document.getElementById('projectSource').value = data.projectSource || '';
+                    document.getElementById('ownerCompany').value = data.ownerCompany || '';
+                    document.getElementById('ownerContact').value = data.ownerContact || '';
+                    document.getElementById('ownerPhone').value = data.ownerPhone || '';
+                    document.getElementById('ownerPost').value = data.ownerPost || '';
+                    document.getElementById('bidWebsite').value = data.bidWebsite || '';
+                    document.getElementById('bidUrl').value = data.bidUrl || '';
+                    document.getElementById('priceUnit').value = data.priceUnit || '';
+                    document.getElementById('qualificationRequire').value = data.qualificationRequire || '';
+                    document.getElementById('scoreMethod').value = data.scoreMethod || '';
+                    document.getElementById('contentDetail').value = data.contentDetail || '';
+                    document.getElementById('remark').value = data.remark || '';
+
+                    // 数字字段
+                    if (data.projectAmount != null) document.getElementById('projectAmount').value = data.projectAmount;
+                    if (data.maxPrice != null) document.getElementById('maxPrice').value = data.maxPrice;
+                    if (data.minPrice != null) document.getElementById('minPrice').value = data.minPrice;
+                    if (data.bidDocumentFee != null) document.getElementById('bidDocumentFee').value = data.bidDocumentFee;
+                    if (data.documentBindingFee != null) document.getElementById('documentBindingFee').value = data.documentBindingFee;
+                    if (data.platformFee != null) document.getElementById('platformFee').value = data.platformFee;
+                    if (data.agencyFee != null) document.getElementById('agencyFee').value = data.agencyFee;
+                    if (data.bidDeposit != null) document.getElementById('bidDeposit').value = data.bidDeposit;
+                    if (data.contractDeposit != null) document.getElementById('contractDeposit').value = data.contractDeposit;
+
+                    // 下拉框回显
+                    if (data.projectType != null) { $('select[name="projectType"]').val(data.projectType.toString()); }
+                    if (data.bidType != null) { $('select[name="bidType"]').val(data.bidType.toString()); }
+                    if (data.bidWay != null) { $('select[name="bidWay"]').val(data.bidWay.toString()); }
+                    if (data.priceType != null) { $('select[name="priceType"]').val(data.priceType.toString()); }
+                    if (data.projectCycle != null) { $('select[name="projectCycle"]').val(data.projectCycle.toString()); }
+                    form.render('select');
+
+                    // 日期时间回显
+                    if (data.questionEndTime) { document.getElementById('questionEndTime').value = data.questionEndTime.replace('T', ' '); }
+                    if (data.bidTime) { document.getElementById('bidTime').value = data.bidTime.replace('T', ' '); }
+                }
+            }
+        });
+
+        // 加载已上传附件
+        $.ajax({
+            url: '/project/info/files/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    res.data.forEach(function(file) {
+                        var fileName = file.filePath;
+                        // 从路径中提取文件名
+                        if (fileName && fileName.indexOf('/') > -1) {
+                            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+                        }
+                        uploadedFiles.push({
+                            filePath: file.filePath,
+                            originalName: fileName
+                        });
+                    });
+                    renderFileList();
+                }
+            }
+        });
+    }
+
+    // 监听提交
+    var isSubmitting = false;
+    form.on('submit(projectSubmit)', function(){
+        if (isSubmitting) return false;
+        isSubmitting = true;
+
+        var projectName = document.getElementById('projectName').value.trim();
+        var projectNo = document.getElementById('projectNo').value.trim();
+        var bidTime = document.getElementById('bidTime').value.trim();
+
+        if (!projectName) { layer.msg('请输入项目名称', {icon: 5}); isSubmitting = false; return false; }
+        if (!projectNo) { layer.msg('请输入项目编号', {icon: 5}); isSubmitting = false; return false; }
+        if (!bidTime) { layer.msg('请选择投标时间', {icon: 5}); isSubmitting = false; return false; }
+
+        var $submitBtn = $('#submitBtn');
+        $submitBtn.prop('disabled', true).addClass('layui-btn-disabled').text('保存中...');
+
+        var data = {
+            projectName: projectName,
+            projectNo: projectNo,
+            projectType: $('select[name="projectType"]').val() || null,
+            bidType: $('select[name="bidType"]').val() || null,
+            bidWay: $('select[name="bidWay"]').val() || null,
+            area: document.getElementById('area').value.trim() || null,
+            projectSource: document.getElementById('projectSource').value.trim() || null,
+            ownerCompany: document.getElementById('ownerCompany').value.trim() || null,
+            ownerContact: document.getElementById('ownerContact').value.trim() || null,
+            ownerPhone: document.getElementById('ownerPhone').value.trim() || null,
+            ownerPost: document.getElementById('ownerPost').value.trim() || null,
+            bidWebsite: document.getElementById('bidWebsite').value.trim() || null,
+            bidUrl: document.getElementById('bidUrl').value.trim() || null,
+            priceType: $('select[name="priceType"]').val() || null,
+            projectCycle: $('select[name="projectCycle"]').val() || null,
+            projectAmount: document.getElementById('projectAmount').value.trim() || null,
+            maxPrice: document.getElementById('maxPrice').value.trim() || null,
+            minPrice: document.getElementById('minPrice').value.trim() || null,
+            priceUnit: document.getElementById('priceUnit').value.trim() || null,
+            scoreMethod: document.getElementById('scoreMethod').value.trim() || null,
+            bidDocumentFee: document.getElementById('bidDocumentFee').value.trim() || null,
+            platformFee: document.getElementById('platformFee').value.trim() || null,
+            agencyFee: document.getElementById('agencyFee').value.trim() || null,
+            bidDeposit: document.getElementById('bidDeposit').value.trim() || null,
+            contractDeposit: document.getElementById('contractDeposit').value.trim() || null,
+            questionEndTime: document.getElementById('questionEndTime').value.trim() || null,
+            bidTime: bidTime || null,
+            qualificationRequire: document.getElementById('qualificationRequire').value.trim() || null,
+            documentBindingFee: document.getElementById('documentBindingFee').value.trim() || null,
+            remark: document.getElementById('remark').value.trim() || null,
+            contentDetail: document.getElementById('contentDetail').value.trim() || null,
+            fileList: uploadedFiles
+        };
+
+        if (isEditMode) {
+            data.id = parseInt(document.getElementById('projectId').value);
+        }
+
+        var url = isEditMode ? '/project/info/update' : '/project/info/add';
+        var method = isEditMode ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            type: method,
+            headers: {token: token},
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res) {
+                if (res.code === 200) {
+                    layer.msg(isEditMode ? '更新成功' : '新增成功', {icon: 1}, function(){
+                        closeWindow();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                    isSubmitting = false;
+                    $submitBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
+                }
+            },
+            error: function() {
+                layer.msg('请求失败，请重试', {icon: 2});
+                isSubmitting = false;
+                $submitBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
+            }
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>
