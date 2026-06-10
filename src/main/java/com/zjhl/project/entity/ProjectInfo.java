@@ -1,6 +1,7 @@
 package com.zjhl.project.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -46,6 +47,10 @@ public class ProjectInfo {
     private String contentDetail;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 项目状态（非数据库字段，来自project_stage.stage_status） */
+    @TableField(exist = false)
+    private Integer stageStatus;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -115,4 +120,6 @@ public class ProjectInfo {
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+    public Integer getStageStatus() { return stageStatus; }
+    public void setStageStatus(Integer stageStatus) { this.stageStatus = stageStatus; }
 }

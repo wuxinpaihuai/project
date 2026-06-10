@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体系作战任务分配</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 15px 20px;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .info-card h3 { font-size: 15px; color: #333; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8; }
+        .info-grid { display: flex; flex-wrap: wrap; }
+        .info-item { width: 33.33%; padding: 5px 0; font-size: 13px; }
+        .info-item label { color: #999; margin-right: 5px; }
+        .info-item span { color: #333; }
+        .file-list { margin-top: 8px; }
+        .file-item { display: inline-block; margin-right: 15px; font-size: 13px; color: #1e9fff; }
+        .file-item a { color: #1e9fff; text-decoration: none; }
+        .file-item a:hover { text-decoration: underline; }
+        .task-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .task-card h3 { font-size: 15px; color: #333; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #e8e8e8; }
+        .task-item {
+            border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px 15px;
+            margin-bottom: 10px; position: relative; background: #fafafa;
+        }
+        .task-item:hover { border-color: #1e9fff; }
+        .task-item .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .task-item .task-header .task-index { font-weight: bold; color: #1e9fff; font-size: 14px; }
+        .task-item .task-header .task-actions { }
+        .task-item .task-actions .layui-btn { margin-left: 5px; }
+        .task-form-row { display: flex; flex-wrap: wrap; gap: 0 15px; }
+        .task-form-row .layui-form-item { width: calc(50% - 8px); margin-bottom: 8px; }
+        .task-form-row .layui-form-item.full-width { width: 100%; }
+        .task-form-row .layui-form-label { width: 90px !important; padding: 9px 8px 9px 0; }
+        .task-form-row .layui-input-inline { width: auto !important; flex: 1; }
+        .car-fields { display: none; }
+        .car-fields.show { display: flex; }
+        .btn-area { text-align: center; padding: 15px 0; }
+        .btn-green { background-color: #86c566 !important; color: #fff !important; border-color: #86c566 !important; }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue { background-color: #1e9fff !important; color: #fff !important; border-color: #1e9fff !important; }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- 项目基本信息 -->
+    <div class="info-card">
+        <h3>项目基本信息</h3>
+        <div class="info-grid" id="projectInfoGrid">
+            <div class="info-item"><label>项目编号：</label><span id="infoProjectNo">-</span></div>
+            <div class="info-item"><label>项目名称：</label><span id="infoProjectName">-</span></div>
+            <div class="info-item"><label>项目类型：</label><span id="infoProjectType">-</span></div>
+            <div class="info-item"><label>项目金额：</label><span id="infoProjectAmount">-</span></div>
+            <div class="info-item"><label>项目地址：</label><span id="infoArea">-</span></div>
+            <div class="info-item"><label>业主单位：</label><span id="infoOwnerCompany">-</span></div>
+            <div class="info-item"><label>联系人：</label><span id="infoOwnerContact">-</span></div>
+            <div class="info-item"><label>联系方式：</label><span id="infoOwnerPhone">-</span></div>
+            <div class="info-item"><label>投标时间：</label><span id="infoBidTime">-</span></div>
+        </div>
+        <!-- 项目附件 -->
+        <div id="fileArea" style="display:none;">
+            <h3 style="margin-top:10px;">项目附件</h3>
+            <div class="file-list" id="fileList"></div>
+        </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="task-card">
+        <h3 style="display:flex;justify-content:space-between;align-items:center;">
+            <span>任务列表</span>
+            <button type="button" class="layui-btn btn-blue layui-btn-sm" id="addTaskBtn"><i class="layui-icon">&#xe654;</i> 新增任务</button>
+        </h3>
+        <div id="taskContainer"></div>
+        <div id="emptyTip" style="text-align:center;color:#999;padding:20px 0;">暂无任务，请点击"新增任务"按钮添加</div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="btn-area">
+        <button type="button" class="layui-btn btn-green" id="saveBtn"><i class="layui-icon">&#xe605;</i> 保存</button>
+        <button type="button" class="layui-btn layui-btn-primary" id="cancelBtn"><i class="layui-icon">&#xe646;</i> 取消</button>
+    </div>
+</div>
+
+<!-- 任务模板 -->
+<script type="text/html" id="taskTemplate">
+<div class="task-item" data-index="{{d.index}}">
+    <div class="task-header">
+        <span class="task-index">任务 {{d.index}}</span>
+        <div class="task-actions">
+            <button type="button" class="layui-btn layui-btn-xs btn-blue task-edit-btn"><i class="layui-icon">&#xe642;</i> 编辑</button>
+            <button type="button" class="layui-btn layui-btn-xs layui-btn-danger task-del-btn"><i class="layui-icon">&#xe640;</i> 删除</button>
+        </div>
+    </div>
+    <div class="task-form-row">
+        <div class="layui-form-item">
+            <label class="layui-form-label">任务负责人</label>
+            <div class="layui-input-inline">
+                <span class="task-exec-user-name">{{d.execUserName || '-'}}</span>
+                <input type="hidden" class="task-exec-user-id" value="{{d.execUserId || ''}}">
+                <input type="hidden" class="task-exec-user-phone" value="{{d.execUserPhone || ''}}">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">任务截止时间</label>
+            <div class="layui-input-inline">
+                <span class="task-end-time">{{d.taskEndTime || '-'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否派车</label>
+            <div class="layui-input-inline">
+                <span class="task-need-car">{{d.needCar == 1 ? '是' : '否'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item car-display" style="{{d.needCar == 1 ? '' : 'display:none;'}}">
+            <label class="layui-form-label">通行费</label>
+            <div class="layui-input-inline">
+                <span class="task-toll-fee">{{d.tollFee || '0.00'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item car-display" style="{{d.needCar == 1 ? '' : 'display:none;'}}">
+            <label class="layui-form-label">里程数(公里)</label>
+            <div class="layui-input-inline">
+                <span class="task-mileage">{{d.mileage || '0.00'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item full-width">
+            <label class="layui-form-label">任务内容</label>
+            <div class="layui-input-inline">
+                <span class="task-content">{{d.taskContent || '-'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">交付物</label>
+            <div class="layui-input-inline">
+                <span class="task-deliver-type">{{d.deliverTypeName || '-'}}</span>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-inline">
+                <span class="task-remark">{{d.remark || '-'}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+</script>
+
+<!-- 任务编辑表单模板（弹出层用） -->
+<script type="text/html" id="taskFormTemplate">
+<div style="padding:20px;">
+    <form class="layui-form" lay-filter="taskForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:red;">*</span> 任务负责人</label>
+            <div class="layui-input-block">
+                <select name="execUserId" id="formExecUserId" lay-filter="execUser" lay-search="">
+                    <option value="">请选择任务负责人</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:red;">*</span> 任务截止时间</label>
+            <div class="layui-input-block">
+                <input type="text" name="taskEndTime" id="formTaskEndTime" placeholder="请选择截止时间" class="layui-input" autocomplete="off">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否派车</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="needCarSwitch" id="formNeedCar" lay-skin="switch" lay-text="是|否" lay-filter="needCarSwitch">
+            </div>
+        </div>
+        <div class="layui-form-item car-form-fields" style="display:none;">
+            <label class="layui-form-label">通行费</label>
+            <div class="layui-input-block">
+                <input type="number" name="tollFee" id="formTollFee" placeholder="请输入通行费" class="layui-input" step="0.01" value="0">
+            </div>
+        </div>
+        <div class="layui-form-item car-form-fields" style="display:none;">
+            <label class="layui-form-label">里程数(公里)</label>
+            <div class="layui-input-block">
+                <input type="number" name="mileage" id="formMileage" placeholder="请输入里程数" class="layui-input" step="0.01" value="0">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:red;">*</span> 任务内容</label>
+            <div class="layui-input-block">
+                <textarea name="taskContent" id="formTaskContent" placeholder="请输入任务内容" class="layui-textarea" style="height:80px;"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">交付物</label>
+            <div class="layui-input-block">
+                <select name="deliverType" id="formDeliverType">
+                    <option value="">请选择交付物类型</option>
+                    <option value="1">文档</option>
+                    <option value="2">表格</option>
+                    <option value="3">图片</option>
+                    <option value="4">其他</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-block">
+                <textarea name="remark" id="formRemark" placeholder="请输入备注（选填）" class="layui-textarea" style="height:60px;"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item" style="text-align:center;margin-top:15px;">
+            <button type="button" class="layui-btn btn-green" id="formSubmitBtn">确定</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="formCancelBtn">取消</button>
+        </div>
+    </form>
+</div>
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = null;
+var taskList = []; // 存储所有任务数据
+var editingIndex = -1; // 当前编辑的任务索引，-1表示新增
+var execUserList = []; // 缓存负责人列表
+var deliverTypeMap = {1:'文档', 2:'表格', 3:'图片', 4:'其他'};
+var projectTypeMap = {1:'环评', 2:'场调', 3:'应急预案', 4:'验收', 5:'环评入围', 6:'场调入围', 99:'其他'};
+
+layui.use(['table', 'layer', 'form', 'laydate'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+    var laydate = layui.laydate;
+
+    // 获取URL参数中的projectId
+    var urlParams = new URLSearchParams(window.location.search);
+    projectId = urlParams.get('projectId');
+
+    if (!projectId) {
+        layer.msg('缺少项目ID参数', {icon: 5});
+        return;
+    }
+
+    // 加载项目详情
+    loadProjectDetail();
+    // 加载任务列表
+    loadTaskList();
+    // 加载负责人下拉数据
+    loadExecUsers();
+
+    function loadProjectDetail() {
+        $.ajax({
+            url: '/project/task/projectDetail/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200) {
+                    var p = res.project;
+                    $('#infoProjectNo').text(p.projectNo || '-');
+                    $('#infoProjectName').text(p.projectName || '-');
+                    $('#infoProjectType').text(projectTypeMap[p.projectType] || '-');
+                    $('#infoProjectAmount').text(p.projectAmount != null ? parseFloat(p.projectAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-');
+                    $('#infoArea').text(p.area || '-');
+                    $('#infoOwnerCompany').text(p.ownerCompany || '-');
+                    $('#infoOwnerContact').text(p.ownerContact || '-');
+                    $('#infoOwnerPhone').text(p.ownerPhone || '-');
+                    $('#infoBidTime').text(p.bidTime ? p.bidTime.replace('T', ' ') : '-');
+
+                    // 附件
+                    var files = res.files;
+                    if (files && files.length > 0) {
+                        $('#fileArea').show();
+                        var html = '';
+                        for (var i = 0; i < files.length; i++) {
+                            html += '<div class="file-item"><i class="layui-icon">&#xe61e;</i> <a href="' + files[i].filePath + '" target="_blank">' + files[i].originalName + '</a></div>';
+                        }
+                        $('#fileList').html(html);
+                    }
+                } else {
+                    layer.msg(res.msg || '加载项目详情失败', {icon: 2});
+                }
+            }
+        });
+    }
+
+    function loadTaskList() {
+        $.ajax({
+            url: '/project/task/list/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200) {
+                    taskList = res.data || [];
+                    renderTaskList();
+                }
+            }
+        });
+    }
+
+    function loadExecUsers(keyword) {
+        $.ajax({
+            url: '/project/task/execUsers',
+            type: 'GET',
+            data: {keyword: keyword || ''},
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200) {
+                    execUserList = res.data || [];
+                }
+            }
+        });
+    }
+
+    // 渲染任务列表
+    function renderTaskList() {
+        var container = $('#taskContainer');
+        container.empty();
+        if (taskList.length === 0) {
+            $('#emptyTip').show();
+            return;
+        }
+        $('#emptyTip').hide();
+        for (var i = 0; i < taskList.length; i++) {
+            var task = taskList[i];
+            task.index = i + 1;
+            task.deliverTypeName = deliverTypeMap[task.deliverType] || '-';
+            var html = buildTaskItemHtml(task);
+            container.append(html);
+        }
+    }
+
+    function buildTaskItemHtml(task) {
+        var needCarText = task.needCar == 1 ? '是' : '否';
+        var carDisplay = task.needCar == 1 ? '' : 'display:none;';
+        var html = '<div class="task-item" data-idx="' + (task.index - 1) + '">';
+        html += '<div class="task-header">';
+        html += '<span class="task-index">任务 ' + task.index + '</span>';
+        html += '<div class="task-actions">';
+        html += '<button type="button" class="layui-btn layui-btn-xs btn-blue task-edit-btn"><i class="layui-icon">&#xe642;</i> 编辑</button>';
+        html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger task-del-btn"><i class="layui-icon">&#xe640;</i> 删除</button>';
+        html += '</div></div>';
+        html += '<div class="task-form-row">';
+        html += '<div class="layui-form-item"><label class="layui-form-label">任务负责人</label><div class="layui-input-inline"><span>' + (task.execUserName || '-') + '</span></div></div>';
+        html += '<div class="layui-form-item"><label class="layui-form-label">任务截止时间</label><div class="layui-input-inline"><span>' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</span></div></div>';
+        html += '<div class="layui-form-item"><label class="layui-form-label">是否派车</label><div class="layui-input-inline"><span>' + needCarText + '</span></div></div>';
+        html += '<div class="layui-form-item" style="' + carDisplay + '"><label class="layui-form-label">通行费</label><div class="layui-input-inline"><span>' + (task.tollFee || '0.00') + '</span></div></div>';
+        html += '<div class="layui-form-item" style="' + carDisplay + '"><label class="layui-form-label">里程数(公里)</label><div class="layui-input-inline"><span>' + (task.mileage || '0.00') + '</span></div></div>';
+        html += '<div class="layui-form-item full-width"><label class="layui-form-label">任务内容</label><div class="layui-input-inline"><span>' + (task.taskContent || '-') + '</span></div></div>';
+        html += '<div class="layui-form-item"><label class="layui-form-label">交付物</label><div class="layui-input-inline"><span>' + (task.deliverTypeName || '-') + '</span></div></div>';
+        html += '<div class="layui-form-item"><label class="layui-form-label">备注</label><div class="layui-input-inline"><span>' + (task.remark || '-') + '</span></div></div>';
+        html += '</div></div>';
+        return html;
+    }
+
+    // 新增任务
+    $('#addTaskBtn').on('click', function(){
+        editingIndex = -1;
+        openTaskForm({});
+    });
+
+    // 编辑任务
+    $(document).on('click', '.task-edit-btn', function(){
+        var idx = $(this).closest('.task-item').data('idx');
+        editingIndex = idx;
+        openTaskForm(taskList[idx]);
+    });
+
+    // 删除任务
+    $(document).on('click', '.task-del-btn', function(){
+        var idx = $(this).closest('.task-item').data('idx');
+        layer.confirm('确定要删除该任务吗？', {icon: 3, title: '确认删除'}, function(confirmIndex){
+            var taskId = taskList[idx].id;
+            taskList.splice(idx, 1);
+            // 如果是已保存的任务，调用后端删除
+            if (taskId) {
+                $.ajax({
+                    url: '/project/task/delete/' + taskId,
+                    type: 'DELETE',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res.code === 200) {
+                            layer.msg('删除成功', {icon: 1});
+                        }
+                    }
+                });
+            }
+            renderTaskList();
+            layer.close(confirmIndex);
+        });
+    });
+
+    // 打开任务编辑表单
+    function openTaskForm(data) {
+        var formHtml = '<div style="padding:20px;">';
+        formHtml += '<form class="layui-form" lay-filter="taskEditForm">';
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务负责人</label>';
+        formHtml += '<div class="layui-input-block"><select name="execUserId" id="formExecUserId" lay-filter="execUser" lay-search=""><option value="">请选择任务负责人</option>';
+        for (var i = 0; i < execUserList.length; i++) {
+            var u = execUserList[i];
+            var selected = (data.execUserId && u.id == data.execUserId) ? ' selected' : '';
+            formHtml += '<option value="' + u.id + '"' + selected + '>' + u.realName + (u.phone ? ' (' + u.phone + ')' : '') + '</option>';
+        }
+        formHtml += '</select></div></div>';
+
+        var endTimeVal = data.taskEndTime ? data.taskEndTime.replace('T', ' ') : '';
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务截止时间</label>';
+        formHtml += '<div class="layui-input-block"><input type="text" name="taskEndTime" id="formTaskEndTime" placeholder="请选择截止时间" class="layui-input" autocomplete="off" value="' + endTimeVal + '"></div></div>';
+
+        var needCarChecked = data.needCar == 1 ? ' checked' : '';
+        var carFieldDisplay = data.needCar == 1 ? '' : 'display:none;';
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label">是否派车</label>';
+        formHtml += '<div class="layui-input-block"><input type="checkbox" name="needCarSwitch" id="formNeedCar" lay-skin="switch" lay-text="是|否" lay-filter="needCarSwitch"' + needCarChecked + '></div></div>';
+
+        formHtml += '<div class="layui-form-item car-form-fields" style="' + carFieldDisplay + '"><label class="layui-form-label">通行费</label>';
+        formHtml += '<div class="layui-input-block"><input type="number" name="tollFee" id="formTollFee" placeholder="请输入通行费" class="layui-input" step="0.01" value="' + (data.tollFee || '0') + '"></div></div>';
+
+        formHtml += '<div class="layui-form-item car-form-fields" style="' + carFieldDisplay + '"><label class="layui-form-label">里程数(公里)</label>';
+        formHtml += '<div class="layui-input-block"><input type="number" name="mileage" id="formMileage" placeholder="请输入里程数" class="layui-input" step="0.01" value="' + (data.mileage || '0') + '"></div></div>';
+
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务内容</label>';
+        formHtml += '<div class="layui-input-block"><textarea name="taskContent" id="formTaskContent" placeholder="请输入任务内容" class="layui-textarea" style="height:80px;">' + (data.taskContent || '') + '</textarea></div></div>';
+
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label">交付物</label>';
+        formHtml += '<div class="layui-input-block"><select name="deliverType" id="formDeliverType">';
+        formHtml += '<option value="">请选择交付物类型</option>';
+        var deliverOptions = [{v:1,t:'文档'},{v:2,t:'表格'},{v:3,t:'图片'},{v:4,t:'其他'}];
+        for (var j = 0; j < deliverOptions.length; j++) {
+            var dSel = (data.deliverType && deliverOptions[j].v == data.deliverType) ? ' selected' : '';
+            formHtml += '<option value="' + deliverOptions[j].v + '"' + dSel + '>' + deliverOptions[j].t + '</option>';
+        }
+        formHtml += '</select></div></div>';
+
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label">备注</label>';
+        formHtml += '<div class="layui-input-block"><textarea name="remark" id="formRemark" placeholder="请输入备注（选填）" class="layui-textarea" style="height:60px;">' + (data.remark || '') + '</textarea></div></div>';
+
+        formHtml += '<div class="layui-form-item" style="text-align:center;margin-top:15px;">';
+        formHtml += '<button type="button" class="layui-btn btn-green" id="formSubmitBtn">确定</button>';
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="formCancelBtn" style="margin-left:10px;">取消</button>';
+        formHtml += '</div></form></div>';
+
+        var editIndex = layer.open({
+            type: 1,
+            title: editingIndex === -1 ? '新增任务' : '编辑任务',
+            area: ['550px', '580px'],
+            content: formHtml,
+            success: function(layero) {
+                form.render(null, 'taskEditForm');
+
+                // 日期选择器
+                laydate.render({
+                    elem: '#formTaskEndTime',
+                    type: 'datetime',
+                    format: 'yyyy-MM-dd HH:mm:ss'
+                });
+
+                // 是否派车切换
+                form.on('switch(needCarSwitch)', function(obj){
+                    if (obj.elem.checked) {
+                        layero.find('.car-form-fields').show();
+                    } else {
+                        layero.find('.car-form-fields').hide();
+                        layero.find('#formTollFee').val('0');
+                        layero.find('#formMileage').val('0');
+                    }
+                });
+
+                // 确定按钮
+                layero.find('#formSubmitBtn').on('click', function(){
+                    var execUserId = layero.find('#formExecUserId').val();
+                    var taskEndTime = layero.find('#formTaskEndTime').val();
+                    var taskContent = layero.find('#formTaskContent').val().trim();
+                    var needCar = layero.find('#formNeedCar').is(':checked') ? 1 : 0;
+                    var tollFee = layero.find('#formTollFee').val() || '0';
+                    var mileage = layero.find('#formMileage').val() || '0';
+                    var deliverType = layero.find('#formDeliverType').val();
+                    var remark = layero.find('#formRemark').val().trim();
+
+                    // 验证
+                    if (!execUserId) {
+                        layer.msg('请选择任务负责人', {icon: 5});
+                        return;
+                    }
+                    if (!taskEndTime) {
+                        layer.msg('请选择任务截止时间', {icon: 5});
+                        return;
+                    }
+                    if (!taskContent) {
+                        layer.msg('任务内容不能为空', {icon: 5});
+                        return;
+                    }
+
+                    // 获取负责人信息
+                    var execUser = null;
+                    for (var k = 0; k < execUserList.length; k++) {
+                        if (execUserList[k].id == execUserId) {
+                            execUser = execUserList[k];
+                            break;
+                        }
+                    }
+
+                    var taskData = {
+                        projectId: projectId,
+                        execUserId: execUserId,
+                        execUserName: execUser ? execUser.realName : '',
+                        execUserPhone: execUser ? execUser.phone : '',
+                        taskEndTime: taskEndTime,
+                        taskContent: taskContent,
+                        needCar: needCar,
+                        tollFee: tollFee,
+                        mileage: mileage,
+                        deliverType: deliverType ? parseInt(deliverType) : null,
+                        deliverTypeName: deliverType ? deliverTypeMap[deliverType] : '',
+                        remark: remark
+                    };
+
+                    if (editingIndex === -1) {
+                        // 新增
+                        taskData.stageType = 1;
+                        taskData.taskStatus = 0;
+                        taskList.push(taskData);
+                    } else {
+                        // 编辑
+                        taskData.id = taskList[editingIndex].id;
+                        taskData.stageType = taskList[editingIndex].stageType || 1;
+                        taskData.taskStatus = taskList[editingIndex].taskStatus != null ? taskList[editingIndex].taskStatus : 0;
+                        taskList[editingIndex] = taskData;
+                    }
+
+                    renderTaskList();
+                    layer.close(editIndex);
+                });
+
+                // 取消按钮
+                layero.find('#formCancelBtn').on('click', function(){
+                    layer.close(editIndex);
+                });
+            }
+        });
+    }
+
+    // 保存所有任务
+    $('#saveBtn').on('click', function(){
+        if (taskList.length === 0) {
+            layer.msg('请至少添加一条任务', {icon: 5});
+            return;
+        }
+
+        // 验证任务内容
+        for (var i = 0; i < taskList.length; i++) {
+            if (!taskList[i].taskContent || taskList[i].taskContent.trim() === '') {
+                layer.msg('第' + (i+1) + '条任务内容不能为空', {icon: 5});
+                return;
+            }
+        }
+
+        var confirmIndex = layer.confirm('确定保存所有任务吗？保存后将向各任务执行人发送消息通知。', {icon: 3, title: '确认保存'}, function(){
+            $.ajax({
+                url: '/project/task/batchSave',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {token: token},
+                data: JSON.stringify({
+                    projectId: projectId,
+                    taskList: taskList
+                }),
+                success: function(res) {
+                    if (res.code === 200) {
+                        layer.msg('保存成功', {icon: 1}, function(){
+                            // 关闭当前iframe层
+                            var parentIndex = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(parentIndex);
+                        });
+                    } else {
+                        layer.msg(res.msg || '保存失败', {icon: 2});
+                    }
+                },
+                error: function() {
+                    layer.msg('请求失败，请重试', {icon: 2});
+                }
+            });
+            layer.close(confirmIndex);
+        });
+    });
+
+    // 取消
+    $('#cancelBtn').on('click', function(){
+        var parentIndex = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(parentIndex);
+    });
+});
+</script>
+</body>
+</html>

@@ -47,6 +47,9 @@
         .type-hprw { background-color: #a233c6; }
         .type-cdrw { background-color: #ff6600; }
         .type-other { background-color: #999; }
+        .status-not-started { color: #ff5722; }
+        .status-in-progress { color: #1e9fff; }
+        .status-completed { color: #86c566; }
     </style>
 </head>
 <body>
@@ -106,6 +109,13 @@ layui.use(['table', 'layer', 'form'], function(){
         99: {name: '其他', cls: 'type-other'}
     };
 
+    // 项目状态映射
+    var stageStatusMap = {
+        0: {name: '未开始', cls: 'status-not-started'},
+        1: {name: '执行中', cls: 'status-in-progress'},
+        2: {name: '已完成', cls: 'status-completed'}
+    };
+
     // 渲染表格
     table.render({
         elem: '#projectTable',
@@ -123,6 +133,7 @@ layui.use(['table', 'layer', 'form'], function(){
             dataName: 'records'
         },
         cols: [[
+            {type: 'checkbox', width: 50, align: 'center'},
             {type: 'numbers', title: '序号', width: 60, align: 'center'},
             {field: 'projectNo', title: '项目编号', width: 140, align: 'center'},
             {field: 'projectName', title: '项目名称', minWidth: 200},
@@ -130,6 +141,13 @@ layui.use(['table', 'layer', 'form'], function(){
                 var info = projectTypeMap[d.projectType];
                 if (info) {
                     return '<span class="project-type-tag ' + info.cls + '">' + info.name + '</span>';
+                }
+                return '-';
+            }},
+            {field: 'stageStatus', title: '项目状态', width: 100, align: 'center', templet: function(d){
+                var info = stageStatusMap[d.stageStatus];
+                if (info) {
+                    return '<span class="' + info.cls + '">' + info.name + '</span>';
                 }
                 return '-';
             }},
@@ -225,7 +243,22 @@ layui.use(['table', 'layer', 'form'], function(){
             layer.msg('请先选择项目', {icon: 5});
             return;
         }
-        layer.msg('体系作战任务分配功能开发中...', {icon: 0});
+        if (checkData.length !== 1) {
+            layer.msg('请选择一个项目进行任务分配', {icon: 5});
+            return;
+        }
+        var selectedProject = checkData[0];
+        if (selectedProject.stageStatus !== 0) {
+            layer.msg('只能对未开始状态的项目进行体系作战任务分配', {icon: 5});
+            return;
+        }
+        layer.open({
+            type: 2,
+            title: '体系作战任务分配 - ' + selectedProject.projectName,
+            area: ['1100px', '700px'],
+            content: '/projecttb/task_assign.html?projectId=' + selectedProject.id,
+            end: function(){ table.reload('projectTable'); }
+        });
     });
 });
 </script>

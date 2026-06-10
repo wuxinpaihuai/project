@@ -59,10 +59,23 @@ public class ProjectInfoController {
         Page<ProjectInfo> page = new Page<>(pageNum, pageSize);
         Page<ProjectInfo> resultPage = projectInfoService.page(page, wrapper);
 
+        // 为每条项目记录填充项目状态（stage_status）
+        List<ProjectInfo> records = resultPage.getRecords();
+        for (ProjectInfo info : records) {
+            QueryWrapper<ProjectStage> stageWrapper = new QueryWrapper<>();
+            stageWrapper.eq("project_id", info.getId());
+            stageWrapper.eq("stage_type", 1);
+            stageWrapper.orderByDesc("create_time");
+            List<ProjectStage> stages = projectStageService.list(stageWrapper);
+            if (!stages.isEmpty()) {
+                info.setStageStatus(stages.get(0).getStageStatus());
+            }
+        }
+
         result.put("code", 200);
         result.put("msg", "查询成功");
         result.put("total", resultPage.getTotal());
-        result.put("records", resultPage.getRecords());
+        result.put("records", records);
         return result;
     }
 

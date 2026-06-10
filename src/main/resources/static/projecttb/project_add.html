@@ -530,20 +530,15 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
 
         // 加载已上传附件
         $.ajax({
-            url: '/project/info/files/' + projectId,
+        	url: '/project/info/files/' + projectId,
             type: 'GET',
             headers: {token: token},
             success: function(res) {
                 if (res.code === 200 && res.data) {
                     res.data.forEach(function(file) {
-                        var fileName = file.filePath;
-                        // 从路径中提取文件名
-                        if (fileName && fileName.indexOf('/') > -1) {
-                            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
-                        }
                         uploadedFiles.push({
                             filePath: file.filePath,
-                            originalName: fileName
+                            originalName: file.originalName || file.filePath
                         });
                     });
                     renderFileList();
