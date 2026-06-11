@@ -32,17 +32,20 @@
             margin-bottom: 10px; position: relative; background: #fafafa;
         }
         .task-item:hover { border-color: #1e9fff; }
-        .task-item .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .task-item .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .task-item .task-header .task-index { font-weight: bold; color: #1e9fff; font-size: 14px; }
-        .task-item .task-header .task-actions { }
+        .task-item .task-header .task-actions { display: flex; gap: 5px; }
         .task-item .task-actions .layui-btn { margin-left: 5px; }
-        .task-form-row { display: flex; flex-wrap: wrap; gap: 0 15px; }
-        .task-form-row .layui-form-item { width: calc(50% - 8px); margin-bottom: 8px; }
-        .task-form-row .layui-form-item.full-width { width: 100%; }
-        .task-form-row .layui-form-label { width: 90px !important; padding: 9px 8px 9px 0; }
-        .task-form-row .layui-input-inline { width: auto !important; flex: 1; }
+        /* 任务详情表格布局 */
+        .task-detail-table { width: 100%; border-collapse: collapse; }
+        .task-detail-table td { padding: 6px 10px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .task-detail-table td.label-cell { width: 100px; color: #999; text-align: right; white-space: nowrap; }
+        .task-detail-table td.value-cell { color: #333; word-break: break-all; }
+        .task-detail-table tr:last-child td { border-bottom: none; }
         .car-fields { display: none; }
         .car-fields.show { display: flex; }
+        .car-display { display: none; }
+        .car-display.show { display: block; }
         .btn-area { text-align: center; padding: 15px 0; }
         .btn-green { background-color: #86c566 !important; color: #fff !important; border-color: #86c566 !important; }
         .btn-green:hover { background-color: #7ab857 !important; }
@@ -100,58 +103,16 @@
             <button type="button" class="layui-btn layui-btn-xs layui-btn-danger task-del-btn"><i class="layui-icon">&#xe640;</i> 删除</button>
         </div>
     </div>
-    <div class="task-form-row">
-        <div class="layui-form-item">
-            <label class="layui-form-label">任务负责人</label>
-            <div class="layui-input-inline">
-                <span class="task-exec-user-name">{{d.execUserName || '-'}}</span>
-                <input type="hidden" class="task-exec-user-id" value="{{d.execUserId || ''}}">
-                <input type="hidden" class="task-exec-user-phone" value="{{d.execUserPhone || ''}}">
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">任务截止时间</label>
-            <div class="layui-input-inline">
-                <span class="task-end-time">{{d.taskEndTime || '-'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">是否派车</label>
-            <div class="layui-input-inline">
-                <span class="task-need-car">{{d.needCar == 1 ? '是' : '否'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item car-display" style="{{d.needCar == 1 ? '' : 'display:none;'}}">
-            <label class="layui-form-label">通行费</label>
-            <div class="layui-input-inline">
-                <span class="task-toll-fee">{{d.tollFee || '0.00'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item car-display" style="{{d.needCar == 1 ? '' : 'display:none;'}}">
-            <label class="layui-form-label">里程数(公里)</label>
-            <div class="layui-input-inline">
-                <span class="task-mileage">{{d.mileage || '0.00'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item full-width">
-            <label class="layui-form-label">任务内容</label>
-            <div class="layui-input-inline">
-                <span class="task-content">{{d.taskContent || '-'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">交付物</label>
-            <div class="layui-input-inline">
-                <span class="task-deliver-type">{{d.deliverTypeName || '-'}}</span>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">备注</label>
-            <div class="layui-input-inline">
-                <span class="task-remark">{{d.remark || '-'}}</span>
-            </div>
-        </div>
-    </div>
+    <table class="task-detail-table"><tbody>
+    <tr><td class="label-cell">任务负责人</td><td class="value-cell">{{d.execUserName || '-'}}</td>
+        <td class="label-cell">截止时间</td><td class="value-cell">{{d.taskEndTime ? d.taskEndTime.replace('T',' ') : '-'}}</td></tr>
+    <tr><td class="label-cell">是否派车</td><td class="value-cell">{{d.needCar == 1 ? '是' : '否'}}</td>
+        <td class="label-cell">交付物</td><td class="value-cell">{{d.deliverTypeName || '-'}}</td></tr>
+    <tr class="car-display {{d.needCar == 1 ? 'show' : ''}}"><td class="label-cell">通行费</td><td class="value-cell">{{d.tollFee || '0.00'}} 元</td>
+        <td class="label-cell">里程数</td><td class="value-cell">{{d.mileage || '0.00'}} 公里</td></tr>
+    <tr><td class="label-cell">任务内容</td><td class="value-cell" colspan="3">{{d.taskContent || '-'}}</td></tr>
+    <tr><td class="label-cell">备注</td><td class="value-cell" colspan="3">{{d.remark || '-'}}</td></tr>
+    </tbody></table>
 </div>
 </script>
 
@@ -279,7 +240,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
                         $('#fileArea').show();
                         var html = '';
                         for (var i = 0; i < files.length; i++) {
-                            html += '<div class="file-item"><i class="layui-icon">&#xe61e;</i> <a href="' + files[i].filePath + '" target="_blank">' + files[i].originalName + '</a></div>';
+                            html += '<div class="file-item"><i class="layui-icon">&#xe61e;</i> <a href="/file/download?filePath=' + encodeURIComponent(files[i].filePath) + '&fileName=' + encodeURIComponent(files[i].originalName) + '" target="_blank">' + files[i].originalName + '</a></div>';
                         }
                         $('#fileList').html(html);
                     }
@@ -338,7 +299,11 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
 
     function buildTaskItemHtml(task) {
         var needCarText = task.needCar == 1 ? '是' : '否';
-        var carDisplay = task.needCar == 1 ? '' : 'display:none;';
+        var carHtml = '';
+        if (task.needCar == 1) {
+            carHtml += '<tr><td class="label-cell">通行费</td><td class="value-cell">' + (task.tollFee || '0.00') + ' 元</td>';
+            carHtml += '<td class="label-cell">里程数</td><td class="value-cell">' + (task.mileage || '0.00') + ' 公里</td></tr>';
+        }
         var html = '<div class="task-item" data-idx="' + (task.index - 1) + '">';
         html += '<div class="task-header">';
         html += '<span class="task-index">任务 ' + task.index + '</span>';
@@ -346,16 +311,17 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         html += '<button type="button" class="layui-btn layui-btn-xs btn-blue task-edit-btn"><i class="layui-icon">&#xe642;</i> 编辑</button>';
         html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger task-del-btn"><i class="layui-icon">&#xe640;</i> 删除</button>';
         html += '</div></div>';
-        html += '<div class="task-form-row">';
-        html += '<div class="layui-form-item"><label class="layui-form-label">任务负责人</label><div class="layui-input-inline"><span>' + (task.execUserName || '-') + '</span></div></div>';
-        html += '<div class="layui-form-item"><label class="layui-form-label">任务截止时间</label><div class="layui-input-inline"><span>' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</span></div></div>';
-        html += '<div class="layui-form-item"><label class="layui-form-label">是否派车</label><div class="layui-input-inline"><span>' + needCarText + '</span></div></div>';
-        html += '<div class="layui-form-item" style="' + carDisplay + '"><label class="layui-form-label">通行费</label><div class="layui-input-inline"><span>' + (task.tollFee || '0.00') + '</span></div></div>';
-        html += '<div class="layui-form-item" style="' + carDisplay + '"><label class="layui-form-label">里程数(公里)</label><div class="layui-input-inline"><span>' + (task.mileage || '0.00') + '</span></div></div>';
-        html += '<div class="layui-form-item full-width"><label class="layui-form-label">任务内容</label><div class="layui-input-inline"><span>' + (task.taskContent || '-') + '</span></div></div>';
-        html += '<div class="layui-form-item"><label class="layui-form-label">交付物</label><div class="layui-input-inline"><span>' + (task.deliverTypeName || '-') + '</span></div></div>';
-        html += '<div class="layui-form-item"><label class="layui-form-label">备注</label><div class="layui-input-inline"><span>' + (task.remark || '-') + '</span></div></div>';
-        html += '</div></div>';
+        html += '<table class="task-detail-table"><tbody>';
+        html += '<tr><td class="label-cell">任务负责人</td><td class="value-cell">' + (task.execUserName || '-') + '</td>';
+        html += '<td class="label-cell">截止时间</td><td class="value-cell">' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</td></tr>';
+        html += '<tr><td class="label-cell">是否派车</td><td class="value-cell">' + needCarText + '</td>';
+        html += '<td class="label-cell">交付物</td><td class="value-cell">' + (task.deliverTypeName || '-') + '</td></tr>';
+        if (carHtml) {
+            html += carHtml;
+        }
+        html += '<tr><td class="label-cell">任务内容</td><td class="value-cell" colspan="3">' + (task.taskContent || '-') + '</td></tr>';
+        html += '<tr><td class="label-cell">备注</td><td class="value-cell" colspan="3">' + (task.remark || '-') + '</td></tr>';
+        html += '</tbody></table></div>';
         return html;
     }
 
@@ -560,7 +526,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
             }
         }
 
-        var confirmIndex = layer.confirm('确定保存所有任务吗？保存后将向各任务执行人发送消息通知。', {icon: 3, title: '确认保存'}, function(){
+        var confirmIndex = layer.confirm('请确认任务信息正确，保存后无法修改。', {icon: 0, title: '确认保存', btn: ['确认保存', '返回修改']}, function(){
             $.ajax({
                 url: '/project/task/batchSave',
                 type: 'POST',

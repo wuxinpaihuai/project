@@ -7,11 +7,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/file")
@@ -94,5 +99,46 @@ public class FileUploadController {
             result.put("msg", "删除失败");
         }
         return result;
+    }
+
+    /**
+     * 文件下载
+     */
+    @GetMapping("/download")
+    public void download(@RequestParam String filePath, @RequestParam(required = false) String fileName, HttpServletResponse response) {
+        if (!StpUtil.isLogin()) {
+            try {
+                response.setStatus(401);
+                response.getWriter().write("{\"code\":401,\"msg\":\"未登录\"}");
+            } catch (IOException ignored) {}
+            return;
+        }
+
+        File file = new File(uploadPath + File.separator + filePath);
+        if (!file.exists()) {
+            try {
+                response.setStatus(404);
+                response.getWriter().write("{\"code\":404,\"msg\":\"文件不存在\"}");
+            } catch (IOException ignored) {}
+            return;
+        }
+
+        try {
+            // 确定下载文件名
+            String downloadName = (fileName != null && !fileName.isEmpty()) ? fileName : file.getName();
+            String encodedName = URLEncoder.encode(downloadName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20");
+
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName);
+            response.setContentLengthLong(file.length());
+
+            java.nio.file.Files.copy(file.toPath(), response.getOutputStream());
+            response.getOutputStream().flush();
+        } catch (IOException e) {
+            try {
+                response.setStatus(500);
+                response.getWriter().write("{\"code\":500,\"msg\":\"下载失败\"}");
+            } catch (IOException ignored) {}
+        }
     }
 }

@@ -166,7 +166,7 @@ public class ProjectTaskController {
         task.setTaskEndTime(params.get("taskEndTime") != null && !params.get("taskEndTime").toString().isEmpty()
                 ? LocalDateTime.parse(params.get("taskEndTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         task.setDeliverType(params.get("deliverType") != null ? Integer.parseInt(params.get("deliverType").toString()) : null);
-        task.setTaskStatus(0); // 默认未开始
+        task.setTaskStatus(1); // 默认执行中
         task.setTaskDesc((String) params.get("taskDesc"));
         task.setRemark((String) params.get("remark"));
         task.setCreateTime(LocalDateTime.now());
