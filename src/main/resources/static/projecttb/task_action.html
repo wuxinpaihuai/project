@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完成任务</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 8px 30px;
+        }
+        .info-item {
+            display: flex; line-height: 28px; font-size: 14px;
+        }
+        .info-label {
+            color: #666; min-width: 90px; text-align: right; margin-right: 8px;
+        }
+        .info-value {
+            color: #333; flex: 1; word-break: break-all;
+        }
+        .layui-form-label { width: 100px !important; }
+        .layui-input-block { margin-left: 130px !important; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-bar { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e8e8; }
+        .file-item {
+            display: inline-flex; align-items: center; margin-right: 10px; margin-bottom: 5px;
+            padding: 4px 10px; background: #f2f2f2; border-radius: 3px; font-size: 13px;
+        }
+        .file-item .file-name { color: #333; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item .file-del { color: #ff5722; cursor: pointer; margin-left: 8px; font-size: 16px; }
+        .upload-area {
+            border: 2px dashed #e8e8e8; border-radius: 4px; padding: 20px;
+            text-align: center; color: #999; cursor: pointer; margin-top: 10px;
+        }
+        .upload-area:hover { border-color: #1e9fff; color: #1e9fff; }
+        .task-status-0 { color: #ff5722; }
+        .task-status-3 { color: #86c566; }
+        .task-status-4 { color: #ffb800; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- 任务基本信息 -->
+    <div class="info-card">
+        <div class="section-title">任务基本信息</div>
+        <div class="info-grid" id="taskInfoGrid">
+            加载中...
+        </div>
+    </div>
+
+    <!-- 任务完成表单 -->
+    <div class="info-card">
+        <div class="section-title">任务完成信息</div>
+        <form class="layui-form" lay-filter="taskActionForm">
+            <div class="layui-form-item">
+                <label class="layui-form-label">完成说明</label>
+                <div class="layui-input-block">
+                    <textarea name="taskDesc" id="taskDesc" placeholder="请输入任务完成说明" class="layui-textarea" style="height:120px;"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">相关附件</label>
+                <div class="layui-input-block">
+                    <div id="fileList"></div>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="layui-icon" style="font-size:28px;">&#xe67c;</i>
+                        <p>点击上传附件</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="btn-bar">
+                <button type="button" class="layui-btn btn-green" id="submitBtn" style="width:150px;"><i class="layui-icon">&#xe605;</i> 提交任务</button>
+                <button type="button" class="layui-btn btn-orange" id="submitFailBtn" style="width:150px;"><i class="layui-icon">&#xe605;</i> 提交但未完成</button>
+                <button type="button" class="layui-btn layui-btn-primary" id="closeBtn" style="width:120px;">关闭</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var taskId = new URLSearchParams(window.location.search).get('taskId');
+var uploadedFiles = []; // 已上传的附件列表
+
+layui.use(['form', 'layer', 'upload'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+    var upload = layui.upload;
+
+    var taskStatusMap = {
+        0: {name: '未完成', cls: 'task-status-0'},
+        1: {name: '进行中', cls: 'task-status-0'},
+        2: {name: '进行中', cls: 'task-status-0'},
+        3: {name: '已完成', cls: 'task-status-3'},
+        4: {name: '延迟完成', cls: 'task-status-4'},
+        5: {name: '任务失败', cls: 'task-status-0'}
+    };
+
+    var deliverTypeMap = {1: '文档', 2: '表格', 3: '图片', 4: '其他'};
+
+    function formatTime(t) {
+        return t ? t.replace('T', ' ') : '-';
+    }
+
+    // 加载任务详情
+    $.ajax({
+        url: '/project/tb/taskDetail/' + taskId,
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            if (res.code !== 200) {
+                layer.msg(res.msg || '加载失败', {icon: 2});
+                return;
+            }
+            var task = res.task;
+            var project = res.project;
+
+            var statusInfo = taskStatusMap[task.taskStatus] || {name: '-', cls: ''};
+
+            var html = '';
+            html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + (project ? project.projectName : '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">任务分配人：</span><span class="info-value">' + (task.assignUserName || '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + (task.assignUserPhone || '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">任务内容：</span><span class="info-value">' + (task.taskContent || '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">是否派车：</span><span class="info-value">' + (task.needCar === 1 ? '是' : '否') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">通行费：</span><span class="info-value">' + (task.tollFee != null ? parseFloat(task.tollFee).toFixed(2) : '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">里程数：</span><span class="info-value">' + (task.mileage != null ? parseFloat(task.mileage).toFixed(1) : '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">交付类型：</span><span class="info-value">' + (deliverTypeMap[task.deliverType] || '-') + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">任务开始：</span><span class="info-value">' + formatTime(task.taskStartTime) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">任务截止：</span><span class="info-value">' + formatTime(task.taskEndTime) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">当前状态：</span><span class="info-value"><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></span></div>';
+
+            $('#taskInfoGrid').html(html);
+        }
+    });
+
+    // 文件上传
+    upload.render({
+        elem: '#uploadArea',
+        url: '/file/upload',
+        headers: {token: token},
+        multiple: true,
+        auto: true,
+        done: function(res) {
+            if (res.code === 200) {
+                uploadedFiles.push({
+                    filePath: res.data,
+                    fileName: res.originalName || res.data.split('/').pop()
+                });
+                renderFileList();
+            } else {
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+        },
+        error: function() {
+            layer.msg('上传出错', {icon: 2});
+        }
+    });
+
+    // 渲染文件列表
+    function renderFileList() {
+        var html = '';
+        for (var i = 0; i < uploadedFiles.length; i++) {
+            html += '<div class="file-item">';
+            html += '<i class="layui-icon" style="color:#1e9fff;margin-right:5px;">&#xe61e;</i>';
+            html += '<span class="file-name" title="' + uploadedFiles[i].fileName + '">' + uploadedFiles[i].fileName + '</span>';
+            html += '<i class="layui-icon file-del" data-index="' + i + '">&#xe640;</i>';
+            html += '</div>';
+        }
+        $('#fileList').html(html);
+
+        // 绑定删除事件
+        $('.file-del').on('click', function(){
+            var idx = parseInt($(this).attr('data-index'));
+            uploadedFiles.splice(idx, 1);
+            renderFileList();
+        });
+    }
+
+    // 提交任务
+    $('#submitBtn').on('click', function(){
+        var taskDesc = $('#taskDesc').val().trim();
+        if (!taskDesc) {
+            layer.msg('请填写任务完成说明', {icon: 5});
+            return;
+        }
+
+        // 判断是否超期
+        $.ajax({
+            url: '/project/tb/taskDetail/' + taskId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code !== 200) {
+                    layer.msg(res.msg || '获取任务信息失败', {icon: 2});
+                    return;
+                }
+                var task = res.task;
+                var now = new Date();
+                var endTime = task.taskEndTime ? new Date(task.taskEndTime) : null;
+                var isOverdue = endTime && now.getTime() > endTime.getTime();
+                var taskStatus = isOverdue ? 4 : 3; // 4=延迟完成，3=已完成
+
+                doSubmit(taskStatus, taskDesc);
+            }
+        });
+    });
+
+    // 提交但未完成
+    $('#submitFailBtn').on('click', function(){
+        var taskDesc = $('#taskDesc').val().trim();
+        if (!taskDesc) {
+            layer.msg('请填写任务完成说明', {icon: 5});
+            return;
+        }
+        doSubmit(5, taskDesc); // 5=任务失败
+    });
+
+    function doSubmit(taskStatus, taskDesc) {
+        var postData = {
+            taskId: taskId,
+            taskStatus: taskStatus,
+            taskDesc: taskDesc,
+            fileList: uploadedFiles
+        };
+
+        $.ajax({
+            url: '/project/tb/completeTask',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res.code === 200) {
+                    var statusName = taskStatus === 3 ? '已完成' : (taskStatus === 4 ? '延迟完成' : '任务失败');
+                    layer.msg('提交成功（' + statusName + '）', {icon: 1}, function(){
+                        var parentIndex = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(parentIndex);
+                    });
+                } else {
+                    layer.msg(res.msg || '提交失败', {icon: 2});
+                }
+            }
+        });
+    }
+
+    // 关闭
+    $('#closeBtn').on('click', function(){
+        var parentIndex = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(parentIndex);
+    });
+});
+</script>
+</body>
+</html>

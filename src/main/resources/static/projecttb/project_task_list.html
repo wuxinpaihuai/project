@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体系作战任务执行</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 200px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .project-type-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 2px;
+            font-size: 12px; color: #fff;
+        }
+        .type-hp { background-color: #1e9fff; }
+        .type-cd { background-color: #ff5722; }
+        .type-ya { background-color: #ffb800; }
+        .type-ys { background-color: #86c566; }
+        .type-hprw { background-color: #a233c6; }
+        .type-cdrw { background-color: #ff6600; }
+        .type-other { background-color: #999; }
+        .bid-time-warn { color: #ff5722; font-weight: bold; }
+        .bid-time-expired { color: #999; }
+        .task-status-0 { color: #ff5722; }
+        .task-status-3 { color: #86c566; }
+        .task-status-4 { color: #ffb800; }
+        .task-status-5 { color: #999; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- Tab切换 -->
+    <div class="layui-tab layui-tab-brief" lay-filter="mainTab">
+        <ul class="layui-tab-title">
+            <li class="layui-this">项目信息</li>
+            <li>我的任务</li>
+        </ul>
+        <div class="layui-tab-content">
+            <!-- 项目信息Tab -->
+            <div class="layui-tab-item layui-show">
+                <div class="search-card">
+                    <form class="layui-form" lay-filter="projectSearchForm">
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">项目名称</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="projectName" id="searchProjectName" placeholder="请输入项目名称" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">投标时间</label>
+                                <div class="layui-input-inline" style="width:170px !important;">
+                                    <input type="text" name="bidTimeStart" id="searchBidTimeStart" placeholder="开始时间" class="layui-input">
+                                </div>
+                                <div class="layui-form-mid">-</div>
+                                <div class="layui-input-inline" style="width:170px !important;">
+                                    <input type="text" name="bidTimeEnd" id="searchBidTimeEnd" placeholder="结束时间" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                                <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-card">
+                    <div class="toolbar-btns">
+                        <button type="button" class="layui-btn btn-orange" id="bidResultBtn"><i class="layui-icon">&#xe705;</i> 录入/编辑投标结果</button>
+                        <button type="button" class="layui-btn btn-blue" id="signContractBtn"><i class="layui-icon">&#xe66f;</i> 提交签约</button>
+                    </div>
+                    <table id="projectTable" lay-filter="projectTable"></table>
+                </div>
+            </div>
+            <!-- 我的任务Tab -->
+            <div class="layui-tab-item">
+                <div class="table-card">
+                    <table id="myTaskTable" lay-filter="myTaskTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+    var laydate = layui.laydate;
+    var element = layui.element;
+
+    // 日期选择器
+    laydate.render({elem: '#searchBidTimeStart', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss'});
+    laydate.render({elem: '#searchBidTimeEnd', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss'});
+
+    // 项目类型映射
+    var projectTypeMap = {
+        1: {name: '环评', cls: 'type-hp'},
+        2: {name: '场调', cls: 'type-cd'},
+        3: {name: '应急预案', cls: 'type-ya'},
+        4: {name: '验收', cls: 'type-ys'},
+        5: {name: '环评入围', cls: 'type-hprw'},
+        6: {name: '场调入围', cls: 'type-cdrw'},
+        99: {name: '其他', cls: 'type-other'}
+    };
+
+    // 任务状态映射
+    var taskStatusMap = {
+        0: {name: '未完成', cls: 'task-status-0'},
+        1: {name: '进行中', cls: 'task-status-0'},
+        2: {name: '进行中', cls: 'task-status-0'},
+        3: {name: '已完成', cls: 'task-status-3'},
+        4: {name: '延迟完成', cls: 'task-status-4'},
+        5: {name: '任务失败', cls: 'task-status-5'}
+    };
+
+    // 交付物类型映射
+    var deliverTypeMap = {
+        1: '文档', 2: '表格', 3: '图片', 4: '其他'
+    };
+
+    // 渲染项目信息表格
+    table.render({
+        elem: '#projectTable',
+        url: '/project/tb/projectList',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'projectNo', title: '项目编号', width: 140, align: 'center'},
+            {field: 'projectName', title: '项目名称', minWidth: 180},
+            {field: 'projectType', title: '项目类型', width: 110, align: 'center', templet: function(d){
+                var info = projectTypeMap[d.projectType];
+                if (info) {
+                    return '<span class="project-type-tag ' + info.cls + '">' + info.name + '</span>';
+                }
+                return '-';
+            }},
+            {field: 'remark', title: '任务情况', width: 100, align: 'center', templet: function(d){
+                return d.remark || '0/0';
+            }},
+            {field: 'projectAmount', title: '项目金额(元)', width: 130, align: 'right', templet: function(d){
+                return d.projectAmount != null ? parseFloat(d.projectAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+            }},
+            {field: 'area', title: '项目地址', width: 130, align: 'center'},
+            {field: 'bidTime', title: '投标时间', width: 180, align: 'center', templet: function(d){
+                if (!d.bidTime) return '-';
+                var timeStr = d.bidTime.replace('T', ' ');
+                var bidDate = new Date(d.bidTime);
+                var now = new Date();
+                var diffMs = bidDate.getTime() - now.getTime();
+                var diffDays = diffMs / (1000 * 60 * 60 * 24);
+                if (diffDays < 0) {
+                    return '<span class="bid-time-expired">' + timeStr + ' <b>已过期</b></span>';
+                } else if (diffDays <= 1) {
+                    return '<span class="bid-time-warn">' + timeStr + '</span>';
+                }
+                return timeStr;
+            }},
+            {title: '操作', width: 100, align: 'center', fixed: 'right', toolbar: '#projectRowToolbar'}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 渲染我的任务表格
+    table.render({
+        elem: '#myTaskTable',
+        url: '/project/tb/myTaskList',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'assignUserName', title: '任务分配人', width: 100, align: 'center'},
+            {field: 'assignUserPhone', title: '联系方式', width: 120, align: 'center'},
+            {field: 'taskType', title: '任务类型', width: 100, align: 'center', templet: function(d){
+                var typeMap = {1:'标书制作', 2:'现场踏勘', 3:'资质准备', 4:'商务准备', 5:'技术方案', 99:'其他'};
+                return typeMap[d.taskType] || '-';
+            }},
+            {field: 'taskContent', title: '任务内容', minWidth: 180},
+            {field: 'needCar', title: '是否派车', width: 90, align: 'center', templet: function(d){
+                return d.needCar === 1 ? '是' : '否';
+            }},
+            {field: 'tollFee', title: '通行费', width: 90, align: 'right', templet: function(d){
+                return d.tollFee != null ? parseFloat(d.tollFee).toFixed(2) : '-';
+            }},
+            {field: 'mileage', title: '里程数', width: 90, align: 'right', templet: function(d){
+                return d.mileage != null ? parseFloat(d.mileage).toFixed(1) : '-';
+            }},
+            {field: 'taskStartTime', title: '任务开始时间', width: 160, align: 'center', templet: function(d){
+                return d.taskStartTime ? d.taskStartTime.replace('T', ' ') : '-';
+            }},
+            {field: 'taskEndTime', title: '任务结束时间', width: 160, align: 'center', templet: function(d){
+                return d.taskEndTime ? d.taskEndTime.replace('T', ' ') : '-';
+            }},
+            {field: 'deliverType', title: '交付类型', width: 90, align: 'center', templet: function(d){
+                return deliverTypeMap[d.deliverType] || '-';
+            }},
+            {field: 'taskStatus', title: '任务状态', width: 100, align: 'center', templet: function(d){
+                var info = taskStatusMap[d.taskStatus];
+                if (info) {
+                    return '<span class="' + info.cls + '">' + info.name + '</span>';
+                }
+                return '-';
+            }},
+            {field: 'execFinishTime', title: '任务完成时间', width: 160, align: 'center', templet: function(d){
+                return d.execFinishTime ? d.execFinishTime.replace('T', ' ') : '-';
+            }},
+            {title: '操作', width: 100, align: 'center', fixed: 'right', toolbar: '#taskRowToolbar'}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 项目行操作
+    table.on('tool(projectTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'detail') {
+            layer.open({
+                type: 2,
+                title: '项目详情 - ' + data.projectName,
+                area: ['1100px', '700px'],
+                content: '/projecttb/project_tb_detail.html?projectId=' + data.id,
+                end: function(){ table.reload('projectTable'); }
+            });
+        }
+    });
+
+    // 任务行操作
+    table.on('tool(myTaskTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'complete') {
+            layer.open({
+                type: 2,
+                title: '完成任务 - ' + (data.taskContent || ''),
+                area: ['800px', '600px'],
+                content: '/projecttb/task_action.html?taskId=' + data.id,
+                end: function(){ table.reload('myTaskTable'); }
+            });
+        }
+    });
+
+    // 搜索
+    $('#searchBtn').on('click', function(){
+        table.reload('projectTable', {
+            page: {curr: 1},
+            where: {
+                projectName: $('#searchProjectName').val().trim(),
+                bidTimeStart: $('#searchBidTimeStart').val().trim(),
+                bidTimeEnd: $('#searchBidTimeEnd').val().trim()
+            }
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchProjectName').val('');
+        $('#searchBidTimeStart').val('');
+        $('#searchBidTimeEnd').val('');
+        table.reload('projectTable', {
+            page: {curr: 1},
+            where: {projectName: '', bidTimeStart: '', bidTimeEnd: ''}
+        });
+    });
+
+    // 录入/编辑投标结果
+    $('#bidResultBtn').on('click', function(){
+        var checkData = table.checkStatus('projectTable').data;
+        if (checkData.length === 0) {
+            layer.msg('请先选择一个项目', {icon: 5});
+            return;
+        }
+        if (checkData.length !== 1) {
+            layer.msg('请选择一个项目进行操作', {icon: 5});
+            return;
+        }
+        var selectedProject = checkData[0];
+        layer.open({
+            type: 2,
+            title: selectedProject.projectName + ' 的投标详情',
+            area: ['1000px', '650px'],
+            content: '/projecttb/project_tb_result.html?projectId=' + selectedProject.id,
+            end: function(){ table.reload('projectTable'); }
+        });
+    });
+
+    // 提交签约
+    $('#signContractBtn').on('click', function(){
+        var checkData = table.checkStatus('projectTable').data;
+        if (checkData.length === 0) {
+            layer.msg('请先选择一个项目', {icon: 5});
+            return;
+        }
+        if (checkData.length !== 1) {
+            layer.msg('请选择一个项目进行操作', {icon: 5});
+            return;
+        }
+        var selectedProject = checkData[0];
+        layer.confirm('确定要对项目【' + selectedProject.projectName + '】提交签约吗？', {icon: 3, title: '确认签约'}, function(index){
+            $.ajax({
+                url: '/project/tb/signContract',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {token: token},
+                data: JSON.stringify({projectId: selectedProject.id}),
+                success: function(res) {
+                    if (res.code === 200) {
+                        layer.msg('提交签约成功', {icon: 1});
+                    } else {
+                        layer.msg(res.msg || '操作失败', {icon: 2});
+                    }
+                }
+            });
+            layer.close(index);
+        });
+    });
+});
+</script>
+
+<script type="text/html" id="projectRowToolbar">
+    <a class="layui-btn layui-btn-xs btn-blue" lay-event="detail"><i class="layui-icon">&#xe705;</i> 查看详情</a>
+</script>
+
+<script type="text/html" id="taskRowToolbar">
+    {{# if(d.taskStatus === 0 || d.taskStatus === 1 || d.taskStatus === 2){ }}
+    <a class="layui-btn layui-btn-xs btn-green" lay-event="complete"><i class="layui-icon">&#xe669;</i> 完成任务</a>
+    {{# } else { }}
+    <span style="color:#999;font-size:12px;">已处理</span>
+    {{# } }}
+</script>
+</body>
+</html>
