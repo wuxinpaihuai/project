@@ -108,7 +108,7 @@ var uploadedFiles = []; // 已上传的附件列表
 layui.use(['form', 'layer', 'upload'], function(){
     var form = layui.form;
     var layer = layui.layer;
-    var $ = layui.jquery;
+    var $ = layui.$ || layui.jquery;
     var upload = layui.upload;
 
     var taskStatusMap = {
@@ -132,8 +132,8 @@ layui.use(['form', 'layer', 'upload'], function(){
         type: 'GET',
         headers: {token: token},
         success: function(res) {
-            if (res.code !== 200) {
-                layer.msg(res.msg || '加载失败', {icon: 2});
+            if (!res || res.code !== 200) {
+                layer.msg(res && res.msg ? res.msg : '加载失败', {icon: 2});
                 return;
             }
             var task = res.task;

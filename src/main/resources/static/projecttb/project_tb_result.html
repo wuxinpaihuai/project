@@ -18,8 +18,8 @@
             padding-bottom: 10px; margin-bottom: 15px;
             border-bottom: 2px solid #1e9fff;
         }
-        .layui-form-label { width: 100px !important; }
-        .layui-input-block { margin-left: 130px !important; }
+        .layui-form-label { width: 110px !important; }
+        .layui-input-block { margin-left: 140px !important; }
         .layui-input-inline { width: 200px !important; }
         .btn-green {
             background-color: #86c566 !important; color: #fff !important;
@@ -33,23 +33,39 @@
             background-color: #ff5722 !important; color: #fff !important;
             border-color: #ff5722 !important;
         }
-        .bid-row {
-            background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px;
-            padding: 15px; margin-bottom: 10px; position: relative;
-        }
-        .bid-row:hover { border-color: #1e9fff; }
-        .bid-row-index {
-            display: inline-block; background: #1e9fff; color: #fff;
-            width: 24px; height: 24px; line-height: 24px; text-align: center;
-            border-radius: 50%; font-size: 12px; margin-right: 8px;
-        }
-        .bid-row .del-btn {
-            position: absolute; top: 10px; right: 10px;
-            cursor: pointer; color: #ff5722; font-size: 18px;
-        }
-        .bid-row .del-btn:hover { color: #d43f2a; }
-        .btn-bar { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e8e8; }
         .win-bid-amount-box { display: none; margin-top: 10px; }
+        .btn-bar { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e8e8; }
+
+        /* 表格内输入框样式 */
+        #bidScoreTable { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        #bidScoreTable th {
+            background: #f2f2f2; font-weight: bold; text-align: center;
+            padding: 8px 5px; font-size: 13px; border: 1px solid #e6e6e6;
+            white-space: nowrap;
+        }
+        #bidScoreTable td {
+            padding: 6px 5px; text-align: center; border: 1px solid #e6e6e6;
+            font-size: 13px;
+        }
+        #bidScoreTable tr:hover td { background: #fafafa; }
+        #bidScoreTable input {
+            width: 100%; border: 1px solid #ddd; border-radius: 2px;
+            padding: 4px 6px; font-size: 13px; text-align: center;
+            background: #fff;
+        }
+        #bidScoreTable input:focus {
+            border-color: #1e9fff; outline: none;
+        }
+        #bidScoreTable .bid-company-input { text-align: left; min-width: 120px; }
+        #bidScoreTable .bid-price-input { min-width: 90px; }
+        #bidScoreTable .bid-score-input { min-width: 70px; }
+        .del-row-btn {
+            color: #ff5722; cursor: pointer; font-size: 16px;
+        }
+        .del-row-btn:hover { color: #d43f2a; }
+        .add-row-bar {
+            margin-top: 10px; text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -73,14 +89,31 @@
                 </div>
             </div>
 
-            <!-- 投标单位得分情况 -->
+            <!-- 投标单位得分情况 - 表格形式 -->
             <div style="margin-top:20px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                     <span style="font-weight:bold;font-size:14px;">投标单位得分情况</span>
-                    <button type="button" class="layui-btn layui-btn-sm btn-blue" id="addBidRowBtn"><i class="layui-icon">&#xe654;</i> 新增一条</button>
+                    <button type="button" class="layui-btn layui-btn-sm btn-blue" id="addBidRowBtn"><i class="layui-icon">&#xe654;</i> 新增一行</button>
                 </div>
-                <div id="bidListContainer">
-                    <!-- 动态添加投标单位行 -->
+                <div style="overflow-x:auto;">
+                    <table id="bidScoreTable">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;">序号</th>
+                                <th style="min-width:140px;">投标单位名称</th>
+                                <th style="min-width:100px;">报价</th>
+                                <th style="min-width:80px;">报价得分</th>
+                                <th style="min-width:80px;">商务得分</th>
+                                <th style="min-width:80px;">技术得分</th>
+                                <th style="min-width:80px;">最终得分</th>
+                                <th style="min-width:70px;">最终排名</th>
+                                <th style="width:50px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bidScoreBody">
+                            <!-- 动态行 -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -97,21 +130,21 @@
 <script>
 var token = localStorage.getItem('token');
 var projectId = new URLSearchParams(window.location.search).get('projectId');
-var bidIndex = 0;
+var rowIndex = 0;
 
 layui.use(['form', 'layer'], function(){
     var form = layui.form;
     var layer = layui.layer;
-    var $ = layui.jquery;
+    var $ = layui.$ || layui.jquery;
 
-    // 加载已有数据
+    // ========== 加载已有数据 ==========
     $.ajax({
         url: '/project/tb/bidResult/' + projectId,
         type: 'GET',
         headers: {token: token},
         success: function(res) {
-            if (res.code !== 200) {
-                layer.msg(res.msg || '加载失败', {icon: 2});
+            if (!res || res.code !== 200) {
+                layer.msg(res && res.msg ? res.msg : '加载失败', {icon: 2});
                 return;
             }
             var project = res.project;
@@ -139,10 +172,17 @@ layui.use(['form', 'layer'], function(){
             } else {
                 addBidRow();
             }
+        },
+        error: function(xhr) {
+            var msg = '加载投标数据失败';
+            if (xhr.status === 401) msg = '登录已过期';
+            else if (xhr.status === 404) msg = '接口不存在';
+            else if (xhr.status === 500) msg = '服务器错误';
+            layer.msg(msg, {icon: 2});
         }
     });
 
-    // 是否中标切换
+    // ========== 是否中标切换 ==========
     form.on('radio(isWinBid)', function(data){
         if (data.value === '1') {
             $('#winBidAmountBox').show();
@@ -152,46 +192,43 @@ layui.use(['form', 'layer'], function(){
         }
     });
 
-    // 添加投标单位行
+    // ========== 添加投标单位行 ==========
     function addBidRow(data) {
-        bidIndex++;
-        var idx = bidIndex;
-        var html = '<div class="bid-row" id="bidRow_' + idx + '">';
-        html += '<span class="bid-row-index">' + idx + '</span>';
-        html += '<i class="layui-icon del-btn" onclick="removeBidRow(' + idx + ')">&#xe640;</i>';
-        html += '<div class="layui-form-item" style="margin-bottom:5px;">';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">投标单位名</label><div class="layui-input-inline" style="width:220px!important;"><input type="text" class="layui-input bid-company-name" value="' + (data && data.bidCompanyName ? data.bidCompanyName : '') + '" placeholder="投标单位名称"></div></div>';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:50px!important;">报价</label><div class="layui-input-inline" style="width:150px!important;"><input type="text" class="layui-input bid-price" value="' + (data && data.bidPrice ? data.bidPrice : '') + '" placeholder="报价"></div></div>';
-        html += '</div>';
-        html += '<div class="layui-form-item" style="margin-bottom:0;">';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">报价得分</label><div class="layui-input-inline" style="width:100px!important;"><input type="number" step="0.01" class="layui-input price-score" value="' + (data && data.priceScore != null ? data.priceScore : '') + '" placeholder="0"></div></div>';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">商务得分</label><div class="layui-input-inline" style="width:100px!important;"><input type="number" step="0.01" class="layui-input business-score" value="' + (data && data.businessScore != null ? data.businessScore : '') + '" placeholder="0"></div></div>';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">技术得分</label><div class="layui-input-inline" style="width:100px!important;"><input type="number" step="0.01" class="layui-input tech-score" value="' + (data && data.techScore != null ? data.techScore : '') + '" placeholder="0"></div></div>';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">最终得分</label><div class="layui-input-inline" style="width:100px!important;"><input type="number" step="0.01" class="layui-input final-score" value="' + (data && data.finalScore != null ? data.finalScore : '') + '" placeholder="0"></div></div>';
-        html += '<div class="layui-inline"><label class="layui-form-label" style="width:90px!important;">最终排名</label><div class="layui-input-inline" style="width:80px!important;"><input type="number" class="layui-input final-rank" value="' + (data && data.finalRank != null ? data.finalRank : '') + '" placeholder="0"></div></div>';
-        html += '</div>';
-        html += '</div>';
-        $('#bidListContainer').append(html);
+        rowIndex++;
+        var d = data || {};
+        var html = '<tr data-rid="' + rowIndex + '">';
+        html += '<td class="row-num">' + rowIndex + '</td>';
+        html += '<td><input type="text" class="bid-company-input" value="' + (d.bidCompanyName || '') + '" placeholder="单位名称"></td>';
+        html += '<td><input type="text" class="bid-price-input" value="' + (d.bidPrice || '') + '" placeholder="报价"></td>';
+        html += '<td><input type="number" step="0.01" class="bid-score-input price-score" value="' + (d.priceScore != null ? d.priceScore : '') + '" placeholder="0"></td>';
+        html += '<td><input type="number" step="0.01" class="bid-score-input business-score" value="' + (d.businessScore != null ? d.businessScore : '') + '" placeholder="0"></td>';
+        html += '<td><input type="number" step="0.01" class="bid-score-input tech-score" value="' + (d.techScore != null ? d.techScore : '') + '" placeholder="0"></td>';
+        html += '<td><input type="number" step="0.01" class="bid-score-input final-score" value="' + (d.finalScore != null ? d.finalScore : '') + '" placeholder="0"></td>';
+        html += '<td><input type="number" class="bid-score-input final-rank" value="' + (d.finalRank != null ? d.finalRank : '') + '" placeholder="0"></td>';
+        html += '<td><i class="layui-icon del-row-btn" onclick="removeBidRow(this)">&#xe640;</i></td>';
+        html += '</tr>';
+        $('#bidScoreBody').append(html);
     }
 
-    // 暴露给全局
-    window.removeBidRow = function(idx) {
-        $('#bidRow_' + idx).remove();
+    // ========== 删除投标单位行 ==========
+    window.removeBidRow = function(el) {
+        $(el).closest('tr').remove();
         // 重新编号
-        $('.bid-row').each(function(i){
-            $(this).find('.bid-row-index').text(i + 1);
+        $('#bidScoreBody tr').each(function(i){
+            $(this).find('.row-num').text(i + 1);
         });
     };
 
-    // 新增投标单位按钮
+    // ========== 新增行按钮 ==========
     $('#addBidRowBtn').on('click', function(){
         addBidRow();
     });
 
-    // 保存
+    // ========== 保存 ==========
     $('#saveBtn').on('click', function(){
         var isWinBid = $('input[name="isWinBid"]:checked').val();
-        var winBidAmount = $('#winBidAmount').val().trim();
+        var winBidAmount = $('#winBidAmount').val();
+        if (winBidAmount) winBidAmount = winBidAmount.trim();
 
         // 校验：中标时必须填写金额
         if (isWinBid === '1' && !winBidAmount) {
@@ -202,8 +239,9 @@ layui.use(['form', 'layer'], function(){
         // 收集投标单位数据
         var bidList = [];
         var valid = true;
-        $('.bid-row').each(function(){
-            var companyName = $(this).find('.bid-company-name').val().trim();
+        $('#bidScoreBody tr').each(function(){
+            var companyName = $(this).find('.bid-company-input').val();
+            if (companyName) companyName = companyName.trim();
             if (!companyName) {
                 layer.msg('投标单位名称不能为空', {icon: 5});
                 valid = false;
@@ -211,12 +249,12 @@ layui.use(['form', 'layer'], function(){
             }
             bidList.push({
                 bidCompanyName: companyName,
-                bidPrice: $(this).find('.bid-price').val().trim(),
-                priceScore: $(this).find('.price-score').val().trim(),
-                businessScore: $(this).find('.business-score').val().trim(),
-                techScore: $(this).find('.tech-score').val().trim(),
-                finalScore: $(this).find('.final-score').val().trim(),
-                finalRank: $(this).find('.final-rank').val().trim()
+                bidPrice: $(this).find('.bid-price-input').val() ? $(this).find('.bid-price-input').val().trim() : '',
+                priceScore: $(this).find('.price-score').val() ? $(this).find('.price-score').val().trim() : '',
+                businessScore: $(this).find('.business-score').val() ? $(this).find('.business-score').val().trim() : '',
+                techScore: $(this).find('.tech-score').val() ? $(this).find('.tech-score').val().trim() : '',
+                finalScore: $(this).find('.final-score').val() ? $(this).find('.final-score').val().trim() : '',
+                finalRank: $(this).find('.final-rank').val() ? $(this).find('.final-rank').val().trim() : ''
             });
         });
 
@@ -225,9 +263,14 @@ layui.use(['form', 'layer'], function(){
         var postData = {
             projectId: projectId,
             isWinBid: parseInt(isWinBid),
-            winBidAmount: winBidAmount,
+            winBidAmount: winBidAmount || '',
             bidList: bidList
         };
+
+        // 保存按钮禁用防重复提交
+        var $btn = $('#saveBtn');
+        if ($btn.hasClass('layui-btn-disabled')) return;
+        $btn.addClass('layui-btn-disabled').prop('disabled', true);
 
         $.ajax({
             url: '/project/tb/saveBidResult',
@@ -236,19 +279,27 @@ layui.use(['form', 'layer'], function(){
             headers: {token: token},
             data: JSON.stringify(postData),
             success: function(res) {
-                if (res.code === 200) {
+                $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                if (res && res.code === 200) {
                     layer.msg('保存成功', {icon: 1}, function(){
                         var parentIndex = parent.layer.getFrameIndex(window.name);
                         parent.layer.close(parentIndex);
                     });
                 } else {
-                    layer.msg(res.msg || '保存失败', {icon: 2});
+                    layer.msg(res && res.msg ? res.msg : '保存失败', {icon: 2});
                 }
+            },
+            error: function(xhr) {
+                $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                var msg = '保存请求失败';
+                if (xhr.status === 401) msg = '登录已过期';
+                else if (xhr.status === 500) msg = '服务器内部错误';
+                layer.msg(msg, {icon: 2});
             }
         });
     });
 
-    // 取消
+    // ========== 取消 ==========
     $('#cancelBtn').on('click', function(){
         var parentIndex = parent.layer.getFrameIndex(window.name);
         parent.layer.close(parentIndex);

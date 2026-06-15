@@ -64,6 +64,7 @@
         .win-tag { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; color: #fff; }
         .win-yes { background-color: #86c566; }
         .win-no { background-color: #999; }
+        .error-msg { color: red; text-align: center; padding: 50px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -78,7 +79,17 @@ var projectId = new URLSearchParams(window.location.search).get('projectId');
 
 layui.use(['layer'], function(){
     var layer = layui.layer;
-    var $ = layui.jquery;
+    var $ = layui.$ || layui.jquery;
+
+    if (!projectId) {
+        $('#detailContent').html('<p class="error-msg">缺少项目ID参数</p>');
+        return;
+    }
+
+    if (!token) {
+        $('#detailContent').html('<p class="error-msg">未登录或登录已过期，请重新登录</p>');
+        return;
+    }
 
     var projectTypeMap = {
         1: {name: '环评', cls: 'type-hp'},
@@ -106,7 +117,14 @@ layui.use(['layer'], function(){
     }
 
     function formatAmount(v) {
-        return v != null ? parseFloat(v).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+        if (v == null) return '-';
+        var n = parseFloat(v);
+        if (isNaN(n)) return '-';
+        return n.toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    function safeStr(v) {
+        return (v != null && v !== '') ? String(v) : '-';
     }
 
     // 加载详情数据
@@ -115,151 +133,169 @@ layui.use(['layer'], function(){
         type: 'GET',
         headers: {token: token},
         success: function(res) {
-            if (res.code !== 200) {
-                $('#detailContent').html('<p style="color:red;text-align:center;padding:50px;">' + (res.msg || '加载失败') + '</p>');
-                return;
-            }
+            try {
+                if (!res || res.code !== 200) {
+                    $('#detailContent').html('<p class="error-msg">' + (res && res.msg ? res.msg : '加载失败') + '</p>');
+                    return;
+                }
 
-            var p = res.project;
-            var files = res.files || [];
-            var tasks = res.tasks || [];
-            var extend = res.extend;
-            var bidResults = res.bidResults || [];
+                var p = res.project;
+                var files = res.files || [];
+                var tasks = res.tasks || [];
+                var extend = res.extend;
+                var bidResults = res.bidResults || [];
 
-            var html = '';
+                if (!p) {
+                    $('#detailContent').html('<p class="error-msg">项目数据为空</p>');
+                    return;
+                }
 
-            // 第一大模块：项目基本信息
-            html += '<div class="info-card">';
-            html += '<div class="section-title">一、项目基本信息</div>';
-            html += '<div class="info-grid">';
-            html += '<div class="info-item"><span class="info-label">项目编号：</span><span class="info-value">' + (p.projectNo || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + (p.projectName || '-') + '</span></div>';
-            var ptInfo = projectTypeMap[p.projectType];
-            html += '<div class="info-item"><span class="info-label">项目类型：</span><span class="info-value">' + (ptInfo ? '<span class="project-type-tag ' + ptInfo.cls + '">' + ptInfo.name + '</span>' : '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">项目金额：</span><span class="info-value">' + formatAmount(p.projectAmount) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">项目区域：</span><span class="info-value">' + (p.area || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">业主单位：</span><span class="info-value">' + (p.ownerCompany || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + (p.ownerContact || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + (p.ownerPhone || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">投标时间：</span><span class="info-value">' + formatTime(p.bidTime) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">项目来源：</span><span class="info-value">' + (p.projectSource || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">报价类型：</span><span class="info-value">' + (p.priceType === 1 ? '金额' : (p.priceType === 0 ? '其他' : '-')) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">最高限价：</span><span class="info-value">' + formatAmount(p.maxPrice) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">最低限价：</span><span class="info-value">' + formatAmount(p.minPrice) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">投标保证金：</span><span class="info-value">' + formatAmount(p.bidDeposit) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">资质要求：</span><span class="info-value">' + (p.qualificationRequire || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">招标网站：</span><span class="info-value">' + (p.bidWebsite || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">备注：</span><span class="info-value">' + (p.remark || '-') + '</span></div>';
-            html += '</div>';
+                var html = '';
 
-            // 附件
-            if (files.length > 0) {
-                html += '<div style="margin-top:15px;"><strong>附件：</strong>';
-                for (var i = 0; i < files.length; i++) {
-                    var f = files[i];
-                    html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(f.filePath) + '&fileName=' + encodeURIComponent(f.originalName) + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (f.originalName || '附件' + (i+1)) + '</a></div>';
+                // ========== 第一大模块：项目基本信息 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">一、项目基本信息</div>';
+                html += '<div class="info-grid">';
+                html += '<div class="info-item"><span class="info-label">项目编号：</span><span class="info-value">' + safeStr(p.projectNo) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + safeStr(p.projectName) + '</span></div>';
+                var ptInfo = projectTypeMap[p.projectType];
+                html += '<div class="info-item"><span class="info-label">项目类型：</span><span class="info-value">' + (ptInfo ? '<span class="project-type-tag ' + ptInfo.cls + '">' + ptInfo.name + '</span>' : '-') + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目金额：</span><span class="info-value">' + formatAmount(p.projectAmount) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目地址：</span><span class="info-value">' + safeStr(p.area) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">业主单位：</span><span class="info-value">' + safeStr(p.ownerCompany) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + safeStr(p.ownerContact) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + safeStr(p.ownerPhone) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">投标时间：</span><span class="info-value">' + formatTime(p.bidTime) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目来源：</span><span class="info-value">' + safeStr(p.projectSource) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">报价类型：</span><span class="info-value">' + (p.priceType === 1 ? '金额' : (p.priceType === 0 ? '其他' : '-')) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">最高限价：</span><span class="info-value">' + formatAmount(p.maxPrice) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">最低限价：</span><span class="info-value">' + formatAmount(p.minPrice) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">投标保证金：</span><span class="info-value">' + formatAmount(p.bidDeposit) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">资质要求：</span><span class="info-value">' + safeStr(p.qualificationRequire) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">招标网站：</span><span class="info-value">' + safeStr(p.bidWebsite) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">备注：</span><span class="info-value">' + safeStr(p.remark) + '</span></div>';
+                html += '</div>';
+
+                // 附件
+                if (files.length > 0) {
+                    html += '<div style="margin-top:15px;"><strong>附件：</strong>';
+                    for (var i = 0; i < files.length; i++) {
+                        var f = files[i];
+                        html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(f.filePath || '') + '&fileName=' + encodeURIComponent(f.originalName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (f.originalName || '附件' + (i+1)) + '</a></div>';
+                    }
+                    html += '</div>';
                 }
                 html += '</div>';
-            }
-            html += '</div>';
 
-            // 第二大模块：体系作战任务执行情况
-            html += '<div class="info-card">';
-            html += '<div class="section-title">二、体系作战任务执行情况</div>';
-            if (tasks.length === 0) {
-                html += '<p style="color:#999;text-align:center;padding:20px;">暂无任务</p>';
-            } else {
-                html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
-                html += '<colgroup>';
-                html += '<col width="80"><col width="80"><col width="110"><col><col width="80"><col width="80"><col width="80"><col width="160"><col width="160"><col width="100">';
-                html += '</colgroup>';
-                html += '<thead><tr>';
-                html += '<th>序号</th><th>负责人</th><th>联系方式</th><th>任务内容</th><th>交付类型</th><th>完成时间</th><th>完成描述</th><th>交付物</th><th>任务截止</th><th>状态</th>';
-                html += '</tr></thead><tbody>';
+                // ========== 第二大模块：体系作战任务执行情况 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">二、体系作战任务执行情况</div>';
+                if (tasks.length === 0) {
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无任务</p>';
+                } else {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr>';
+                    html += '<th>序号</th><th>负责人</th><th>联系方式</th><th>任务内容</th><th>交付类型</th><th>完成描述</th><th>交付物</th><th>任务截止</th><th>完成时间</th><th>状态</th>';
+                    html += '</tr></thead><tbody>';
+                    for (var i = 0; i < tasks.length; i++) {
+                        var t = tasks[i];
+                        var statusInfo = taskStatusMap[t.taskStatus] || {name: '-', cls: ''};
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(t.execUserName) + '</td>';
+                        html += '<td>' + safeStr(t.execUserPhone) + '</td>';
+                        html += '<td>' + safeStr(t.taskContent) + '</td>';
+                        html += '<td>' + (deliverTypeMap[t.deliverType] || '-') + '</td>';
+                        html += '<td>' + safeStr(t.completeDesc) + '</td>';
+                        html += '<td id="taskAttach_' + t.id + '">-</td>';
+                        html += '<td>' + formatTime(t.endTime) + '</td>';
+                        html += '<td>' + formatTime(t.completeTime) + '</td>';
+                        html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                }
+                html += '</div>';
+
+                // ========== 第三大模块：投标结果 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">三、投标结果</div>';
+
+                var isWinBid = extend && extend.isWinBid === 1;
+                html += '<div style="margin-bottom:15px;">';
+                html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">是否中标：</span>';
+                html += isWinBid ? '<span class="win-tag win-yes">是</span>' : '<span class="win-tag win-no">否</span>';
+                if (isWinBid && extend.winBidAmount) {
+                    html += '<span style="margin-left:15px;color:#333;">中标金额/费率：' + safeStr(extend.winBidAmount) + '</span>';
+                }
+                html += '</div>';
+
+                if (bidResults.length > 0) {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr>';
+                    html += '<th>序号</th><th>投标单位名称</th><th>报价</th><th>报价得分</th><th>商务得分</th><th>技术得分</th><th>最终得分</th><th>最终排名</th>';
+                    html += '</tr></thead><tbody>';
+                    for (var i = 0; i < bidResults.length; i++) {
+                        var b = bidResults[i];
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(b.bidCompanyName) + '</td>';
+                        html += '<td>' + safeStr(b.bidPrice) + '</td>';
+                        html += '<td>' + (b.priceScore != null ? b.priceScore : '-') + '</td>';
+                        html += '<td>' + (b.businessScore != null ? b.businessScore : '-') + '</td>';
+                        html += '<td>' + (b.techScore != null ? b.techScore : '-') + '</td>';
+                        html += '<td>' + (b.finalScore != null ? b.finalScore : '-') + '</td>';
+                        html += '<td>' + (b.finalRank != null ? b.finalRank : '-') + '</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无投标结果数据</p>';
+                }
+                html += '</div>';
+
+                $('#detailContent').html(html);
+
+                // 异步加载每个任务的附件
                 for (var i = 0; i < tasks.length; i++) {
-                    var t = tasks[i];
-                    var statusInfo = taskStatusMap[t.taskStatus] || {name: '-', cls: ''};
-                    html += '<tr>';
-                    html += '<td>' + (i+1) + '</td>';
-                    html += '<td>' + (t.execUserName || '-') + '</td>';
-                    html += '<td>' + (t.execUserPhone || '-') + '</td>';
-                    html += '<td>' + (t.taskContent || '-') + '</td>';
-                    html += '<td>' + (deliverTypeMap[t.deliverType] || '-') + '</td>';
-                    html += '<td>' + formatTime(t.execFinishTime) + '</td>';
-                    html += '<td>' + (t.taskDesc || '-') + '</td>';
-                    html += '<td id="taskAttach_' + t.id + '">加载中...</td>';
-                    html += '<td>' + formatTime(t.taskEndTime) + '</td>';
-                    html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
-                    html += '</tr>';
-                }
-                html += '</tbody></table>';
-            }
-            html += '</div>';
-
-            // 第三大模块：投标结果
-            html += '<div class="info-card">';
-            html += '<div class="section-title">三、投标结果</div>';
-
-            // 是否中标
-            var isWinBid = extend && extend.isWinBid === 1;
-            html += '<div style="margin-bottom:15px;">';
-            html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">是否中标：</span>';
-            html += isWinBid ? '<span class="win-tag win-yes">是</span>' : '<span class="win-tag win-no">否</span>';
-            if (isWinBid && extend.winBidAmount) {
-                html += '<span style="margin-left:15px;color:#333;">中标金额/费率：' + extend.winBidAmount + '</span>';
-            }
-            html += '</div>';
-
-            // 投标单位得分
-            if (bidResults.length > 0) {
-                html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
-                html += '<thead><tr>';
-                html += '<th>序号</th><th>投标单位名称</th><th>报价</th><th>报价得分</th><th>商务得分</th><th>技术得分</th><th>最终得分</th><th>最终排名</th>';
-                html += '</tr></thead><tbody>';
-                for (var i = 0; i < bidResults.length; i++) {
-                    var b = bidResults[i];
-                    html += '<tr>';
-                    html += '<td>' + (i+1) + '</td>';
-                    html += '<td>' + (b.bidCompanyName || '-') + '</td>';
-                    html += '<td>' + (b.bidPrice || '-') + '</td>';
-                    html += '<td>' + (b.priceScore != null ? b.priceScore : '-') + '</td>';
-                    html += '<td>' + (b.businessScore != null ? b.businessScore : '-') + '</td>';
-                    html += '<td>' + (b.techScore != null ? b.techScore : '-') + '</td>';
-                    html += '<td>' + (b.finalScore != null ? b.finalScore : '-') + '</td>';
-                    html += '<td>' + (b.finalRank != null ? b.finalRank : '-') + '</td>';
-                    html += '</tr>';
-                }
-                html += '</tbody></table>';
-            } else {
-                html += '<p style="color:#999;text-align:center;padding:20px;">暂无投标结果数据</p>';
-            }
-            html += '</div>';
-
-            $('#detailContent').html(html);
-
-            // 异步加载每个任务的附件
-            for (var i = 0; i < tasks.length; i++) {
-                (function(taskId){
-                    $.ajax({
-                        url: '/project/tb/taskAttachments/' + taskId,
-                        type: 'GET',
-                        headers: {token: token},
-                        success: function(res) {
-                            var el = $('#taskAttach_' + taskId);
-                            if (res.code === 200 && res.data && res.data.length > 0) {
-                                var attachHtml = '';
-                                for (var j = 0; j < res.data.length; j++) {
-                                    var a = res.data[j];
-                                    attachHtml += '<a href="/file/download?filePath=' + encodeURIComponent(a.filePath) + '&fileName=' + encodeURIComponent(a.fileName) + '" target="_blank" style="color:#1e9fff;margin-right:8px;">' + (a.fileName || '附件') + '</a>';
+                    (function(taskId){
+                        $.ajax({
+                            url: '/project/tb/taskAttachments/' + taskId,
+                            type: 'GET',
+                            headers: {token: token},
+                            success: function(res2) {
+                                var el = $('#taskAttach_' + taskId);
+                                if (el.length && res2 && res2.code === 200 && res2.data && res2.data.length > 0) {
+                                    var attachHtml = '';
+                                    for (var j = 0; j < res2.data.length; j++) {
+                                        var a = res2.data[j];
+                                        attachHtml += '<a href="/file/download?filePath=' + encodeURIComponent(a.filePath || '') + '&fileName=' + encodeURIComponent(a.fileName || '') + '" target="_blank" style="color:#1e9fff;margin-right:8px;">' + (a.fileName || '附件') + '</a>';
+                                    }
+                                    el.html(attachHtml);
                                 }
-                                el.html(attachHtml);
-                            } else {
-                                el.html('-');
+                            },
+                            error: function() {
+                                // 附件加载失败不阻塞页面
                             }
-                        }
-                    });
-                })(tasks[i].id);
+                        });
+                    })(tasks[i].id);
+                }
+            } catch(e) {
+                $('#detailContent').html('<p class="error-msg">页面渲染异常：' + e.message + '</p>');
             }
+        },
+        error: function(xhr, status, err) {
+            var msg = '请求失败';
+            if (xhr.status === 401) {
+                msg = '登录已过期，请重新登录';
+            } else if (xhr.status === 404) {
+                msg = '接口不存在(404)';
+            } else if (xhr.status === 500) {
+                msg = '服务器内部错误(500)';
+            } else if (status === 'timeout') {
+                msg = '请求超时';
+            }
+            $('#detailContent').html('<p class="error-msg">' + msg + '</p>');
         }
     });
 });
