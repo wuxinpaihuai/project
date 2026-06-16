@@ -48,6 +48,10 @@ public class ProjectInfo {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
+    private Long bisnessUserId;
+    private String bisnessUserName;
+    private String bisnessUserPhone;
+    
     /** 项目状态（非数据库字段，来自project_stage.stage_status） */
     @TableField(exist = false)
     private Integer stageStatus;
@@ -130,6 +134,24 @@ public class ProjectInfo {
 	}
 	public void setStageType(Integer stageType) {
 		this.stageType = stageType;
+	}
+	public Long getBisnessUserId() {
+		return bisnessUserId;
+	}
+	public void setBisnessUserId(Long bisnessUserId) {
+		this.bisnessUserId = bisnessUserId;
+	}
+	public String getBisnessUserName() {
+		return bisnessUserName;
+	}
+	public void setBisnessUserName(String bisnessUserName) {
+		this.bisnessUserName = bisnessUserName;
+	}
+	public String getBisnessUserPhone() {
+		return bisnessUserPhone;
+	}
+	public void setBisnessUserPhone(String bisnessUserPhone) {
+		this.bisnessUserPhone = bisnessUserPhone;
 	}
     
     

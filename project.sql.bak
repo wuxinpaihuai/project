@@ -90,9 +90,6 @@ CREATE TABLE `project_info` (
   `document_binding_fee` decimal(10,2) DEFAULT NULL COMMENT '标书装订费',
   `remark` varchar(1000) DEFAULT NULL COMMENT '备注',
   `content_detail` text DEFAULT NULL COMMENT '项目详细内容',
-  `bisness_user_id` bigint DEFAULT NULL COMMENT '业务员用户ID',
-  `bisness_user_name` varchar(50) DEFAULT NULL COMMENT '业务员姓名',
-  `bisness_user_phone` varchar(20) DEFAULT NULL COMMENT '业务员手机号',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   
