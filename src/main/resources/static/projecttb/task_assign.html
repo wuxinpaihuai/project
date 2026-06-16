@@ -108,7 +108,7 @@
         <td class="label-cell">任务负责人</td><td class="value-cell">{{d.execUserName || '-'}}</td></tr>
     <tr><td class="label-cell">截止时间</td><td class="value-cell">{{d.taskEndTime ? d.taskEndTime.replace('T',' ') : '-'}}</td>
         <td class="label-cell">是否派车</td><td class="value-cell">{{d.needCar == 1 ? '是' : '否'}}</td>
-        <td class="label-cell">交付物</td><td class="value-cell">{{d.deliverTypeName || '-'}}</td></tr>
+        <td class="label-cell">工作成果</td><td class="value-cell">{{d.deliverTypeName || '-'}}</td></tr>
     <tr class="car-display {{d.needCar == 1 ? 'show' : ''}}"><td class="label-cell">通行费</td><td class="value-cell">{{d.tollFee || '0.00'}} 元</td>
         <td class="label-cell">里程数</td><td class="value-cell">{{d.mileage || '0.00'}} 公里</td></tr>
     <tr><td class="label-cell">任务内容</td><td class="value-cell" colspan="3">{{d.taskContent || '-'}}</td></tr>
@@ -160,10 +160,10 @@
             </div>
         </div>
         <div class="layui-form-item">
-            <label class="layui-form-label">交付物</label>
+            <label class="layui-form-label">工作成果</label>
             <div class="layui-input-block">
                 <select name="deliverType" id="formDeliverType">
-                    <option value="">请选择交付物类型</option>
+                    <option value="">工作成果类型</option>
                     <option value="1">文档</option>
                     <option value="2">表格</option>
                     <option value="3">图片</option>
@@ -318,7 +318,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         html += '<td class="label-cell">任务负责人</td><td class="value-cell">' + (task.execUserName || '-') + '</td></tr>';
         html += '<tr><td class="label-cell">截止时间</td><td class="value-cell">' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</td>';
         html += '<td class="label-cell">是否派车</td><td class="value-cell">' + needCarText + '</td></tr>';
-        html += '<tr><td class="label-cell">交付物</td><td class="value-cell" colspan="3">' + (task.deliverTypeName || '-') + '</td></tr>';
+        html += '<tr><td class="label-cell">工作成果</td><td class="value-cell" colspan="3">' + (task.deliverTypeName || '-') + '</td></tr>';
         if (carHtml) {
             html += carHtml;
         }
@@ -405,9 +405,9 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务内容</label>';
         formHtml += '<div class="layui-input-block"><textarea name="taskContent" id="formTaskContent" placeholder="请输入任务内容" class="layui-textarea" style="height:80px;">' + (data.taskContent || '') + '</textarea></div></div>';
 
-        formHtml += '<div class="layui-form-item"><label class="layui-form-label">交付物</label>';
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label">工作成果</label>';
         formHtml += '<div class="layui-input-block"><select name="deliverType" id="formDeliverType">';
-        formHtml += '<option value="">请选择交付物类型</option>';
+        formHtml += '<option value="">工作成果类型</option>';
         var deliverOptions = [{v:1,t:'文档'},{v:2,t:'表格'},{v:3,t:'图片'},{v:4,t:'其他'}];
         for (var j = 0; j < deliverOptions.length; j++) {
             var dSel = (data.deliverType && deliverOptions[j].v == data.deliverType) ? ' selected' : '';
