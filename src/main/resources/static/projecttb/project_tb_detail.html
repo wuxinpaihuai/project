@@ -25,6 +25,9 @@
         .info-item {
             display: flex; line-height: 28px; font-size: 14px;
         }
+        .info-item-full {
+            grid-column: span 3;
+        }
         .info-label {
             color: #666; min-width: 90px; text-align: right; margin-right: 8px;
         }
@@ -171,7 +174,9 @@ layui.use(['layer'], function(){
                 html += '<div class="info-item"><span class="info-label">最高限价：</span><span class="info-value">' + formatAmount(p.maxPrice) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">最低限价：</span><span class="info-value">' + formatAmount(p.minPrice) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">投标保证金：</span><span class="info-value">' + formatAmount(p.bidDeposit) + '</span></div>';
-                html += '<div class="info-item"><span class="info-label">资质要求：</span><span class="info-value">' + safeStr(p.qualificationRequire) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">项目详细内容：</span><span class="info-value">' + safeStr(p.contentDetail) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">资质要求：</span><span class="info-value">' + safeStr(p.qualificationRequire) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">评分方式：</span><span class="info-value">' + safeStr(p.scoreMethod) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">招标网站：</span><span class="info-value">' + safeStr(p.bidWebsite) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">备注：</span><span class="info-value">' + safeStr(p.remark) + '</span></div>';
                 html += '</div>';
@@ -208,8 +213,8 @@ layui.use(['layer'], function(){
                         html += '<td>' + (deliverTypeMap[t.deliverType] || '-') + '</td>';
                         html += '<td>' + safeStr(t.completeDesc) + '</td>';
                         html += '<td id="taskAttach_' + t.id + '">-</td>';
-                        html += '<td>' + formatTime(t.endTime) + '</td>';
-                        html += '<td>' + formatTime(t.completeTime) + '</td>';
+                        html += '<td>' + formatTime(t.taskEndTime) + '</td>';
+                        html += '<td>' + formatTime(t.execFinishTime) + '</td>';
                         html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
                         html += '</tr>';
                     }

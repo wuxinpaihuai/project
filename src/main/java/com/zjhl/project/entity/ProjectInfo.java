@@ -51,6 +51,9 @@ public class ProjectInfo {
     /** 项目状态（非数据库字段，来自project_stage.stage_status） */
     @TableField(exist = false)
     private Integer stageStatus;
+    
+    @TableField(exist = false)
+    private Integer stageType;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -122,4 +125,12 @@ public class ProjectInfo {
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
     public Integer getStageStatus() { return stageStatus; }
     public void setStageStatus(Integer stageStatus) { this.stageStatus = stageStatus; }
+	public Integer getStageType() {
+		return stageType;
+	}
+	public void setStageType(Integer stageType) {
+		this.stageType = stageType;
+	}
+    
+    
 }

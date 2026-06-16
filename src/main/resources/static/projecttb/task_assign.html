@@ -104,9 +104,10 @@
         </div>
     </div>
     <table class="task-detail-table"><tbody>
-    <tr><td class="label-cell">任务负责人</td><td class="value-cell">{{d.execUserName || '-'}}</td>
-        <td class="label-cell">截止时间</td><td class="value-cell">{{d.taskEndTime ? d.taskEndTime.replace('T',' ') : '-'}}</td></tr>
-    <tr><td class="label-cell">是否派车</td><td class="value-cell">{{d.needCar == 1 ? '是' : '否'}}</td>
+    <tr><td class="label-cell">任务类型</td><td class="value-cell">{{d.taskTypeName || '-'}}</td>
+        <td class="label-cell">任务负责人</td><td class="value-cell">{{d.execUserName || '-'}}</td></tr>
+    <tr><td class="label-cell">截止时间</td><td class="value-cell">{{d.taskEndTime ? d.taskEndTime.replace('T',' ') : '-'}}</td>
+        <td class="label-cell">是否派车</td><td class="value-cell">{{d.needCar == 1 ? '是' : '否'}}</td>
         <td class="label-cell">交付物</td><td class="value-cell">{{d.deliverTypeName || '-'}}</td></tr>
     <tr class="car-display {{d.needCar == 1 ? 'show' : ''}}"><td class="label-cell">通行费</td><td class="value-cell">{{d.tollFee || '0.00'}} 元</td>
         <td class="label-cell">里程数</td><td class="value-cell">{{d.mileage || '0.00'}} 公里</td></tr>
@@ -192,6 +193,7 @@ var taskList = []; // 存储所有任务数据
 var editingIndex = -1; // 当前编辑的任务索引，-1表示新增
 var execUserList = []; // 缓存负责人列表
 var deliverTypeMap = {1:'文档', 2:'表格', 3:'图片', 4:'其他'};
+var taskTypeMap = {1:'业主调研', 2:'资料收集', 3:'现场勘察', 4:'成本估算', 5:'风险分析', 6:'方案设计', 7:'方案一审', 8:'方案二审', 9:'实施任务'};
 var projectTypeMap = {1:'环评', 2:'场调', 3:'应急预案', 4:'验收', 5:'环评入围', 6:'场调入围', 99:'其他'};
 
 layui.use(['table', 'layer', 'form', 'laydate'], function(){
@@ -312,10 +314,11 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger task-del-btn"><i class="layui-icon">&#xe640;</i> 删除</button>';
         html += '</div></div>';
         html += '<table class="task-detail-table"><tbody>';
-        html += '<tr><td class="label-cell">任务负责人</td><td class="value-cell">' + (task.execUserName || '-') + '</td>';
-        html += '<td class="label-cell">截止时间</td><td class="value-cell">' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</td></tr>';
-        html += '<tr><td class="label-cell">是否派车</td><td class="value-cell">' + needCarText + '</td>';
-        html += '<td class="label-cell">交付物</td><td class="value-cell">' + (task.deliverTypeName || '-') + '</td></tr>';
+        html += '<tr><td class="label-cell">任务类型</td><td class="value-cell">' + (taskTypeMap[task.taskType] || '-') + '</td>';
+        html += '<td class="label-cell">任务负责人</td><td class="value-cell">' + (task.execUserName || '-') + '</td></tr>';
+        html += '<tr><td class="label-cell">截止时间</td><td class="value-cell">' + (task.taskEndTime ? task.taskEndTime.replace('T', ' ') : '-') + '</td>';
+        html += '<td class="label-cell">是否派车</td><td class="value-cell">' + needCarText + '</td></tr>';
+        html += '<tr><td class="label-cell">交付物</td><td class="value-cell" colspan="3">' + (task.deliverTypeName || '-') + '</td></tr>';
         if (carHtml) {
             html += carHtml;
         }
@@ -375,6 +378,15 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         }
         formHtml += '</select></div></div>';
 
+        formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务类型</label>';
+        formHtml += '<div class="layui-input-block"><select name="taskType" id="formTaskType" lay-search=""><option value="">请选择任务类型</option>';
+        var taskTypeOptions = [{v:1,t:'业主调研'},{v:2,t:'资料收集'},{v:3,t:'现场勘察'},{v:4,t:'成本估算'},{v:5,t:'风险分析'},{v:6,t:'方案设计'},{v:7,t:'方案一审'},{v:8,t:'方案二审'},{v:9,t:'实施任务'}];
+        for (var j = 0; j < taskTypeOptions.length; j++) {
+            var typeSel = (data.taskType && taskTypeOptions[j].v == data.taskType) ? ' selected' : '';
+            formHtml += '<option value="' + taskTypeOptions[j].v + '"' + typeSel + '>' + taskTypeOptions[j].t + '</option>';
+        }
+        formHtml += '</select></div></div>';
+
         var endTimeVal = data.taskEndTime ? data.taskEndTime.replace('T', ' ') : '';
         formHtml += '<div class="layui-form-item"><label class="layui-form-label"><span style="color:red;">*</span> 任务截止时间</label>';
         formHtml += '<div class="layui-input-block"><input type="text" name="taskEndTime" id="formTaskEndTime" placeholder="请选择截止时间" class="layui-input" autocomplete="off" value="' + endTimeVal + '"></div></div>';
@@ -414,7 +426,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         var editIndex = layer.open({
             type: 1,
             title: editingIndex === -1 ? '新增任务' : '编辑任务',
-            area: ['550px', '580px'],
+            area: ['550px', '620px'],
             content: formHtml,
             success: function(layero) {
                 form.render(null, 'taskEditForm');
@@ -440,6 +452,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
                 // 确定按钮
                 layero.find('#formSubmitBtn').on('click', function(){
                     var execUserId = layero.find('#formExecUserId').val();
+                    var taskType = layero.find('#formTaskType').val();
                     var taskEndTime = layero.find('#formTaskEndTime').val();
                     var taskContent = layero.find('#formTaskContent').val().trim();
                     var needCar = layero.find('#formNeedCar').is(':checked') ? 1 : 0;
@@ -451,6 +464,10 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
                     // 验证
                     if (!execUserId) {
                         layer.msg('请选择任务负责人', {icon: 5});
+                        return;
+                    }
+                    if (!taskType) {
+                        layer.msg('请选择任务类型', {icon: 5});
                         return;
                     }
                     if (!taskEndTime) {
@@ -476,6 +493,8 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
                         execUserId: execUserId,
                         execUserName: execUser ? execUser.realName : '',
                         execUserPhone: execUser ? execUser.phone : '',
+                        taskType: taskType ? parseInt(taskType) : null,
+                        taskTypeName: taskType ? taskTypeMap[taskType] : '',
                         taskEndTime: taskEndTime,
                         taskContent: taskContent,
                         needCar: needCar,

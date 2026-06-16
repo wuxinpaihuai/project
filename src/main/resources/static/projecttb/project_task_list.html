@@ -237,7 +237,7 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
             {field: 'assignUserName', title: '任务分配人', width: 100, align: 'center'},
             {field: 'assignUserPhone', title: '联系方式', width: 120, align: 'center'},
             {field: 'taskType', title: '任务类型', width: 100, align: 'center', templet: function(d){
-                var typeMap = {1:'标书制作', 2:'现场踏勘', 3:'资质准备', 4:'商务准备', 5:'技术方案', 99:'其他'};
+                var typeMap = {1:'业主调研', 2:'资料收集', 3:'现场勘察', 4:'成本估算', 5:'风险分析', 6:'方案设计', 7:'方案一审', 8:'方案二审', 9:'实施任务'};
                 return typeMap[d.taskType] || '-';
             }},
             {field: 'taskContent', title: '任务内容', minWidth: 180},

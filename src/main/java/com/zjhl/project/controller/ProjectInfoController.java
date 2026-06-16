@@ -64,11 +64,12 @@ public class ProjectInfoController {
         for (ProjectInfo info : records) {
             QueryWrapper<ProjectStage> stageWrapper = new QueryWrapper<>();
             stageWrapper.eq("project_id", info.getId());
-            stageWrapper.eq("stage_type", 1);
+            //stageWrapper.eq("stage_type", 1);
             stageWrapper.orderByDesc("create_time");
             List<ProjectStage> stages = projectStageService.list(stageWrapper);
             if (!stages.isEmpty()) {
                 info.setStageStatus(stages.get(0).getStageStatus());
+                info.setStageType(stages.get(0).getStageType());
             }
         }
 

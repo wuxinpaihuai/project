@@ -146,11 +146,14 @@ public class ProjectTaskController {
         ProjectTask task = new ProjectTask();
         task.setProjectId(Long.parseLong(params.get("projectId").toString()));
         task.setStageType(1); // 体系作战任务默认投标阶段
-        if (params.get("assignUserId") != null) {
-            task.setAssignUserId(Long.parseLong(params.get("assignUserId").toString()));
+        // 设置当前登录用户为任务分配人
+        Long loginUserId = StpUtil.getLoginIdAsLong();
+        SysUser loginUser = sysUserService.getById(loginUserId);
+        if (loginUser != null) {
+            task.setAssignUserId(loginUser.getId());
+            task.setAssignUserName(loginUser.getRealName());
+            task.setAssignUserPhone(loginUser.getPhone());
         }
-        task.setAssignUserName((String) params.get("assignUserName"));
-        task.setAssignUserPhone((String) params.get("assignUserPhone"));
         if (params.get("taskType") != null) {
             task.setTaskType(Integer.parseInt(params.get("taskType").toString()));
         }
@@ -314,16 +317,21 @@ public class ProjectTaskController {
         }
         projectTaskService.remove(delWrapper);
 
+        // 获取当前登录用户作为任务分配人
+        Long loginUserId = StpUtil.getLoginIdAsLong();
+        SysUser loginUser = sysUserService.getById(loginUserId);
+
         // 逐个保存新任务
         for (Map<String, Object> taskMap : taskList) {
             ProjectTask task = new ProjectTask();
             task.setProjectId(projectId);
             task.setStageType(1);
-            if (taskMap.get("assignUserId") != null) {
-                task.setAssignUserId(Long.parseLong(taskMap.get("assignUserId").toString()));
+            // 设置当前登录用户为任务分配人
+            if (loginUser != null) {
+                task.setAssignUserId(loginUser.getId());
+                task.setAssignUserName(loginUser.getRealName());
+                task.setAssignUserPhone(loginUser.getPhone());
             }
-            task.setAssignUserName((String) taskMap.get("assignUserName"));
-            task.setAssignUserPhone((String) taskMap.get("assignUserPhone"));
             if (taskMap.get("taskType") != null) {
                 task.setTaskType(Integer.parseInt(taskMap.get("taskType").toString()));
             }

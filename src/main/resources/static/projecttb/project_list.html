@@ -147,7 +147,7 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'stageStatus', title: '项目状态', width: 100, align: 'center', templet: function(d){
                 var info = stageStatusMap[d.stageStatus];
                 if (info) {
-                    return '<span class="' + info.cls + '">' + info.name + '</span>';
+                    return '<span class="' + info.cls + '">投标' + info.name + '</span>';
                 }
                 return '-';
             }},
