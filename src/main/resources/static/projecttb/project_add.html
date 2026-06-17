@@ -39,6 +39,39 @@
         .file-item .file-remove { color: #ff5722; cursor: pointer; font-size: 18px; margin-left: 10px; }
         .file-item .file-remove:hover { color: #d32f2f; }
         .upload-btn-wrap { margin-top: 6px; }
+        /* 业务员选择下拉 */
+        .biz-user-wrap { position: relative; }
+        .biz-user-trigger {
+            position: relative; cursor: pointer;
+        }
+        .biz-user-trigger .layui-input { padding-right: 30px; cursor: pointer; background: #fff; }
+        .biz-user-trigger .layui-input:disabled,
+        .biz-user-trigger .layui-input.readonly-style { background: #fff; cursor: pointer; }
+        .biz-user-trigger .trigger-arrow {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 14px; color: #999; pointer-events: none; transition: transform 0.2s;
+        }
+        .biz-user-trigger.open .trigger-arrow { transform: translateY(-50%) rotate(180deg); }
+        .biz-user-panel {
+            position: absolute; top: 100%; left: 0; width: 100%;
+            background: #fff; border: 1px solid #e6e6e6; border-top: none;
+            z-index: 9999; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+        .biz-user-panel .search-box { padding: 8px; border-bottom: 1px solid #f2f2f2; }
+        .biz-user-panel .search-box input {
+            width: 100%; height: 32px; line-height: 32px; padding: 0 8px;
+            border: 1px solid #e6e6e6; border-radius: 4px; font-size: 13px; outline: none;
+        }
+        .biz-user-panel .search-box input:focus { border-color: #86c566; }
+        .biz-user-list { max-height: 180px; overflow-y: auto; }
+        .biz-user-list .biz-user-item {
+            padding: 8px 12px; cursor: pointer; font-size: 13px; color: #333;
+            border-bottom: 1px solid #f2f2f2; display: flex; justify-content: space-between; align-items: center;
+        }
+        .biz-user-list .biz-user-item:hover { background: #f2f8ff; }
+        .biz-user-list .biz-user-item.selected { background: #e8f5e0; color: #5a9e3e; }
+        .biz-user-list .biz-user-item .user-phone { color: #999; font-size: 12px; margin-left: 10px; }
+        .biz-user-list .no-result { padding: 15px; text-align: center; color: #999; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -194,6 +227,39 @@
         </div>
     </div>
 
+    <!-- 业务员信息 -->
+    <div class="section-title">业务员信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">业务员</label>
+                <div class="layui-input-block biz-user-wrap">
+                    <input type="hidden" id="bisnessUserId" value="">
+                    <div class="biz-user-trigger" id="bizUserTrigger">
+                        <input type="text" id="bisnessUserName" placeholder="请选择业务员" class="layui-input" readonly>
+                        <i class="layui-icon trigger-arrow">&#xe623;</i>
+                    </div>
+                    <div class="biz-user-panel" id="bizUserPanel">
+                        <div class="search-box">
+                            <input type="text" id="bizUserSearchInput" placeholder="输入姓名检索..." autocomplete="off">
+                        </div>
+                        <div class="biz-user-list" id="bizUserList">
+                            <div class="no-result">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">业务员手机</label>
+                <div class="layui-input-block">
+                    <input type="text" id="bisnessUserPhone" placeholder="选择业务员后自动填充" class="layui-input" readonly style="background:#f2f2f2; cursor:not-allowed;">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 招标信息 -->
     <div class="section-title">招标信息</div>
     <div class="row-group">
@@ -212,7 +278,6 @@
                     <select name="priceType" id="priceType">
                         <option value="">请选择报价类型</option>
                         <option value="1">金额</option>
-                        <option value="2">费率</option>
                         <option value="0">其他</option>
                     </select>
                 </div>
@@ -447,6 +512,109 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
     laydate.render({ elem: '#questionEndTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
     laydate.render({ elem: '#bidTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
 
+    // 业务员选择下拉组件
+    var $bizTrigger = $('#bizUserTrigger');
+    var $bizPanel = $('#bizUserPanel');
+    var $bizSearchInput = $('#bizUserSearchInput');
+    var $bizUserList = $('#bizUserList');
+    var $bizNameInput = $('#bisnessUserName');
+    var allBizUsers = []; // 缓存所有用户
+
+    // 加载所有用户（启用状态）
+    function loadBizUsers() {
+        $.ajax({
+            url: '/sys/user/searchByName',
+            type: 'GET',
+            headers: {token: token},
+            data: {name: ''},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    allBizUsers = res.data;
+                    renderBizUserList(allBizUsers);
+                } else {
+                    allBizUsers = [];
+                    $bizUserList.html('<div class="no-result">暂无用户数据</div>');
+                }
+            },
+            error: function() {
+                allBizUsers = [];
+                $bizUserList.html('<div class="no-result">加载失败</div>');
+            }
+        });
+    }
+
+    // 渲染用户列表
+    function renderBizUserList(users) {
+        var currentId = $('#bisnessUserId').val();
+        if (!users || users.length === 0) {
+            $bizUserList.html('<div class="no-result">无匹配用户</div>');
+            return;
+        }
+        var html = '';
+        users.forEach(function(user) {
+            var selected = currentId && user.id == currentId ? ' selected' : '';
+            html += '<div class="biz-user-item' + selected + '" data-id="' + user.id + '" data-name="' + (user.realName || '') + '" data-phone="' + (user.phone || '') + '">';
+            html += '  <span>' + (user.realName || '') + '</span>';
+            html += '  <span class="user-phone">' + (user.phone || '') + '</span>';
+            html += '</div>';
+        });
+        $bizUserList.html(html);
+    }
+
+    // 点击触发器：展开/收起下拉
+    $bizTrigger.on('click', function(e) {
+        e.stopPropagation();
+        var isOpen = $bizPanel.is(':visible');
+        if (isOpen) {
+            closeBizPanel();
+        } else {
+            if (allBizUsers.length === 0) loadBizUsers();
+            $bizPanel.show();
+            $bizTrigger.addClass('open');
+            $bizSearchInput.val('').focus();
+            renderBizUserList(allBizUsers);
+        }
+    });
+
+    // 搜索框输入：前端过滤
+    $bizSearchInput.on('input', function() {
+        var keyword = $(this).val().trim().toLowerCase();
+        if (!keyword) {
+            renderBizUserList(allBizUsers);
+            return;
+        }
+        var filtered = allBizUsers.filter(function(u) {
+            return (u.realName && u.realName.toLowerCase().indexOf(keyword) > -1);
+        });
+        renderBizUserList(filtered);
+    });
+
+    // 选中用户
+    $bizUserList.on('click', '.biz-user-item', function(e) {
+        e.stopPropagation();
+        var userId = $(this).data('id');
+        var userName = $(this).data('name');
+        var userPhone = $(this).data('phone');
+        $('#bisnessUserId').val(userId);
+        $bizNameInput.val(userName);
+        $('#bisnessUserPhone').val(userPhone || '');
+        closeBizPanel();
+    });
+
+    // 关闭下拉
+    function closeBizPanel() {
+        $bizPanel.hide();
+        $bizTrigger.removeClass('open');
+        $bizSearchInput.val('');
+    }
+
+    // 点击外部关闭
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.biz-user-wrap').length) {
+            closeBizPanel();
+        }
+    });
+
     // 文件上传
     var uploadInst = upload.render({
         elem: '#uploadBtn',
@@ -524,13 +692,18 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     // 日期时间回显
                     if (data.questionEndTime) { document.getElementById('questionEndTime').value = data.questionEndTime.replace('T', ' '); }
                     if (data.bidTime) { document.getElementById('bidTime').value = data.bidTime.replace('T', ' '); }
+
+                    // 业务员信息回显
+                    if (data.bisnessUserId) { document.getElementById('bisnessUserId').value = data.bisnessUserId; }
+                    if (data.bisnessUserName) { document.getElementById('bisnessUserName').value = data.bisnessUserName; }
+                    if (data.bisnessUserPhone) { document.getElementById('bisnessUserPhone').value = data.bisnessUserPhone; }
                 }
             }
         });
 
         // 加载已上传附件
         $.ajax({
-        	url: '/project/info/files/' + projectId,
+            url: '/project/info/files/' + projectId,
             type: 'GET',
             headers: {token: token},
             success: function(res) {
@@ -590,6 +763,9 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
             agencyFee: document.getElementById('agencyFee').value.trim() || null,
             bidDeposit: document.getElementById('bidDeposit').value.trim() || null,
             contractDeposit: document.getElementById('contractDeposit').value.trim() || null,
+            bisnessUserId: document.getElementById('bisnessUserId').value || null,
+            bisnessUserName: document.getElementById('bisnessUserName').value.trim() || null,
+            bisnessUserPhone: document.getElementById('bisnessUserPhone').value.trim() || null,
             questionEndTime: document.getElementById('questionEndTime').value.trim() || null,
             bidTime: bidTime || null,
             qualificationRequire: document.getElementById('qualificationRequire').value.trim() || null,

@@ -64,12 +64,11 @@ public class ProjectInfoController {
         for (ProjectInfo info : records) {
             QueryWrapper<ProjectStage> stageWrapper = new QueryWrapper<>();
             stageWrapper.eq("project_id", info.getId());
-            //stageWrapper.eq("stage_type", 1);
+            stageWrapper.eq("stage_type", 1);
             stageWrapper.orderByDesc("create_time");
             List<ProjectStage> stages = projectStageService.list(stageWrapper);
             if (!stages.isEmpty()) {
                 info.setStageStatus(stages.get(0).getStageStatus());
-                info.setStageType(stages.get(0).getStageType());
             }
         }
 
@@ -142,6 +141,9 @@ public class ProjectInfoController {
         project.setAgencyFee(params.get("agencyFee") != null ? new java.math.BigDecimal(params.get("agencyFee").toString()) : null);
         project.setBidDeposit(params.get("bidDeposit") != null ? new java.math.BigDecimal(params.get("bidDeposit").toString()) : null);
         project.setContractDeposit(params.get("contractDeposit") != null ? new java.math.BigDecimal(params.get("contractDeposit").toString()) : null);
+        project.setBisnessUserId(params.get("bisnessUserId") != null ? Long.parseLong(params.get("bisnessUserId").toString()) : null);
+        project.setBisnessUserName((String) params.get("bisnessUserName"));
+        project.setBisnessUserPhone((String) params.get("bisnessUserPhone"));
         project.setQuestionEndTime(params.get("questionEndTime") != null && !params.get("questionEndTime").toString().isEmpty() ? LocalDateTime.parse(params.get("questionEndTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setBidTime(params.get("bidTime") != null && !params.get("bidTime").toString().isEmpty() ? LocalDateTime.parse(params.get("bidTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setQualificationRequire((String) params.get("qualificationRequire"));
@@ -226,6 +228,9 @@ public class ProjectInfoController {
         project.setAgencyFee(params.get("agencyFee") != null ? new java.math.BigDecimal(params.get("agencyFee").toString()) : null);
         project.setBidDeposit(params.get("bidDeposit") != null ? new java.math.BigDecimal(params.get("bidDeposit").toString()) : null);
         project.setContractDeposit(params.get("contractDeposit") != null ? new java.math.BigDecimal(params.get("contractDeposit").toString()) : null);
+        project.setBisnessUserId(params.get("bisnessUserId") != null ? Long.parseLong(params.get("bisnessUserId").toString()) : null);
+        project.setBisnessUserName((String) params.get("bisnessUserName"));
+        project.setBisnessUserPhone((String) params.get("bisnessUserPhone"));
         project.setQuestionEndTime(params.get("questionEndTime") != null && !params.get("questionEndTime").toString().isEmpty() ? LocalDateTime.parse(params.get("questionEndTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setBidTime(params.get("bidTime") != null && !params.get("bidTime").toString().isEmpty() ? LocalDateTime.parse(params.get("bidTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setQualificationRequire((String) params.get("qualificationRequire"));

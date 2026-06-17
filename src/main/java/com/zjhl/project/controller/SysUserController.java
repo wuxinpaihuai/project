@@ -1,33 +1,22 @@
 package com.zjhl.project.controller;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zjhl.project.entity.SysUser;
 import com.zjhl.project.entity.SysUserDept;
 import com.zjhl.project.entity.SysUserRole;
-import com.zjhl.project.service.SysDeptService;
+import com.zjhl.project.service.SysUserService;
 import com.zjhl.project.service.SysUserDeptService;
 import com.zjhl.project.service.SysUserRoleService;
-import com.zjhl.project.service.SysUserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
-import cn.dev33.satoken.stp.StpUtil;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/sys/user")
@@ -38,19 +27,44 @@ public class SysUserController {
 
     @Autowired
     private SysUserDeptService sysUserDeptService;
-    
-    @Autowired
-    private SysDeptService sysDeptService;
-    
+
     @Autowired
     private SysUserRoleService sysUserRoleService;
-    
-    
 
+    /**
+     * 根据姓名搜索用户（模糊查询，用于业务员选择）
+     */
+    @GetMapping("/searchByName")
+    public Map<String, Object> searchByName(@RequestParam(required = false) String name) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        QueryWrapper<SysUser> wrapper = new QueryWrapper<>();
+        if (name != null && !name.isEmpty()) {
+            wrapper.like("real_name", name);
+        }
+        wrapper.eq("status", 0); // 只查启用状态的用户
+        wrapper.select("id", "real_name", "phone");
+        wrapper.last("LIMIT 50");
+        List<SysUser> users = sysUserService.list(wrapper);
+
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", users);
+        return result;
+    }
+
+    /**
+     * 用户列表（分页+条件查询）
+     */
     @GetMapping("/list")
     public Map<String, Object> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(defaultValue = "5") Integer pageSize,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) Integer disabled,
@@ -58,6 +72,7 @@ public class SysUserController {
         
         Map<String, Object> result = new HashMap<>();
         
+        // 未登录则返回未授权
         if (!StpUtil.isLogin()) {
             result.put("code", 401);
             result.put("msg", "未登录");
@@ -76,29 +91,20 @@ public class SysUserController {
             wrapper.eq("status", disabled);
         }
         
-        // ========== 按部门过滤（包含子部门） ==========
+        // 按部门过滤：从中间表查出该部门下的用户ID列表
         if (deptId != null) {
-            // 1. 获取该部门及所有子部门ID
-            List<Long> allDeptIds = sysDeptService.getAllChildDeptIds(deptId);
-            
-            // 2. 从中间表查出这些部门下的所有用户ID
             QueryWrapper<SysUserDept> udWrapper = new QueryWrapper<>();
-            udWrapper.in("dept_id", allDeptIds);
+            udWrapper.eq("dept_id", deptId);
             List<SysUserDept> udList = sysUserDeptService.list(udWrapper);
-            
-            List<Long> userIds = udList.stream()
-                    .map(SysUserDept::getUserId)
-                    .distinct()  // 去重，一个用户可能在多个子部门
-                    .collect(Collectors.toList());
-            
+            List<Long> userIds = udList.stream().map(SysUserDept::getUserId).collect(Collectors.toList());
             if (userIds.isEmpty()) {
+                // 该部门下无用户，直接返回空
                 result.put("code", 200);
                 result.put("msg", "查询成功");
                 result.put("total", 0);
                 result.put("records", java.util.Collections.emptyList());
                 return result;
             }
-            
             wrapper.in("id", userIds);
         }
         
@@ -115,7 +121,6 @@ public class SysUserController {
         
         return result;
     }
-
 
     /**
      * 新增用户（同时保存部门、角色关联）
@@ -137,7 +142,6 @@ public class SysUserController {
         String sysPosition = params.get("sysPosition") != null ? params.get("sysPosition").toString() : null;
         List<Integer> deptIds = params.get("deptIds") != null ? (List<Integer>) params.get("deptIds") : null;
         List<Integer> roleIds = params.get("roleIds") != null ? (List<Integer>) params.get("roleIds") : null;
-        Integer status = params.get("status") != null ? Integer.parseInt(params.get("status").toString()) : null;
         
         // 检查用户名是否已存在
         SysUser existUser = sysUserService.getByUsername(username);
@@ -154,7 +158,7 @@ public class SysUserController {
         sysUser.setRealName(realName);
         sysUser.setPhone(phone);
         sysUser.setSysPosition(sysPosition);
-        sysUser.setStatus(status); 
+        sysUser.setStatus(0); // 默认启用
         sysUser.setCreateTime(LocalDateTime.now());
         
         boolean success = sysUserService.save(sysUser);
@@ -260,6 +264,16 @@ public class SysUserController {
             return result;
         }
         
+        // 删除用户-部门关联
+        QueryWrapper<SysUserDept> delDeptWrapper = new QueryWrapper<>();
+        delDeptWrapper.eq("user_id", id);
+        sysUserDeptService.remove(delDeptWrapper);
+        
+        // 删除用户-角色关联
+        QueryWrapper<SysUserRole> delRoleWrapper = new QueryWrapper<>();
+        delRoleWrapper.eq("user_id", id);
+        sysUserRoleService.remove(delRoleWrapper);
+        
         boolean success = sysUserService.removeById(id);
         
         if (success) {
@@ -296,7 +310,28 @@ public class SysUserController {
         }
         return result;
     }
-    
+
+    /**
+     * 获取用户已分配的部门ID列表
+     */
+    @GetMapping("/depts/{userId}")
+    public Map<String, Object> getUserDepts(@PathVariable Long userId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+        QueryWrapper<SysUserDept> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId);
+        List<SysUserDept> list = sysUserDeptService.list(wrapper);
+        List<Long> deptIds = list.stream().map(SysUserDept::getDeptId).collect(Collectors.toList());
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", deptIds);
+        return result;
+    }
+
     /**
      * 获取用户已分配的角色ID列表
      */
