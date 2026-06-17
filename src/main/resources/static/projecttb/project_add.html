@@ -39,39 +39,42 @@
         .file-item .file-remove { color: #ff5722; cursor: pointer; font-size: 18px; margin-left: 10px; }
         .file-item .file-remove:hover { color: #d32f2f; }
         .upload-btn-wrap { margin-top: 6px; }
-        /* 业务员选择下拉 */
-        .biz-user-wrap { position: relative; }
-        .biz-user-trigger {
-            position: relative; cursor: pointer;
+
+        /* ★★★ 业务员可搜索下拉选择 - 关键CSS ★★★ */
+        /* 核心：解决 Layui .layui-form-item 默认 overflow:hidden 裁剪下拉框的问题 */
+        .biz-form-item,
+        .biz-form-item .layui-input-block {
+            overflow: visible !important;
         }
-        .biz-user-trigger .layui-input { padding-right: 30px; cursor: pointer; background: #fff; }
-        .biz-user-trigger .layui-input:disabled,
-        .biz-user-trigger .layui-input.readonly-style { background: #fff; cursor: pointer; }
-        .biz-user-trigger .trigger-arrow {
+        .biz-user-wrap { position: relative; overflow: visible !important; }
+        .biz-user-wrap .biz-input-wrap { position: relative; }
+        .biz-user-wrap .biz-input-wrap input.layui-input {
+            padding-right: 30px; cursor: text;
+        }
+        .biz-user-wrap .biz-input-wrap .biz-arrow {
             position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            font-size: 14px; color: #999; pointer-events: none; transition: transform 0.2s;
+            font-size: 14px; color: #999; cursor: pointer; transition: transform 0.2s;
+            user-select: none;
         }
-        .biz-user-trigger.open .trigger-arrow { transform: translateY(-50%) rotate(180deg); }
-        .biz-user-panel {
-            position: absolute; top: 100%; left: 0; width: 100%;
-            background: #fff; border: 1px solid #e6e6e6; border-top: none;
-            z-index: 9999; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        .biz-user-wrap .biz-input-wrap .biz-arrow.open { transform: translateY(-50%) rotate(180deg); }
+        .biz-user-wrap .biz-dropdown {
+            position: absolute; top: 42px; left: 0; width: 100%;
+            background: #fff; border: 1px solid #d2d2d2;
+            z-index: 99999; display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 0 0 4px 4px;
+            overflow: visible !important;
         }
-        .biz-user-panel .search-box { padding: 8px; border-bottom: 1px solid #f2f2f2; }
-        .biz-user-panel .search-box input {
-            width: 100%; height: 32px; line-height: 32px; padding: 0 8px;
-            border: 1px solid #e6e6e6; border-radius: 4px; font-size: 13px; outline: none;
+        .biz-user-wrap .biz-dropdown .biz-list { max-height: 220px; overflow-y: auto; }
+        .biz-user-wrap .biz-dropdown .biz-list .biz-item {
+            padding: 9px 12px; cursor: pointer; font-size: 13px; color: #333;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .biz-user-panel .search-box input:focus { border-color: #86c566; }
-        .biz-user-list { max-height: 180px; overflow-y: auto; }
-        .biz-user-list .biz-user-item {
-            padding: 8px 12px; cursor: pointer; font-size: 13px; color: #333;
-            border-bottom: 1px solid #f2f2f2; display: flex; justify-content: space-between; align-items: center;
-        }
-        .biz-user-list .biz-user-item:hover { background: #f2f8ff; }
-        .biz-user-list .biz-user-item.selected { background: #e8f5e0; color: #5a9e3e; }
-        .biz-user-list .biz-user-item .user-phone { color: #999; font-size: 12px; margin-left: 10px; }
-        .biz-user-list .no-result { padding: 15px; text-align: center; color: #999; font-size: 13px; }
+        .biz-user-wrap .biz-dropdown .biz-list .biz-item:hover { background: #f0f7ff; }
+        .biz-user-wrap .biz-dropdown .biz-list .biz-item.active { background: #e8f5e0; color: #5a9e3e; font-weight: bold; }
+        .biz-user-wrap .biz-dropdown .biz-list .biz-item .item-phone { color: #999; font-size: 12px; }
+        .biz-user-wrap .biz-dropdown .biz-list .biz-empty { padding: 15px; text-align: center; color: #999; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -227,24 +230,21 @@
         </div>
     </div>
 
-    <!-- 业务员信息 -->
+    <!-- 业务员信息 ★★★ 关键：biz-form-item 类解决 overflow:hidden 裁剪 ★★★ -->
     <div class="section-title">业务员信息</div>
     <div class="row-group">
         <div class="col-item">
-            <div class="layui-form-item">
+            <div class="layui-form-item biz-form-item">
                 <label class="layui-form-label">业务员</label>
-                <div class="layui-input-block biz-user-wrap">
-                    <input type="hidden" id="bisnessUserId" value="">
-                    <div class="biz-user-trigger" id="bizUserTrigger">
-                        <input type="text" id="bisnessUserName" placeholder="请选择业务员" class="layui-input" readonly>
-                        <i class="layui-icon trigger-arrow">&#xe623;</i>
+                <div class="layui-input-block biz-user-wrap" id="bizUserWrap">
+                    <input type="hidden" id="bisnessUserId" name="bisnessUserId" value="">
+                    <div class="biz-input-wrap">
+                        <input type="text" id="bisnessUserName" name="bisnessUserName" placeholder="请选择业务员（可搜索）" class="layui-input" autocomplete="off">
+                        <i class="layui-icon biz-arrow" id="bizArrow">&#xe623;</i>
                     </div>
-                    <div class="biz-user-panel" id="bizUserPanel">
-                        <div class="search-box">
-                            <input type="text" id="bizUserSearchInput" placeholder="输入姓名检索..." autocomplete="off">
-                        </div>
-                        <div class="biz-user-list" id="bizUserList">
-                            <div class="no-result">加载中...</div>
+                    <div class="biz-dropdown" id="bizDropdown">
+                        <div class="biz-list" id="bizList">
+                            <div class="biz-empty">点击输入框加载用户数据</div>
                         </div>
                     </div>
                 </div>
@@ -254,7 +254,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">业务员手机</label>
                 <div class="layui-input-block">
-                    <input type="text" id="bisnessUserPhone" placeholder="选择业务员后自动填充" class="layui-input" readonly style="background:#f2f2f2; cursor:not-allowed;">
+                    <input type="text" id="bisnessUserPhone" name="bisnessUserPhone" placeholder="选择业务员后自动填充" class="layui-input" readonly style="background:#f2f2f2; cursor:not-allowed;">
                 </div>
             </div>
         </div>
@@ -409,43 +409,44 @@
     <div class="layui-form-item">
         <label class="layui-form-label">资质要求</label>
         <div class="layui-input-block">
-            <textarea name="qualificationRequire" id="qualificationRequire" placeholder="请输入资质要求" class="layui-textarea" maxlength="1000"></textarea>
+            <textarea name="qualificationRequire" id="qualificationRequire" placeholder="请输入资质要求" class="layui-textarea" style="height:80px;"></textarea>
         </div>
     </div>
     <div class="layui-form-item">
-        <label class="layui-form-label">评分方式</label>
+        <label class="layui-form-label">评分办法</label>
         <div class="layui-input-block">
-            <textarea name="scoreMethod" id="scoreMethod" placeholder="请输入评分方式" class="layui-textarea"></textarea>
+            <textarea name="scoreMethod" id="scoreMethod" placeholder="请输入评分办法" class="layui-textarea" style="height:80px;"></textarea>
         </div>
     </div>
     <div class="layui-form-item">
-        <label class="layui-form-label">项目详细内容</label>
+        <label class="layui-form-label">项目详情</label>
         <div class="layui-input-block">
-            <textarea name="contentDetail" id="contentDetail" placeholder="请输入项目详细内容" class="layui-textarea" style="height:120px;"></textarea>
+            <textarea name="contentDetail" id="contentDetail" placeholder="请输入项目详情" class="layui-textarea" style="height:80px;"></textarea>
         </div>
     </div>
     <div class="layui-form-item">
         <label class="layui-form-label">备注</label>
         <div class="layui-input-block">
-            <textarea name="remark" id="remark" placeholder="请输入备注" class="layui-textarea" maxlength="1000"></textarea>
+            <textarea name="remark" id="remark" placeholder="请输入备注" class="layui-textarea" style="height:80px;"></textarea>
         </div>
     </div>
 
     <!-- 附件上传 -->
-    <div class="section-title">附件上传</div>
+    <div class="section-title">附件</div>
     <div class="layui-form-item">
-        <label class="layui-form-label">项目附件</label>
+        <label class="layui-form-label">上传附件</label>
         <div class="layui-input-block">
-            <div class="upload-btn-wrap">
-                <button type="button" class="layui-btn btn-green layui-btn-sm" id="uploadBtn"><i class="layui-icon">&#xe67c;</i> 选择文件</button>
-                <span style="color:#999; font-size:12px; margin-left:8px;">支持多文件上传</span>
-            </div>
             <div class="file-list" id="fileList"></div>
+            <div class="upload-btn-wrap">
+                <button type="button" class="layui-btn layui-btn-sm btn-green" id="uploadBtn">
+                    <i class="layui-icon">&#xe67c;</i>上传文件
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- 按钮 -->
-    <div class="layui-form-item btn-group">
+    <!-- 操作按钮 -->
+    <div class="btn-group">
         <button type="button" class="layui-btn btn-green" lay-submit lay-filter="projectSubmit" id="submitBtn">保存</button>
         <button type="button" class="layui-btn layui-btn-primary" onclick="closeWindow()">取消</button>
     </div>
@@ -455,9 +456,8 @@
 <script>
 var token = localStorage.getItem('token');
 var isEditMode = false;
-var uploadedFiles = []; // 已上传的附件列表 [{filePath, originalName}]
+var uploadedFiles = [];
 
-// 获取URL参数
 function getQueryString(name) {
     var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
     var r = window.location.search.substr(1).match(reg);
@@ -465,13 +465,11 @@ function getQueryString(name) {
     return null;
 }
 
-// 关闭窗口
 function closeWindow() {
     var index = parent.layer.getFrameIndex(window.name);
     parent.layer.close(index);
 }
 
-// 渲染附件列表
 function renderFileList() {
     var html = '';
     uploadedFiles.forEach(function(file, idx) {
@@ -481,8 +479,6 @@ function renderFileList() {
         html += '</div>';
     });
     document.getElementById('fileList').innerHTML = html;
-
-    // 绑定删除事件
     document.querySelectorAll('.file-remove').forEach(function(el) {
         el.addEventListener('click', function() {
             var idx = parseInt(this.getAttribute('data-idx'));
@@ -495,11 +491,12 @@ function renderFileList() {
 layui.use(['form', 'layer', 'laydate', 'upload'], function(){
     var form = layui.form;
     var layer = layui.layer;
-    var $ = layui.jquery;
+    var $ = layui.$ || layui.jquery;
     var laydate = layui.laydate;
     var upload = layui.upload;
 
-    // 判断是否编辑模式
+    console.log('[project_add] layui.use callback executed, $ =', typeof $);
+
     var projectId = getQueryString('id');
     isEditMode = !!projectId;
 
@@ -512,106 +509,210 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
     laydate.render({ elem: '#questionEndTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
     laydate.render({ elem: '#bidTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss' });
 
-    // 业务员选择下拉组件
-    var $bizTrigger = $('#bizUserTrigger');
-    var $bizPanel = $('#bizUserPanel');
-    var $bizSearchInput = $('#bizUserSearchInput');
-    var $bizUserList = $('#bizUserList');
-    var $bizNameInput = $('#bisnessUserName');
-    var allBizUsers = []; // 缓存所有用户
+    // ★★★ 业务员可搜索下拉组件 - 使用原生DOM + jQuery混合确保可靠性 ★★★
+    var bizInputEl = document.getElementById('bisnessUserName');
+    var bizDropdownEl = document.getElementById('bizDropdown');
+    var bizListEl = document.getElementById('bizList');
+    var bizArrowEl = document.getElementById('bizArrow');
+    var bizUserIdEl = document.getElementById('bisnessUserId');
+    var bizPhoneEl = document.getElementById('bisnessUserPhone');
 
-    // 加载所有用户（启用状态）
-    function loadBizUsers() {
+    var allBizUsers = [];
+    var bizUsersLoaded = false;
+    var selectedBizUserName = ''; // 当前已选中的业务员姓名，用于校验用户是否手动修改
+
+    console.log('[biz-user] elements found:',
+        !!bizInputEl, !!bizDropdownEl, !!bizListEl, !!bizArrowEl);
+
+    // 加载全部用户
+    function loadBizUsers(callback) {
+        console.log('[biz-user] loading users...');
         $.ajax({
             url: '/sys/user/searchByName',
             type: 'GET',
             headers: {token: token},
             data: {name: ''},
             success: function(res) {
+                console.log('[biz-user] AJAX response:', res.code, res.data ? res.data.length + ' users' : 'no data');
                 if (res.code === 200 && res.data) {
                     allBizUsers = res.data;
-                    renderBizUserList(allBizUsers);
+                    bizUsersLoaded = true;
+                    if (callback) callback();
                 } else {
                     allBizUsers = [];
-                    $bizUserList.html('<div class="no-result">暂无用户数据</div>');
+                    bizUsersLoaded = false;
+                    bizListEl.innerHTML = '<div class="biz-empty">暂无用户数据</div>';
                 }
             },
-            error: function() {
+            error: function(xhr, status, err) {
+                console.log('[biz-user] AJAX error:', status, err);
                 allBizUsers = [];
-                $bizUserList.html('<div class="no-result">加载失败</div>');
+                bizUsersLoaded = false;
+                bizListEl.innerHTML = '<div class="biz-empty">加载失败，请重试</div>';
             }
         });
     }
 
+    // 清空业务员选择（用于用户手动修改姓名后未选择有效用户）
+    function clearBizSelection() {
+        bizUserIdEl.value = '';
+        bizPhoneEl.value = '';
+        selectedBizUserName = '';
+    }
+
+    // 设置业务员选择
+    function setBizSelection(user) {
+        if (!user) {
+            clearBizSelection();
+            return;
+        }
+        bizUserIdEl.value = user.id || '';
+        bizInputEl.value = user.realName || '';
+        bizPhoneEl.value = user.phone || '';
+        selectedBizUserName = user.realName || '';
+    }
+
+    // 根据输入框内容同步选择状态：精确匹配则选中，否则清空
+    function syncBizSelectionByInput() {
+        var keyword = bizInputEl.value.trim();
+        if (!keyword) {
+            clearBizSelection();
+            return;
+        }
+        // 优先按ID（隐藏域）匹配当前列表中的用户
+        var currentId = bizUserIdEl.value;
+        if (currentId) {
+            var matched = allBizUsers.find(function(u) { return u.id == currentId; });
+            if (matched && matched.realName === keyword) {
+                setBizSelection(matched);
+                return;
+            }
+        }
+        // 按姓名精确匹配
+        var matchedByName = allBizUsers.find(function(u) {
+            return u.realName === keyword;
+        });
+        if (matchedByName) {
+            setBizSelection(matchedByName);
+        } else {
+            clearBizSelection();
+        }
+    }
+
     // 渲染用户列表
-    function renderBizUserList(users) {
-        var currentId = $('#bisnessUserId').val();
-        if (!users || users.length === 0) {
-            $bizUserList.html('<div class="no-result">无匹配用户</div>');
+    function renderBizList(keyword) {
+        var currentId = bizUserIdEl.value;
+        var list = allBizUsers;
+        if (keyword) {
+            var kw = keyword.toLowerCase();
+            list = allBizUsers.filter(function(u) {
+                return (u.realName && u.realName.toLowerCase().indexOf(kw) > -1);
+            });
+        }
+        if (list.length === 0) {
+            bizListEl.innerHTML = '<div class="biz-empty">' + (keyword ? '无匹配用户' : '暂无用户数据') + '</div>';
             return;
         }
         var html = '';
-        users.forEach(function(user) {
-            var selected = currentId && user.id == currentId ? ' selected' : '';
-            html += '<div class="biz-user-item' + selected + '" data-id="' + user.id + '" data-name="' + (user.realName || '') + '" data-phone="' + (user.phone || '') + '">';
-            html += '  <span>' + (user.realName || '') + '</span>';
-            html += '  <span class="user-phone">' + (user.phone || '') + '</span>';
+        list.forEach(function(u) {
+            var cls = (currentId && u.id == currentId) ? ' active' : '';
+            html += '<div class="biz-item' + cls + '" data-id="' + u.id + '" data-name="' + (u.realName || '') + '" data-phone="' + (u.phone || '') + '">';
+            html += '  <span>' + (u.realName || '') + '</span>';
+            html += '  <span class="item-phone">' + (u.phone || '') + '</span>';
             html += '</div>';
         });
-        $bizUserList.html(html);
+        bizListEl.innerHTML = html;
     }
 
-    // 点击触发器：展开/收起下拉
-    $bizTrigger.on('click', function(e) {
-        e.stopPropagation();
-        var isOpen = $bizPanel.is(':visible');
-        if (isOpen) {
-            closeBizPanel();
+    // 打开下拉（使用原生 style.display 确保可靠）
+    function openBizDropdown() {
+        console.log('[biz-user] openBizDropdown called, loaded=', bizUsersLoaded);
+        if (!bizUsersLoaded) {
+            bizListEl.innerHTML = '<div class="biz-empty">加载中...</div>';
+            bizDropdownEl.style.display = 'block';
+            bizArrowEl.classList.add('open');
+            loadBizUsers(function() {
+                renderBizList(bizInputEl.value.trim());
+                bizDropdownEl.style.display = 'block';
+            });
         } else {
-            if (allBizUsers.length === 0) loadBizUsers();
-            $bizPanel.show();
-            $bizTrigger.addClass('open');
-            $bizSearchInput.val('').focus();
-            renderBizUserList(allBizUsers);
+            renderBizList(bizInputEl.value.trim());
+            bizDropdownEl.style.display = 'block';
+            bizArrowEl.classList.add('open');
         }
-    });
-
-    // 搜索框输入：前端过滤
-    $bizSearchInput.on('input', function() {
-        var keyword = $(this).val().trim().toLowerCase();
-        if (!keyword) {
-            renderBizUserList(allBizUsers);
-            return;
-        }
-        var filtered = allBizUsers.filter(function(u) {
-            return (u.realName && u.realName.toLowerCase().indexOf(keyword) > -1);
-        });
-        renderBizUserList(filtered);
-    });
-
-    // 选中用户
-    $bizUserList.on('click', '.biz-user-item', function(e) {
-        e.stopPropagation();
-        var userId = $(this).data('id');
-        var userName = $(this).data('name');
-        var userPhone = $(this).data('phone');
-        $('#bisnessUserId').val(userId);
-        $bizNameInput.val(userName);
-        $('#bisnessUserPhone').val(userPhone || '');
-        closeBizPanel();
-    });
+    }
 
     // 关闭下拉
-    function closeBizPanel() {
-        $bizPanel.hide();
-        $bizTrigger.removeClass('open');
-        $bizSearchInput.val('');
+    function closeBizDropdown() {
+        bizDropdownEl.style.display = 'none';
+        bizArrowEl.classList.remove('open');
     }
 
+    // ★ 使用原生 addEventListener 绑定事件，比 jQuery .on() 更可靠
+    bizInputEl.addEventListener('focus', function(e) {
+        console.log('[biz-user] input focus');
+        openBizDropdown();
+    });
+
+    bizInputEl.addEventListener('input', function(e) {
+        var keyword = this.value.trim();
+        if (!bizUsersLoaded) {
+            openBizDropdown();
+        } else {
+            renderBizList(keyword);
+            bizDropdownEl.style.display = 'block';
+            bizArrowEl.classList.add('open');
+        }
+    });
+
+    // 失去焦点时校验：若输入内容与当前选中项不一致，则清空选择（延时避免点击下拉项时误清空）
+    bizInputEl.addEventListener('blur', function(e) {
+        setTimeout(function() {
+            if (!bizInputEl.value.trim()) {
+                clearBizSelection();
+                return;
+            }
+            if (bizInputEl.value.trim() !== selectedBizUserName) {
+                syncBizSelectionByInput();
+            }
+        }, 200);
+    });
+
+    // 点击下拉箭头
+    bizArrowEl.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        console.log('[biz-user] arrow click, dropdown visible=', bizDropdownEl.style.display !== 'none');
+        if (bizDropdownEl.style.display !== 'none') {
+            closeBizDropdown();
+        } else {
+            bizInputEl.focus();
+            openBizDropdown();
+        }
+    });
+
+    // 选中某个用户（用原生事件代理）
+    bizListEl.addEventListener('mousedown', function(e) {
+        var item = e.target.closest('.biz-item');
+        if (!item) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var userId = item.getAttribute('data-id');
+        var userName = item.getAttribute('data-name');
+        var userPhone = item.getAttribute('data-phone');
+        console.log('[biz-user] selected user:', userId, userName);
+        bizUserIdEl.value = userId;
+        bizInputEl.value = userName;
+        bizPhoneEl.value = userPhone || '';
+        selectedBizUserName = userName;
+        closeBizDropdown();
+    });
+
     // 点击外部关闭
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('.biz-user-wrap').length) {
-            closeBizPanel();
+    document.addEventListener('click', function(e) {
+        var wrap = document.getElementById('bizUserWrap');
+        if (wrap && !wrap.contains(e.target)) {
+            closeBizDropdown();
         }
     });
 
@@ -646,7 +747,6 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
 
     // 编辑模式：加载项目数据
     if (isEditMode) {
-        // 加载项目基本信息
         $.ajax({
             url: '/project/info/get/' + projectId,
             type: 'GET',
@@ -670,7 +770,6 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     document.getElementById('contentDetail').value = data.contentDetail || '';
                     document.getElementById('remark').value = data.remark || '';
 
-                    // 数字字段
                     if (data.projectAmount != null) document.getElementById('projectAmount').value = data.projectAmount;
                     if (data.maxPrice != null) document.getElementById('maxPrice').value = data.maxPrice;
                     if (data.minPrice != null) document.getElementById('minPrice').value = data.minPrice;
@@ -682,21 +781,24 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     if (data.contractDeposit != null) document.getElementById('contractDeposit').value = data.contractDeposit;
 
                     // 下拉框回显
-                    if (data.projectType != null) { $('select[name="projectType"]').val(data.projectType.toString()); }
-                    if (data.bidType != null) { $('select[name="bidType"]').val(data.bidType.toString()); }
-                    if (data.bidWay != null) { $('select[name="bidWay"]').val(data.bidWay.toString()); }
-                    if (data.priceType != null) { $('select[name="priceType"]').val(data.priceType.toString()); }
-                    if (data.projectCycle != null) { $('select[name="projectCycle"]').val(data.projectCycle.toString()); }
+                    if (data.projectType != null) $('select[name="projectType"]').val(data.projectType.toString());
+                    if (data.bidType != null) $('select[name="bidType"]').val(data.bidType.toString());
+                    if (data.bidWay != null) $('select[name="bidWay"]').val(data.bidWay.toString());
+                    if (data.priceType != null) $('select[name="priceType"]').val(data.priceType.toString());
+                    if (data.projectCycle != null) $('select[name="projectCycle"]').val(data.projectCycle.toString());
                     form.render('select');
 
-                    // 日期时间回显
-                    if (data.questionEndTime) { document.getElementById('questionEndTime').value = data.questionEndTime.replace('T', ' '); }
-                    if (data.bidTime) { document.getElementById('bidTime').value = data.bidTime.replace('T', ' '); }
+                    // 日期回显
+                    if (data.questionEndTime) document.getElementById('questionEndTime').value = data.questionEndTime.replace('T', ' ');
+                    if (data.bidTime) document.getElementById('bidTime').value = data.bidTime.replace('T', ' ');
 
                     // 业务员信息回显
-                    if (data.bisnessUserId) { document.getElementById('bisnessUserId').value = data.bisnessUserId; }
-                    if (data.bisnessUserName) { document.getElementById('bisnessUserName').value = data.bisnessUserName; }
-                    if (data.bisnessUserPhone) { document.getElementById('bisnessUserPhone').value = data.bisnessUserPhone; }
+                    if (data.bisnessUserId) bizUserIdEl.value = data.bisnessUserId;
+                    if (data.bisnessUserName) {
+                        bizInputEl.value = data.bisnessUserName;
+                        selectedBizUserName = data.bisnessUserName;
+                    }
+                    if (data.bisnessUserPhone) bizPhoneEl.value = data.bisnessUserPhone || '';
                 }
             }
         });
@@ -763,9 +865,9 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
             agencyFee: document.getElementById('agencyFee').value.trim() || null,
             bidDeposit: document.getElementById('bidDeposit').value.trim() || null,
             contractDeposit: document.getElementById('contractDeposit').value.trim() || null,
-            bisnessUserId: document.getElementById('bisnessUserId').value || null,
-            bisnessUserName: document.getElementById('bisnessUserName').value.trim() || null,
-            bisnessUserPhone: document.getElementById('bisnessUserPhone').value.trim() || null,
+            bisnessUserId: bizUserIdEl.value || null,
+            bisnessUserName: bizInputEl.value.trim() || null,
+            bisnessUserPhone: bizPhoneEl.value.trim() || null,
             questionEndTime: document.getElementById('questionEndTime').value.trim() || null,
             bidTime: bidTime || null,
             qualificationRequire: document.getElementById('qualificationRequire').value.trim() || null,

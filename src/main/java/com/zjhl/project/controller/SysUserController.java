@@ -47,7 +47,7 @@ public class SysUserController {
         if (name != null && !name.isEmpty()) {
             wrapper.like("real_name", name);
         }
-        wrapper.eq("status", 0); // 只查启用状态的用户
+        wrapper.eq("status", 1); // 只查启用状态的用户（sys_user.status：1正常 0禁用）
         wrapper.select("id", "real_name", "phone");
         wrapper.last("LIMIT 50");
         List<SysUser> users = sysUserService.list(wrapper);
