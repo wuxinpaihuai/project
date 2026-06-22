@@ -51,6 +51,10 @@ public class ProjectInfo {
     private Long bisnessUserId;
     private String bisnessUserName;
     private String bisnessUserPhone;
+
+    private Long techUserId;
+    private String techUserName;
+    private String techUserPhone;
     
     /** 项目状态（非数据库字段，来自project_stage.stage_status） */
     @TableField(exist = false)
@@ -152,6 +156,24 @@ public class ProjectInfo {
 	}
 	public void setBisnessUserPhone(String bisnessUserPhone) {
 		this.bisnessUserPhone = bisnessUserPhone;
+	}
+	public Long getTechUserId() {
+		return techUserId;
+	}
+	public void setTechUserId(Long techUserId) {
+		this.techUserId = techUserId;
+	}
+	public String getTechUserName() {
+		return techUserName;
+	}
+	public void setTechUserName(String techUserName) {
+		this.techUserName = techUserName;
+	}
+	public String getTechUserPhone() {
+		return techUserPhone;
+	}
+	public void setTechUserPhone(String techUserPhone) {
+		this.techUserPhone = techUserPhone;
 	}
     
     

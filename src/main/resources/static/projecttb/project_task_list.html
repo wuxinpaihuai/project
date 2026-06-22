@@ -57,6 +57,46 @@
         .task-status-3 { color: #86c566; }
         .task-status-4 { color: #ffb800; }
         .task-status-5 { color: #999; }
+
+        /* 签约弹窗 - 技术负责人选择 */
+        .sign-form { padding: 20px 25px 10px; }
+        .sign-form .layui-form-item { margin-bottom: 15px; }
+        .sign-form .layui-form-label { width: 100px !important; }
+        .sign-form .layui-input-block { margin-left: 100px !important; }
+        .sign-form .tech-form-item,
+        .sign-form .tech-form-item .layui-input-block {
+            overflow: visible !important;
+        }
+        .tech-user-wrap { position: relative; overflow: visible !important; }
+        .tech-user-wrap .tech-input-wrap { position: relative; }
+        .tech-user-wrap .tech-input-wrap input.layui-input {
+            padding-right: 30px; cursor: text;
+        }
+        .tech-user-wrap .tech-input-wrap .tech-arrow {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 14px; color: #999; cursor: pointer; transition: transform 0.2s;
+            user-select: none;
+        }
+        .tech-user-wrap .tech-input-wrap .tech-arrow.open { transform: translateY(-50%) rotate(180deg); }
+        .tech-user-wrap .tech-dropdown {
+            position: absolute; top: 42px; left: 0; width: 100%;
+            background: #fff; border: 1px solid #d2d2d2;
+            z-index: 999999; display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 0 0 4px 4px;
+            overflow: visible !important;
+        }
+        .tech-user-wrap .tech-dropdown .tech-list { max-height: 220px; overflow-y: auto; }
+        .tech-user-wrap .tech-dropdown .tech-list .tech-item {
+            padding: 9px 12px; cursor: pointer; font-size: 13px; color: #333;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .tech-user-wrap .tech-dropdown .tech-list .tech-item:hover { background: #f0f7ff; }
+        .tech-user-wrap .tech-dropdown .tech-list .tech-item.active { background: #e8f5e0; color: #5a9e3e; font-weight: bold; }
+        .tech-user-wrap .tech-dropdown .tech-list .tech-item .item-phone { color: #999; font-size: 12px; }
+        .tech-user-wrap .tech-dropdown .tech-list .tech-empty { padding: 15px; text-align: center; color: #999; font-size: 13px; }
+        .sign-form .readonly-input { background:#f2f2f2; cursor:not-allowed; }
     </style>
 </head>
 <body>
@@ -109,6 +149,40 @@
                 <div class="table-card">
                     <table id="myTaskTable" lay-filter="myTaskTable"></table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 提交签约弹窗 -->
+<div id="signContractForm" style="display:none;">
+    <div class="layui-form sign-form" lay-filter="signContractForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">项目名称</label>
+            <div class="layui-input-block">
+                <input type="text" id="signProjectName" class="layui-input readonly-input" readonly>
+                <input type="hidden" id="signProjectId">
+            </div>
+        </div>
+        <div class="layui-form-item tech-form-item">
+            <label class="layui-form-label"><span style="color:red;">*</span>技术负责人</label>
+            <div class="layui-input-block tech-user-wrap" id="techUserWrap">
+                <input type="hidden" id="techUserId">
+                <div class="tech-input-wrap">
+                    <input type="text" id="techUserName" placeholder="请选择技术负责人（可搜索）" class="layui-input" autocomplete="off">
+                    <i class="layui-icon tech-arrow" id="techArrow">&#xe623;</i>
+                </div>
+                <div class="tech-dropdown" id="techDropdown">
+                    <div class="tech-list" id="techList">
+                        <div class="tech-empty">点击输入框加载用户数据</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">联系方式</label>
+            <div class="layui-input-block">
+                <input type="text" id="techUserPhone" class="layui-input readonly-input" readonly placeholder="选择技术负责人后自动填充">
             </div>
         </div>
     </div>
@@ -250,9 +324,6 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
             {field: 'mileage', title: '里程数', width: 90, align: 'right', templet: function(d){
                 return d.mileage != null ? parseFloat(d.mileage).toFixed(1) : '-';
             }},
-            {field: 'taskStartTime', title: '任务开始时间', width: 160, align: 'center', templet: function(d){
-                return d.taskStartTime ? d.taskStartTime.replace('T', ' ') : '-';
-            }},
             {field: 'taskEndTime', title: '任务结束时间', width: 160, align: 'center', templet: function(d){
                 return d.taskEndTime ? d.taskEndTime.replace('T', ' ') : '-';
             }},
@@ -352,6 +423,177 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
         });
     });
 
+    // ★★★ 技术负责人可搜索下拉组件 ★★★
+    var techInputEl = document.getElementById('techUserName');
+    var techDropdownEl = document.getElementById('techDropdown');
+    var techListEl = document.getElementById('techList');
+    var techArrowEl = document.getElementById('techArrow');
+    var techUserIdEl = document.getElementById('techUserId');
+    var techPhoneEl = document.getElementById('techUserPhone');
+    var allTechUsers = [];
+    var techUsersLoaded = false;
+    var selectedTechUserName = '';
+
+    function loadTechUsers(callback) {
+        $.ajax({
+            url: '/sys/user/searchByName',
+            type: 'GET',
+            headers: {token: token},
+            data: {name: ''},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    allTechUsers = res.data;
+                    techUsersLoaded = true;
+                    if (callback) callback();
+                } else {
+                    allTechUsers = [];
+                    techUsersLoaded = false;
+                    techListEl.innerHTML = '<div class="tech-empty">暂无用户数据</div>';
+                }
+            },
+            error: function() {
+                allTechUsers = [];
+                techUsersLoaded = false;
+                techListEl.innerHTML = '<div class="tech-empty">加载失败，请重试</div>';
+            }
+        });
+    }
+
+    function clearTechSelection() {
+        techUserIdEl.value = '';
+        techPhoneEl.value = '';
+        selectedTechUserName = '';
+    }
+
+    function setTechSelection(user) {
+        if (!user) {
+            clearTechSelection();
+            return;
+        }
+        techUserIdEl.value = user.id || '';
+        techInputEl.value = user.realName || '';
+        techPhoneEl.value = user.phone || '';
+        selectedTechUserName = user.realName || '';
+    }
+
+    function syncTechSelectionByInput() {
+        var keyword = techInputEl.value.trim();
+        if (!keyword) {
+            clearTechSelection();
+            return;
+        }
+        var currentId = techUserIdEl.value;
+        if (currentId) {
+            var matched = allTechUsers.find(function(u) { return u.id == currentId; });
+            if (matched && matched.realName === keyword) {
+                setTechSelection(matched);
+                return;
+            }
+        }
+        var matchedByName = allTechUsers.find(function(u) {
+            return u.realName === keyword;
+        });
+        if (matchedByName) {
+            setTechSelection(matchedByName);
+        } else {
+            clearTechSelection();
+        }
+    }
+
+    function renderTechList(keyword) {
+        var currentId = techUserIdEl.value;
+        var list = allTechUsers;
+        if (keyword) {
+            var kw = keyword.toLowerCase();
+            list = allTechUsers.filter(function(u) {
+                return (u.realName && u.realName.toLowerCase().indexOf(kw) > -1);
+            });
+        }
+        if (list.length === 0) {
+            techListEl.innerHTML = '<div class="tech-empty">' + (keyword ? '无匹配用户' : '暂无用户数据') + '</div>';
+            return;
+        }
+        var html = '';
+        list.forEach(function(u) {
+            var cls = (currentId && u.id == currentId) ? ' active' : '';
+            html += '<div class="tech-item' + cls + '" data-id="' + u.id + '" data-name="' + (u.realName || '') + '" data-phone="' + (u.phone || '') + '">';
+            html += '  <span>' + (u.realName || '') + '</span>';
+            html += '  <span class="item-phone">' + (u.phone || '') + '</span>';
+            html += '</div>';
+        });
+        techListEl.innerHTML = html;
+    }
+
+    function openTechDropdown() {
+        if (!techUsersLoaded) {
+            techListEl.innerHTML = '<div class="tech-empty">加载中...</div>';
+            techDropdownEl.style.display = 'block';
+            techArrowEl.classList.add('open');
+            loadTechUsers(function() {
+                renderTechList(techInputEl.value.trim());
+                techDropdownEl.style.display = 'block';
+            });
+        } else {
+            renderTechList(techInputEl.value.trim());
+            techDropdownEl.style.display = 'block';
+            techArrowEl.classList.add('open');
+        }
+    }
+
+    function closeTechDropdown() {
+        techDropdownEl.style.display = 'none';
+        techArrowEl.classList.remove('open');
+    }
+
+    techInputEl.addEventListener('focus', function() { openTechDropdown(); });
+    techInputEl.addEventListener('input', function() {
+        if (!techUsersLoaded) {
+            openTechDropdown();
+        } else {
+            renderTechList(this.value.trim());
+            techDropdownEl.style.display = 'block';
+            techArrowEl.classList.add('open');
+        }
+    });
+    techInputEl.addEventListener('blur', function() {
+        setTimeout(function() {
+            if (!techInputEl.value.trim()) {
+                clearTechSelection();
+                return;
+            }
+            if (techInputEl.value.trim() !== selectedTechUserName) {
+                syncTechSelectionByInput();
+            }
+        }, 200);
+    });
+    techArrowEl.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (techDropdownEl.style.display !== 'none') {
+            closeTechDropdown();
+        } else {
+            techInputEl.focus();
+            openTechDropdown();
+        }
+    });
+    techListEl.addEventListener('mousedown', function(e) {
+        var item = e.target.closest('.tech-item');
+        if (!item) return;
+        e.preventDefault();
+        e.stopPropagation();
+        techUserIdEl.value = item.getAttribute('data-id');
+        techInputEl.value = item.getAttribute('data-name');
+        techPhoneEl.value = item.getAttribute('data-phone') || '';
+        selectedTechUserName = item.getAttribute('data-name');
+        closeTechDropdown();
+    });
+    document.addEventListener('click', function(e) {
+        var wrap = document.getElementById('techUserWrap');
+        if (wrap && !wrap.contains(e.target)) {
+            closeTechDropdown();
+        }
+    });
+
     // 提交签约
     $('#signContractBtn').on('click', function(){
         var checkData = table.checkStatus('projectTable').data;
@@ -364,22 +606,63 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
             return;
         }
         var selectedProject = checkData[0];
-        layer.confirm('确定要对项目【' + selectedProject.projectName + '】提交签约吗？', {icon: 3, title: '确认签约'}, function(index){
-            $.ajax({
-                url: '/project/tb/signContract',
-                type: 'POST',
-                contentType: 'application/json',
-                headers: {token: token},
-                data: JSON.stringify({projectId: selectedProject.id}),
-                success: function(res) {
-                    if (res.code === 200) {
-                        layer.msg('提交签约成功', {icon: 1});
-                    } else {
-                        layer.msg(res.msg || '操作失败', {icon: 2});
-                    }
+
+        // 重置弹窗
+        document.getElementById('signProjectId').value = selectedProject.id;
+        document.getElementById('signProjectName').value = selectedProject.projectName || '';
+        techUserIdEl.value = '';
+        techInputEl.value = '';
+        techPhoneEl.value = '';
+        selectedTechUserName = '';
+        allTechUsers = [];
+        techUsersLoaded = false;
+        techListEl.innerHTML = '<div class="tech-empty">点击输入框加载用户数据</div>';
+
+        layer.open({
+            type: 1,
+            title: '提交签约 - ' + selectedProject.projectName,
+            area: ['500px', '360px'],
+            content: $('#signContractForm'),
+            btn: ['确认签约', '取消'],
+            yes: function(index, layero){
+                var projectId = document.getElementById('signProjectId').value;
+                var techUserId = techUserIdEl.value;
+                var techUserName = techInputEl.value.trim();
+                var techUserPhone = techPhoneEl.value.trim();
+
+                if (!techUserId || !techUserName) {
+                    layer.msg('请选择技术负责人', {icon: 5});
+                    return;
                 }
-            });
-            layer.close(index);
+
+                $.ajax({
+                    url: '/project/tb/signContract',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {token: token},
+                    data: JSON.stringify({
+                        projectId: projectId,
+                        techUserId: techUserId,
+                        techUserName: techUserName,
+                        techUserPhone: techUserPhone
+                    }),
+                    success: function(res) {
+                        if (res.code === 200) {
+                            layer.msg('提交签约成功', {icon: 1});
+                            layer.close(index);
+                            table.reload('projectTable');
+                        } else {
+                            layer.msg(res.msg || '操作失败', {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('请求失败，请重试', {icon: 2});
+                    }
+                });
+            },
+            end: function(){
+                $('#signContractForm').hide();
+            }
         });
     });
 });

@@ -34,6 +34,7 @@
             border-color: #ff5722 !important;
         }
         .win-bid-amount-box { display: none; margin-top: 10px; }
+        .win-bid-file-box { display: none; margin-top: 10px; }
         .btn-bar { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e8e8; }
 
         /* 表格内输入框样式 */
@@ -88,6 +89,19 @@
                     <input type="text" name="winBidAmount" id="winBidAmount" placeholder="请输入中标金额或费率" class="layui-input" style="width:300px;">
                 </div>
             </div>
+            <!-- 中标通知书上传 -->
+            <div class="layui-form-item win-bid-file-box" id="winBidFileBox">
+                <label class="layui-form-label">中标通知书</label>
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn layui-btn-sm btn-blue" id="uploadBidFileBtn"><i class="layui-icon">&#xe67c;</i> 上传文件</button>
+                    <span id="bidFileInfo" style="display:none;margin-left:10px;color:#333;">
+                        <span id="bidFileName"></span>
+                        <i class="layui-icon" id="deleteBidFileBtn" style="color:#ff5722;cursor:pointer;margin-left:5px;font-size:16px;" title="删除">&#xe640;</i>
+                    </span>
+                    <input type="hidden" id="bidFilePath" name="filePath" value="">
+                    <input type="hidden" id="bidFileOriginalName" name="fileName" value="">
+                </div>
+            </div>
 
             <!-- 投标单位得分情况 - 表格形式 -->
             <div style="margin-top:20px;">
@@ -132,9 +146,10 @@ var token = localStorage.getItem('token');
 var projectId = new URLSearchParams(window.location.search).get('projectId');
 var rowIndex = 0;
 
-layui.use(['form', 'layer'], function(){
+layui.use(['form', 'layer', 'upload'], function(){
     var form = layui.form;
     var layer = layui.layer;
+    var upload = layui.upload;
     var $ = layui.$ || layui.jquery;
 
     // ========== 加载已有数据 ==========
@@ -158,8 +173,15 @@ layui.use(['form', 'layer'], function(){
             if (extend && extend.isWinBid === 1) {
                 $('input[name="isWinBid"][value="1"]').prop('checked', true);
                 $('#winBidAmountBox').show();
+                $('#winBidFileBox').show();
                 if (extend.winBidAmount) {
                     $('#winBidAmount').val(extend.winBidAmount);
+                }
+                if (extend.filePath) {
+                    $('#bidFilePath').val(extend.filePath);
+                    $('#bidFileOriginalName').val(extend.fileName || '');
+                    $('#bidFileName').text(extend.fileName || '已上传文件');
+                    $('#bidFileInfo').show();
                 }
             }
             form.render('radio');
@@ -186,10 +208,60 @@ layui.use(['form', 'layer'], function(){
     form.on('radio(isWinBid)', function(data){
         if (data.value === '1') {
             $('#winBidAmountBox').show();
+            $('#winBidFileBox').show();
         } else {
             $('#winBidAmountBox').hide();
+            $('#winBidFileBox').hide();
             $('#winBidAmount').val('');
+            $('#bidFilePath').val('');
+            $('#bidFileOriginalName').val('');
+            $('#bidFileName').text('');
+            $('#bidFileInfo').hide();
         }
+    });
+
+    // ========== 文件上传 ==========
+    var uploadInst = upload.render({
+        elem: '#uploadBidFileBtn',
+        url: '/file/upload',
+        headers: {token: token},
+        accept: 'file',
+        exts: 'pdf|doc|docx|jpg|jpeg|png|xls|xlsx|zip|rar',
+        size: 102400,
+        auto: true,
+        choose: function(obj) {
+            obj.preview(function(index, file, result){
+                // 选中文件后回调
+            });
+        },
+        before: function(obj) {
+            layer.msg('正在上传...', {icon: 16, time: 0, shade: 0.3});
+        },
+        done: function(res) {
+            layer.closeAll('msg');
+            if (res && res.code === 200) {
+                $('#bidFilePath').val(res.data);
+                $('#bidFileOriginalName').val(res.originalName || '');
+                $('#bidFileName').text(res.originalName || '已上传文件');
+                $('#bidFileInfo').show();
+                layer.msg('上传成功', {icon: 1});
+            } else {
+                layer.msg(res && res.msg ? res.msg : '上传失败', {icon: 2});
+            }
+        },
+        error: function() {
+            layer.closeAll('msg');
+            layer.msg('上传请求失败', {icon: 2});
+        }
+    });
+
+    // ========== 删除已上传通知书 ==========
+    $('#deleteBidFileBtn').on('click', function(){
+        $('#bidFilePath').val('');
+        $('#bidFileOriginalName').val('');
+        $('#bidFileName').text('');
+        $('#bidFileInfo').hide();
+        layer.msg('已删除，可重新上传', {icon: 1});
     });
 
     // ========== 添加投标单位行 ==========
@@ -236,6 +308,12 @@ layui.use(['form', 'layer'], function(){
             return;
         }
 
+        // 校验：中标时必须上传通知书
+        if (isWinBid === '1' && !$('#bidFilePath').val()) {
+            layer.msg('请上传中标通知书', {icon: 5});
+            return;
+        }
+
         // 收集投标单位数据
         var bidList = [];
         var valid = true;
@@ -264,6 +342,8 @@ layui.use(['form', 'layer'], function(){
             projectId: projectId,
             isWinBid: parseInt(isWinBid),
             winBidAmount: winBidAmount || '',
+            filePath: $('#bidFilePath').val() || '',
+            fileName: $('#bidFileOriginalName').val() || '',
             bidList: bidList
         };
 

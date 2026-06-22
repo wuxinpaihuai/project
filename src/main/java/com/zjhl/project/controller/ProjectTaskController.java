@@ -377,6 +377,7 @@ public class ProjectTaskController {
         if (!stages.isEmpty()) {
             ProjectStage latestStage = stages.get(0);
             latestStage.setStageStatus(1); // 执行中
+            latestStage.setStartTime(LocalDateTime.now());
             projectStageService.updateById(latestStage);
         }
 

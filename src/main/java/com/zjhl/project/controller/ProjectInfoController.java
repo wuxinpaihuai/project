@@ -144,6 +144,9 @@ public class ProjectInfoController {
         project.setBisnessUserId(params.get("bisnessUserId") != null ? Long.parseLong(params.get("bisnessUserId").toString()) : null);
         project.setBisnessUserName((String) params.get("bisnessUserName"));
         project.setBisnessUserPhone((String) params.get("bisnessUserPhone"));
+        project.setTechUserId(params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null);
+        project.setTechUserName((String) params.get("techUserName"));
+        project.setTechUserPhone((String) params.get("techUserPhone"));
         project.setQuestionEndTime(params.get("questionEndTime") != null && !params.get("questionEndTime").toString().isEmpty() ? LocalDateTime.parse(params.get("questionEndTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setBidTime(params.get("bidTime") != null && !params.get("bidTime").toString().isEmpty() ? LocalDateTime.parse(params.get("bidTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setQualificationRequire((String) params.get("qualificationRequire"));
@@ -231,6 +234,9 @@ public class ProjectInfoController {
         project.setBisnessUserId(params.get("bisnessUserId") != null ? Long.parseLong(params.get("bisnessUserId").toString()) : null);
         project.setBisnessUserName((String) params.get("bisnessUserName"));
         project.setBisnessUserPhone((String) params.get("bisnessUserPhone"));
+        project.setTechUserId(params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null);
+        project.setTechUserName((String) params.get("techUserName"));
+        project.setTechUserPhone((String) params.get("techUserPhone"));
         project.setQuestionEndTime(params.get("questionEndTime") != null && !params.get("questionEndTime").toString().isEmpty() ? LocalDateTime.parse(params.get("questionEndTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setBidTime(params.get("bidTime") != null && !params.get("bidTime").toString().isEmpty() ? LocalDateTime.parse(params.get("bidTime").toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
         project.setQualificationRequire((String) params.get("qualificationRequire"));

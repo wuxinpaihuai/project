@@ -234,6 +234,9 @@ layui.use(['layer'], function(){
                 if (isWinBid && extend.winBidAmount) {
                     html += '<span style="margin-left:15px;color:#333;">中标金额/费率：' + safeStr(extend.winBidAmount) + '</span>';
                 }
+                if (isWinBid && extend.filePath) {
+                    html += '<span style="margin-left:15px;color:#333;">中标通知书：<a href="/file/download?filePath=' + encodeURIComponent(extend.filePath) + '&fileName=' + encodeURIComponent(extend.fileName || '') + '" target="_blank" style="color:#1e9fff;"><i class="layui-icon">&#xe61e;</i> ' + (extend.fileName || '下载') + '</a></span>';
+                }
                 html += '</div>';
 
                 if (bidResults.length > 0) {

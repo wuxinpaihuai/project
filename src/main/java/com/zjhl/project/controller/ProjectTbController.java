@@ -2,7 +2,7 @@ package com.zjhl.project.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +89,7 @@ public class ProjectTbController {
             result.put("code", 200);
             result.put("msg", "查询成功");
             result.put("total", 0);
-            result.put("records", new ArrayList<ProjectInfo>());
+            result.put("records", Arrays.asList());
             return result;
         }
 
@@ -171,7 +171,7 @@ public class ProjectTbController {
             attachWrapper.eq("task_id", task.getId());
             attachWrapper.eq("attach_type", 2);
             attachWrapper.orderByAsc("create_time");
-            List<ProjectTaskAttachment> attachments = projectTaskAttachmentService.list(attachWrapper);
+           // List<ProjectTaskAttachment> attachments = projectTaskAttachmentService.list(attachWrapper);
             task.setTaskDesc(task.getTaskDesc()); // 借用taskDesc暂存附件JSON
         }
 
@@ -250,6 +250,8 @@ public class ProjectTbController {
         Long projectId = Long.parseLong(params.get("projectId").toString());
         Integer isWinBid = params.get("isWinBid") != null ? Integer.parseInt(params.get("isWinBid").toString()) : 0;
         String winBidAmount = (String) params.get("winBidAmount");
+        String filePath = (String) params.get("filePath");
+        String fileName = (String) params.get("fileName");
 
         // 保存/更新 project_extend
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
@@ -260,12 +262,26 @@ public class ProjectTbController {
             extend.setProjectId(projectId);
             extend.setIsWinBid(isWinBid);
             extend.setWinBidAmount(winBidAmount);
+            if (isWinBid == 1) {
+                extend.setFilePath(filePath);
+                extend.setFileName(fileName);
+            } else {
+                extend.setFilePath(null);
+                extend.setFileName(null);
+            }
             extend.setCreateTime(LocalDateTime.now());
             extend.setUpdateTime(LocalDateTime.now());
             projectExtendService.save(extend);
         } else {
             extend.setIsWinBid(isWinBid);
             extend.setWinBidAmount(winBidAmount);
+            if (isWinBid == 1) {
+                extend.setFilePath(filePath);
+                extend.setFileName(fileName);
+            } else {
+                extend.setFilePath(null);
+                extend.setFileName(null);
+            }
             extend.setUpdateTime(LocalDateTime.now());
             projectExtendService.updateById(extend);
         }
@@ -329,13 +345,67 @@ public class ProjectTbController {
             return result;
         }
 
-        // 更新签约状态
-        if (extend != null) {
-            extend.setIsSign(1);
-            extend.setUpdateTime(LocalDateTime.now());
-            projectExtendService.updateById(extend);
+        // 校验技术负责人
+        Long techUserId = params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null;
+        String techUserName = (String) params.get("techUserName");
+        String techUserPhone = (String) params.get("techUserPhone");
+        if (techUserId == null) {
+            result.put("code", 500);
+            result.put("msg", "请选择技术负责人");
+            return result;
         }
 
+        // 更新签约状态
+       // extend.setIsSign(1);
+        extend.setUpdateTime(LocalDateTime.now());
+        projectExtendService.updateById(extend);
+
+        // 更新项目信息表的技术负责人
+        ProjectInfo project = projectInfoService.getById(projectId);
+        if (project != null) {
+            project.setTechUserId(techUserId);
+            project.setTechUserName(techUserName);
+            project.setTechUserPhone(techUserPhone);
+            project.setUpdateTime(LocalDateTime.now());
+            projectInfoService.updateById(project);
+        }
+
+        //更新投标阶段结束时间，插入签约阶段和实施阶段记录。（目前机制是默认签约阶段和实施阶段同时展开）
+        QueryWrapper<ProjectStage> stageWrapper =  new QueryWrapper<>();
+        stageWrapper.eq("project_id", projectId);
+        stageWrapper.eq("stage_type", 1);//投标状态
+        ProjectStage updateStage = projectStageService.getOne(stageWrapper);
+        
+        if (updateStage == null ) {
+            result.put("code", 500);
+            result.put("msg", "项目进入签约阶段出错，请联系管理员！");
+            return result;
+        }
+        
+        updateStage.setEndTime(LocalDateTime.now());//更新投标阶段结束时间
+        updateStage.setStageStatus(2);//已完成
+        updateStage.setStageRemark("投标已完成，进入下一阶段");
+        projectStageService.updateById(updateStage);
+        
+        //签约阶段
+        ProjectStage qyStage = new ProjectStage();
+        qyStage.setCreateTime(LocalDateTime.now());
+        qyStage.setProjectId(projectId);
+        qyStage.setStageType(2);//签约
+        qyStage.setStageStatus(1);//进行中
+        qyStage.setStartTime(LocalDateTime.now());//开始时间
+        projectStageService.save(qyStage);
+        
+        
+        //实施阶段
+        ProjectStage ssStage = new ProjectStage();
+        ssStage.setCreateTime(LocalDateTime.now());
+        ssStage.setProjectId(projectId);
+        ssStage.setStageType(3);//实施
+        ssStage.setStageStatus(1);//进行中
+        ssStage.setStartTime(LocalDateTime.now());//开始时间
+        projectStageService.save(ssStage);
+        
         result.put("code", 200);
         result.put("msg", "提交签约成功");
         return result;

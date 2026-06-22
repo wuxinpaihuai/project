@@ -21,6 +21,8 @@ public class ProjectExtend {
     private Integer isFinish;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private String filePath;
+    private String fileName;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -42,4 +44,18 @@ public class ProjectExtend {
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+	public String getFilePath() {
+		return filePath;
+	}
+	public void setFilePath(String filePath) {
+		this.filePath = filePath;
+	}
+	public String getFileName() {
+		return fileName;
+	}
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+    
+    
 }
