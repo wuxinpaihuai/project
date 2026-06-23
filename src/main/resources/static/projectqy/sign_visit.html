@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拜访记录</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px 30px;
+        }
+        .info-item {
+            display: flex; line-height: 28px; font-size: 14px;
+        }
+        .info-label {
+            color: #666; min-width: 90px; text-align: right; margin-right: 8px;
+        }
+        .info-value {
+            color: #333; flex: 1; word-break: break-all;
+        }
+        .visit-card {
+            background: #fff; border-radius: 4px; padding: 15px 20px;
+            margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .visit-timeline-dot {
+            position: absolute; left: 6px; top: 15px;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #1e9fff; border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #1e9fff;
+        }
+        .visit-timeline-line {
+            position: absolute; left: 11px; top: 30px;
+            width: 2px; background: #1e9fff; opacity: 0.3;
+        }
+        .visit-content { margin-left: 20px; }
+        .visit-narrative {
+            font-size: 14px; color: #333; line-height: 24px;
+            margin-bottom: 8px;
+        }
+        .visit-narrative .time-text { color: #1e9fff; font-weight: bold; }
+        .visit-narrative .target-text { color: #333; font-weight: bold; }
+        .visit-files {
+            margin-top: 8px;
+        }
+        .visit-files a {
+            color: #1e9fff; text-decoration: none; margin-right: 10px;
+        }
+        .visit-files a:hover { text-decoration: underline; }
+        .visit-actions {
+            position: absolute; top: 12px; right: 15px;
+        }
+        .visit-actions .layui-btn { margin-left: 5px; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .empty-visit {
+            text-align: center; color: #999; padding: 40px; font-size: 14px;
+        }
+        /* 编辑弹窗样式 */
+        .visit-form-card {
+            padding: 15px;
+        }
+        .visit-form-card .layui-form-label { width: 110px !important; }
+        .visit-form-card .layui-input-block { margin-left: 140px !important; }
+        .visit-form-card .layui-input-inline { width: 260px !important; }
+        .upload-file-item {
+            display: inline-block; margin-right: 10px; margin-bottom: 5px;
+            color: #1e9fff;
+        }
+        .upload-file-item .del-file {
+            color: #ff5722; cursor: pointer; margin-left: 3px;
+        }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="info-card">
+        <div class="section-title">项目基本信息</div>
+        <div class="info-grid" id="projectInfoGrid">
+            加载中...
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="section-title" style="border-bottom:none;margin-bottom:0;padding-bottom:0;">拜访记录</div>
+            <button type="button" class="layui-btn btn-green layui-btn-sm" id="addVisitBtn"><i class="layui-icon">&#xe654;</i> 新增拜访</button>
+        </div>
+        <div id="visitList" style="margin-top:15px;">
+            加载中...
+        </div>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = new URLSearchParams(window.location.search).get('projectId');
+
+layui.use(['layer', 'form', 'laydate', 'upload'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+    var $ = layui.jquery;
+
+    if (!projectId) {
+        $('#projectInfoGrid').html('<p style="color:red;text-align:center;">缺少项目ID参数</p>');
+        return;
+    }
+
+    // ========== 格式化时间 ==========
+    function formatDateTime(t) {
+        if (!t) return '';
+        var str = t.replace('T', ' ');
+        // 提取 年月日时分
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return str;
+        var year = d.getFullYear();
+        var month = d.getMonth() + 1;
+        var day = d.getDate();
+        var hour = d.getHours();
+        var min = d.getMinutes();
+        return year + '年' + month + '月' + day + '日' + hour + '点' + (min > 0 ? min + '分' : '');
+    }
+
+    function formatDateTimeShort(t) {
+        if (!t) return '';
+        var str = t.replace('T', ' ');
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return str;
+        var year = d.getFullYear();
+        var month = d.getMonth() + 1;
+        var day = d.getDate();
+        var hour = d.getHours();
+        var min = d.getMinutes();
+        return year + '/' + padZero(month) + '/' + padZero(day) + ' ' + padZero(hour) + ':' + padZero(min);
+    }
+
+    function padZero(n) { return n < 10 ? '0' + n : n; }
+
+    function safeStr(v) { return (v != null && v !== '') ? String(v) : '-'; }
+
+    // ========== 加载项目信息 ==========
+    $.ajax({
+        url: '/project/tb/projectDetail/' + projectId,
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            if (!res || res.code !== 200) {
+                $('#projectInfoGrid').html('<p style="color:red;text-align:center;">加载失败</p>');
+                return;
+            }
+            var p = res.project;
+            if (!p) {
+                $('#projectInfoGrid').html('<p style="color:red;text-align:center;">项目数据为空</p>');
+                return;
+            }
+            var html = '';
+            html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + safeStr(p.projectName) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">项目编号：</span><span class="info-value">' + safeStr(p.projectNo) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">项目地址：</span><span class="info-value">' + safeStr(p.area) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">业主单位：</span><span class="info-value">' + safeStr(p.ownerCompany) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + safeStr(p.ownerContact) + '</span></div>';
+            html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + safeStr(p.ownerPhone) + '</span></div>';
+            $('#projectInfoGrid').html(html);
+        },
+        error: function() {
+            $('#projectInfoGrid').html('<p style="color:red;text-align:center;">请求失败</p>');
+        }
+    });
+
+    // ========== 加载拜访记录 ==========
+    function loadVisits() {
+        $.ajax({
+            url: '/project/sign/visitList/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (!res || res.code !== 200) {
+                    $('#visitList').html('<p style="color:red;text-align:center;">加载失败</p>');
+                    return;
+                }
+                var visits = res.visits || [];
+                if (visits.length === 0) {
+                    $('#visitList').html('<div class="empty-visit">暂无拜访记录，点击上方按钮新增</div>');
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < visits.length; i++) {
+                    var v = visits[i];
+                    var startTimeStr = formatDateTime(v.visitStartTime);
+                    var endTimeStr = formatDateTime(v.visitEndTime);
+                    var targetStr = v.visitTarget || '';
+                    var contentStr = v.communicateContent || '';
+
+                    // 叙事式描述
+                    var narrative = '';
+                    if (startTimeStr) {
+                        narrative += '<span class="time-text">' + startTimeStr + '</span>';
+                    }
+                    if (endTimeStr) {
+                        narrative += ' - <span class="time-text">' + endTimeStr + '</span>';
+                    }
+                    if (targetStr) {
+                        narrative += ' 拜访 <span class="target-text">' + targetStr + '</span>';
+                    }
+                    if (contentStr) {
+                        narrative += '，' + contentStr;
+                    }
+
+                    html += '<div class="visit-card" data-id="' + v.id + '">';
+                    // 时间线点（最后一条不画线）
+                    html += '<div class="visit-timeline-dot"></div>';
+                    if (i < visits.length - 1) {
+                        html += '<div class="visit-timeline-line" style="height:calc(100% - 25px);"></div>';
+                    }
+                    html += '<div class="visit-content">';
+                    html += '<div class="visit-narrative">' + narrative + '</div>';
+
+                    // 附件
+                    var files = v.files || [];
+                    if (files.length > 0) {
+                        html += '<div class="visit-files">';
+                        for (var j = 0; j < files.length; j++) {
+                            var f = files[j];
+                            html += '<a href="/file/download?filePath=' + encodeURIComponent(f.filePath || '') + '&fileName=' + encodeURIComponent(f.fileName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (f.fileName || '附件' + (j+1)) + '</a>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+
+                    // 操作按钮
+                    html += '<div class="visit-actions">';
+                    html += '<button type="button" class="layui-btn layui-btn-xs btn-blue" onclick="editVisit(' + v.id + ')"><i class="layui-icon">&#xe642;</i> 编辑</button>';
+                    html += '<button type="button" class="layui-btn layui-btn-xs btn-red" onclick="deleteVisit(' + v.id + ')"><i class="layui-icon">&#xe640;</i> 删除</button>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+                $('#visitList').html(html);
+            },
+            error: function() {
+                $('#visitList').html('<p style="color:red;text-align:center;">请求失败</p>');
+            }
+        });
+    }
+
+    loadVisits();
+
+    // ========== 新增拜访记录 ==========
+    $('#addVisitBtn').on('click', function(){
+        showVisitForm(null);
+    });
+
+    // ========== 编辑拜访记录 ==========
+    window.editVisit = function(visitId) {
+        // 先加载该拜访记录数据
+        $.ajax({
+            url: '/project/sign/visitList/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (!res || res.code !== 200) return;
+                var visits = res.visits || [];
+                var targetVisit = null;
+                for (var i = 0; i < visits.length; i++) {
+                    if (visits[i].id == visitId) {
+                        targetVisit = visits[i];
+                        break;
+                    }
+                }
+                if (!targetVisit) {
+                    layer.msg('记录不存在', {icon: 2});
+                    return;
+                }
+                showVisitForm(targetVisit);
+            },
+            error: function() {
+                layer.msg('加载失败', {icon: 2});
+            }
+        });
+    };
+
+    // ========== 删除拜访记录 ==========
+    window.deleteVisit = function(visitId) {
+        layer.confirm('确认删除该拜访记录？', {icon: 3}, function(index){
+            $.ajax({
+                url: '/project/sign/deleteVisit/' + visitId,
+                type: 'POST',
+                headers: {token: token},
+                success: function(res) {
+                    if (res && res.code === 200) {
+                        layer.msg('删除成功', {icon: 1});
+                        loadVisits();
+                    } else {
+                        layer.msg(res && res.msg ? res.msg : '删除失败', {icon: 2});
+                    }
+                    layer.close(index);
+                },
+                error: function() {
+                    layer.msg('删除请求失败', {icon: 2});
+                    layer.close(index);
+                }
+            });
+        });
+    };
+
+    // ========== 拜访记录表单弹窗 ==========
+    var tempFiles = []; // 临时存储附件列表
+
+    function showVisitForm(visitData) {
+        tempFiles = [];
+        var isEdit = visitData !== null;
+        var title = isEdit ? '编辑拜访记录' : '新增拜访记录';
+
+        // 构建表单HTML
+        var formHtml = '<div class="visit-form-card">';
+        formHtml += '<form class="layui-form" lay-filter="visitForm">';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">开始时间</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="text" name="visitStartTime" id="visitStartTime" placeholder="请选择开始时间" class="layui-input">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">结束时间</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="text" name="visitEndTime" id="visitEndTime" placeholder="请选择结束时间" class="layui-input">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">拜访对象</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="visitTarget" id="visitTarget" placeholder="请输入拜访对象（多人可用逗号分隔）" class="layui-input" style="width:400px;">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">交流内容</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<textarea name="communicateContent" id="communicateContent" placeholder="请输入交流内容" class="layui-textarea" style="width:400px;height:120px;"></textarea>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">相关附件</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<button type="button" class="layui-btn layui-btn-sm btn-blue" id="visitUploadBtn"><i class="layui-icon">&#xe67c;</i> 上传附件</button>';
+        formHtml += '<div id="visitFileList" style="margin-top:8px;"></div>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-form-item" style="text-align:center;margin-top:20px;">';
+        formHtml += '<button type="button" class="layui-btn btn-green" id="visitSaveBtn"><i class="layui-icon">&#xe605;</i> 保存</button>';
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="visitCancelBtn">取消</button>';
+        formHtml += '</div>';
+        formHtml += '</form>';
+        formHtml += '</div>';
+
+        var editIndex = layer.open({
+            type: 1,
+            title: title,
+            area: ['600px', '500px'],
+            content: formHtml,
+            success: function(layero, index){
+                // 日期选择器
+                laydate.render({elem: '#visitStartTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss'});
+                laydate.render({elem: '#visitEndTime', type: 'datetime', format: 'yyyy-MM-dd HH:mm:ss'});
+
+                // 如果是编辑，回填数据
+                if (isEdit) {
+                    $('#visitStartTime').val(visitData.visitStartTime ? visitData.visitStartTime.replace('T', ' ') : '');
+                    $('#visitEndTime').val(visitData.visitEndTime ? visitData.visitEndTime.replace('T', ' ') : '');
+                    $('#visitTarget').val(visitData.visitTarget || '');
+                    $('#communicateContent').val(visitData.communicateContent || '');
+
+                    // 回填附件
+                    var existingFiles = visitData.files || [];
+                    for (var k = 0; k < existingFiles.length; k++) {
+                        tempFiles.push({
+                            filePath: existingFiles[k].filePath,
+                            fileName: existingFiles[k].fileName || ''
+                        });
+                    }
+                    renderFileList();
+
+                    form.render();
+                }
+
+                // 文件上传
+                upload.render({
+                    elem: '#visitUploadBtn',
+                    url: '/file/upload',
+                    headers: {token: token},
+                    accept: 'file',
+                    size: 102400,
+                    auto: true,
+                    before: function(obj) {
+                        layer.msg('正在上传...', {icon: 16, time: 0, shade: 0.3});
+                    },
+                    done: function(res) {
+                        layer.closeAll('msg');
+                        if (res && res.code === 200) {
+                            tempFiles.push({
+                                filePath: res.data,
+                                fileName: res.originalName || ''
+                            });
+                            renderFileList();
+                            layer.msg('上传成功', {icon: 1});
+                        } else {
+                            layer.msg(res && res.msg ? res.msg : '上传失败', {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.closeAll('msg');
+                        layer.msg('上传请求失败', {icon: 2});
+                    }
+                });
+
+                // 保存
+                $('#visitSaveBtn').on('click', function(){
+                    var visitStartTime = $('#visitStartTime').val();
+                    var visitEndTime = $('#visitEndTime').val();
+                    var visitTarget = $('#visitTarget').val();
+                    var communicateContent = $('#communicateContent').val();
+
+                    if (!visitStartTime) {
+                        layer.msg('请选择开始时间', {icon: 5});
+                        return;
+                    }
+                    if (!visitTarget) {
+                        layer.msg('请输入拜访对象', {icon: 5});
+                        return;
+                    }
+
+                    var postData = {
+                        projectId: projectId,
+                        visitTarget: visitTarget,
+                        communicateContent: communicateContent,
+                        visitStartTime: visitStartTime,
+                        visitEndTime: visitEndTime,
+                        files: tempFiles
+                    };
+
+                    if (isEdit) {
+                        postData.id = visitData.id;
+                    }
+
+                    var url = isEdit ? '/project/sign/editVisit' : '/project/sign/addVisit';
+
+                    var $btn = $('#visitSaveBtn');
+                    if ($btn.hasClass('layui-btn-disabled')) return;
+                    $btn.addClass('layui-btn-disabled').prop('disabled', true);
+
+                    $.ajax({
+                        url: url,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {token: token},
+                        data: JSON.stringify(postData),
+                        success: function(res) {
+                            $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                            if (res && res.code === 200) {
+                                layer.msg(isEdit ? '编辑成功' : '新增成功', {icon: 1});
+                                layer.close(editIndex);
+                                loadVisits();
+                            } else {
+                                layer.msg(res && res.msg ? res.msg : '保存失败', {icon: 2});
+                            }
+                        },
+                        error: function() {
+                            $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                            layer.msg('请求失败', {icon: 2});
+                        }
+                    });
+                });
+
+                // 取消
+                $('#visitCancelBtn').on('click', function(){
+                    layer.close(editIndex);
+                });
+            }
+        });
+    }
+
+    // ========== 渲染附件列表 ==========
+    function renderFileList() {
+        var html = '';
+        for (var i = 0; i < tempFiles.length; i++) {
+            html += '<div class="upload-file-item">';
+            html += '<i class="layui-icon">&#xe61e;</i> ' + tempFiles[i].fileName;
+            html += '<i class="layui-icon del-file" data-index="' + i + '" title="删除">&#xe640;</i>';
+            html += '</div>';
+        }
+        $('#visitFileList').html(html);
+
+        // 删除附件
+        $('#visitFileList .del-file').on('click', function(){
+            var idx = parseInt($(this).attr('data-index'));
+            tempFiles.splice(idx, 1);
+            renderFileList();
+        });
+    }
+});
+</script>
+</body>
+</html>
