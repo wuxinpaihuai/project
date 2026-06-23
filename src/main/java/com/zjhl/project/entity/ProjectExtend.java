@@ -16,6 +16,10 @@ public class ProjectExtend {
     private Integer isWinBid;
     private String winBidAmount;
     private Integer isSign;
+    
+    private LocalDateTime signEndTime;
+    private LocalDateTime signTime;
+    
     private Integer isReceiveMoney;
     private Integer isDeliver;
     private Integer isFinish;
@@ -55,6 +59,18 @@ public class ProjectExtend {
 	}
 	public void setFileName(String fileName) {
 		this.fileName = fileName;
+	}
+	public LocalDateTime getSignEndTime() {
+		return signEndTime;
+	}
+	public void setSignEndTime(LocalDateTime signEndTime) {
+		this.signEndTime = signEndTime;
+	}
+	public LocalDateTime getSignTime() {
+		return signTime;
+	}
+	public void setSignTime(LocalDateTime signTime) {
+		this.signTime = signTime;
 	}
     
     

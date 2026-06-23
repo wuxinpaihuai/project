@@ -35,6 +35,7 @@
         }
         .win-bid-amount-box { display: none; margin-top: 10px; }
         .win-bid-file-box { display: none; margin-top: 10px; }
+        .sign-end-time-box { display: none; margin-top: 10px; }
         .btn-bar { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e8e8; }
 
         /* 表格内输入框样式 */
@@ -87,6 +88,13 @@
                 <label class="layui-form-label">中标金额/费率</label>
                 <div class="layui-input-block">
                     <input type="text" name="winBidAmount" id="winBidAmount" placeholder="请输入中标金额或费率" class="layui-input" style="width:300px;">
+                </div>
+            </div>
+            <!-- 签约截止时间 -->
+            <div class="layui-form-item sign-end-time-box" id="signEndTimeBox">
+                <label class="layui-form-label">签约截止时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="signEndTime" id="signEndTime" placeholder="请选择签约截止时间" class="layui-input" style="width:300px;" readonly>
                 </div>
             </div>
             <!-- 中标通知书上传 -->
@@ -146,11 +154,19 @@ var token = localStorage.getItem('token');
 var projectId = new URLSearchParams(window.location.search).get('projectId');
 var rowIndex = 0;
 
-layui.use(['form', 'layer', 'upload'], function(){
+layui.use(['form', 'layer', 'upload', 'laydate'], function(){
     var form = layui.form;
     var layer = layui.layer;
     var upload = layui.upload;
+    var laydate = layui.laydate;
     var $ = layui.$ || layui.jquery;
+
+    // 初始化签约截止时间日期时间选择器
+    laydate.render({
+        elem: '#signEndTime',
+        type: 'datetime',
+        trigger: 'click'
+    });
 
     // ========== 加载已有数据 ==========
     $.ajax({
@@ -173,9 +189,13 @@ layui.use(['form', 'layer', 'upload'], function(){
             if (extend && extend.isWinBid === 1) {
                 $('input[name="isWinBid"][value="1"]').prop('checked', true);
                 $('#winBidAmountBox').show();
+                $('#signEndTimeBox').show();
                 $('#winBidFileBox').show();
                 if (extend.winBidAmount) {
                     $('#winBidAmount').val(extend.winBidAmount);
+                }
+                if (extend.signEndTime) {
+                    $('#signEndTime').val(extend.signEndTime);
                 }
                 if (extend.filePath) {
                     $('#bidFilePath').val(extend.filePath);
@@ -208,11 +228,13 @@ layui.use(['form', 'layer', 'upload'], function(){
     form.on('radio(isWinBid)', function(data){
         if (data.value === '1') {
             $('#winBidAmountBox').show();
+            $('#signEndTimeBox').show();
             $('#winBidFileBox').show();
         } else {
             $('#winBidAmountBox').hide();
-            $('#winBidFileBox').hide();
+            $('#signEndTimeBox').hide();
             $('#winBidAmount').val('');
+            $('#signEndTime').val('');
             $('#bidFilePath').val('');
             $('#bidFileOriginalName').val('');
             $('#bidFileName').text('');
@@ -301,10 +323,18 @@ layui.use(['form', 'layer', 'upload'], function(){
         var isWinBid = $('input[name="isWinBid"]:checked').val();
         var winBidAmount = $('#winBidAmount').val();
         if (winBidAmount) winBidAmount = winBidAmount.trim();
+        var signEndTime = $('#signEndTime').val();
+        if (signEndTime) signEndTime = signEndTime.trim();
 
         // 校验：中标时必须填写金额
         if (isWinBid === '1' && !winBidAmount) {
             layer.msg('请填写中标金额/费率', {icon: 5});
+            return;
+        }
+
+        // 校验：中标时必须填写签约截止时间
+        if (isWinBid === '1' && !signEndTime) {
+            layer.msg('请选择签约截止时间', {icon: 5});
             return;
         }
 
@@ -342,6 +372,7 @@ layui.use(['form', 'layer', 'upload'], function(){
             projectId: projectId,
             isWinBid: parseInt(isWinBid),
             winBidAmount: winBidAmount || '',
+            signEndTime: signEndTime || '',
             filePath: $('#bidFilePath').val() || '',
             fileName: $('#bidFileOriginalName').val() || '',
             bidList: bidList

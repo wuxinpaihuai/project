@@ -250,8 +250,14 @@ public class ProjectTbController {
         Long projectId = Long.parseLong(params.get("projectId").toString());
         Integer isWinBid = params.get("isWinBid") != null ? Integer.parseInt(params.get("isWinBid").toString()) : 0;
         String winBidAmount = (String) params.get("winBidAmount");
+        String signEndTimeStr = params.get("signEndTime") != null ? params.get("signEndTime").toString() : null;
         String filePath = (String) params.get("filePath");
         String fileName = (String) params.get("fileName");
+
+        LocalDateTime signEndTime = null;
+        if (isWinBid == 1 && signEndTimeStr != null && !signEndTimeStr.isEmpty()) {
+            signEndTime = LocalDateTime.parse(signEndTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
 
         // 保存/更新 project_extend
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
@@ -263,9 +269,11 @@ public class ProjectTbController {
             extend.setIsWinBid(isWinBid);
             extend.setWinBidAmount(winBidAmount);
             if (isWinBid == 1) {
+                extend.setSignEndTime(signEndTime);
                 extend.setFilePath(filePath);
                 extend.setFileName(fileName);
             } else {
+                extend.setSignEndTime(null);
                 extend.setFilePath(null);
                 extend.setFileName(null);
             }
@@ -276,9 +284,11 @@ public class ProjectTbController {
             extend.setIsWinBid(isWinBid);
             extend.setWinBidAmount(winBidAmount);
             if (isWinBid == 1) {
+                extend.setSignEndTime(signEndTime);
                 extend.setFilePath(filePath);
                 extend.setFileName(fileName);
             } else {
+                extend.setSignEndTime(null);
                 extend.setFilePath(null);
                 extend.setFileName(null);
             }
