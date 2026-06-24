@@ -29,6 +29,18 @@ public class ProjectSignController {
     @Autowired
     private SignVisitFileService signVisitFileService;
 
+    private LocalDateTime parseVisitTime(String timeStr) {
+        if (timeStr == null || timeStr.isEmpty()) {
+            return null;
+        }
+        // 兼容前端可能传回的 yyyy-MM-dd HH:mm 与 yyyy-MM-dd HH:mm:ss
+        if (timeStr.length() == "yyyy-MM-dd HH:mm".length()) {
+            timeStr = timeStr + ":00";
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return LocalDateTime.parse(timeStr, formatter);
+    }
+
     /**
      * 合同签订列表 - 查询已中标的项目（分页）
      */

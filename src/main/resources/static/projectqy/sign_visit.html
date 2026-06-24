@@ -47,12 +47,16 @@
             width: 2px; background: #1e9fff; opacity: 0.3;
         }
         .visit-content { margin-left: 20px; }
-        .visit-narrative {
+        .visit-narrative-header {
             font-size: 14px; color: #333; line-height: 24px;
-            margin-bottom: 8px;
+            padding-right: 120px; /* 防止与右侧操作按钮重叠 */
         }
-        .visit-narrative .time-text { color: #1e9fff; font-weight: bold; }
-        .visit-narrative .target-text { color: #333; font-weight: bold; }
+        .visit-narrative-header .time-text { color: #1e9fff; font-weight: bold; }
+        .visit-narrative-header .target-text { color: #333; font-weight: bold; }
+        .visit-narrative-content {
+            font-size: 14px; color: #555; line-height: 24px;
+            margin-top: 4px; word-break: break-all;
+        }
         .visit-files {
             margin-top: 8px;
         }
@@ -164,6 +168,25 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
 
     function safeStr(v) { return (v != null && v !== '') ? String(v) : '-'; }
 
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDateTimeFull(t) {
+        if (!t) return '';
+        var str = t.replace('T', ' ');
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return str;
+        return d.getFullYear() + '-' + padZero(d.getMonth() + 1) + '-' + padZero(d.getDate()) + ' ' +
+               padZero(d.getHours()) + ':' + padZero(d.getMinutes()) + ':' + padZero(d.getSeconds());
+    }
+
     // ========== 加载项目信息 ==========
     $.ajax({
         url: '/project/tb/projectDetail/' + projectId,
@@ -215,22 +238,19 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
                     var v = visits[i];
                     var startTimeStr = formatDateTime(v.visitStartTime);
                     var endTimeStr = formatDateTime(v.visitEndTime);
-                    var targetStr = v.visitTarget || '';
-                    var contentStr = v.communicateContent || '';
+                    var targetStr = escapeHtml(v.visitTarget || '');
+                    var contentStr = escapeHtml(v.communicateContent || '').replace(/\n/g, '<br>');
 
-                    // 叙事式描述
-                    var narrative = '';
+                    // 叙事式描述 —— 标题行（时间+拜访对象）
+                    var headerLine = '';
                     if (startTimeStr) {
-                        narrative += '<span class="time-text">' + startTimeStr + '</span>';
+                        headerLine += '<span class="time-text">' + startTimeStr + '</span>';
                     }
                     if (endTimeStr) {
-                        narrative += ' - <span class="time-text">' + endTimeStr + '</span>';
+                        headerLine += ' - <span class="time-text">' + endTimeStr + '</span>';
                     }
                     if (targetStr) {
-                        narrative += ' 拜访 <span class="target-text">' + targetStr + '</span>';
-                    }
-                    if (contentStr) {
-                        narrative += '，' + contentStr;
+                        headerLine += ' 拜访 <span class="target-text">' + targetStr + '</span>';
                     }
 
                     html += '<div class="visit-card" data-id="' + v.id + '">';
@@ -240,7 +260,11 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
                         html += '<div class="visit-timeline-line" style="height:calc(100% - 25px);"></div>';
                     }
                     html += '<div class="visit-content">';
-                    html += '<div class="visit-narrative">' + narrative + '</div>';
+                    html += '<div class="visit-narrative-header">' + headerLine + '</div>';
+                    // 交流内容另起一行
+                    if (contentStr) {
+                        html += '<div class="visit-narrative-content">' + contentStr + '</div>';
+                    }
 
                     // 附件
                     var files = v.files || [];
@@ -390,8 +414,8 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
 
                 // 如果是编辑，回填数据
                 if (isEdit) {
-                    $('#visitStartTime').val(visitData.visitStartTime ? visitData.visitStartTime.replace('T', ' ') : '');
-                    $('#visitEndTime').val(visitData.visitEndTime ? visitData.visitEndTime.replace('T', ' ') : '');
+                    $('#visitStartTime').val(formatDateTimeFull(visitData.visitStartTime));
+                    $('#visitEndTime').val(formatDateTimeFull(visitData.visitEndTime));
                     $('#visitTarget').val(visitData.visitTarget || '');
                     $('#communicateContent').val(visitData.communicateContent || '');
 
