@@ -187,48 +187,29 @@ layui.use(['table', 'layer', 'form'], function(){
     });
 
     // 上传合同
+    // 上传合同
     $('#uploadContractBtn').on('click', function(){
         var checkData = table.checkStatus('signTable').data;
         if (checkData.length === 0) {
-            layer.msg('请先选择项目', {icon: 5});
+            layer.msg('请先选择一个项目', {icon: 5});
             return;
         }
-
-        // 找出未签约的项目
-        var unsignedProjects = checkData.filter(function(d){ return d.isSign !== 1; });
-        if (unsignedProjects.length === 0) {
-            layer.msg('选中的项目都已签约', {icon: 5});
+        if (checkData.length > 1) {
+            layer.msg('上传合同只能选择一个项目，请取消多余的选择', {icon: 5});
             return;
         }
-
-        layer.confirm('确认为选中的 ' + unsignedProjects.length + ' 个项目上传合同/标记签约？', {icon: 3}, function(index){
-            var successCount = 0;
-            var totalCount = unsignedProjects.length;
-            for (var i = 0; i < totalCount; i++) {
-                $.ajax({
-                    url: '/project/sign/signContract',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {token: token},
-                    data: JSON.stringify({projectId: unsignedProjects[i].id}),
-                    success: function(res) {
-                        successCount++;
-                        if (successCount === totalCount) {
-                            layer.close(index);
-                            layer.msg('签约操作完成', {icon: 1});
-                            table.reload('signTable');
-                        }
-                    },
-                    error: function() {
-                        successCount++;
-                        if (successCount === totalCount) {
-                            layer.close(index);
-                            layer.msg('部分操作失败', {icon: 2});
-                            table.reload('signTable');
-                        }
-                    }
-                });
-            }
+        var selectedProject = checkData[0];
+        if (selectedProject.isSign === 1) {
+            layer.msg('该项目已签约，无需重复上传合同', {icon: 5});
+            return;
+        }
+        layer.open({
+            type: 2,
+            title: '上传合同 - ' + selectedProject.projectName,
+            area: ['950px', '700px'],
+            content: '/projectqy/sign_contract.html?projectId=' + selectedProject.id,
+            maxmin: true,
+            shadeClose: false
         });
     });
 });

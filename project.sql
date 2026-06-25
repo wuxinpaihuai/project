@@ -235,3 +235,26 @@ CREATE TABLE `sign_visit_file` (
   PRIMARY KEY (`id`),
   KEY `idx_visit_id` (`visit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='拜访记录附件表';
+
+CREATE TABLE `sign_milestone` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
+  `milestone_name` varchar(200) NOT NULL COMMENT '里程碑节点名称',
+  `expect_finish_date` date DEFAULT NULL COMMENT '预计完成日期(yyyy-MM-dd)',
+  `milestone_desc` text DEFAULT NULL COMMENT '节点说明',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目里程碑节点表';
+
+CREATE TABLE `sign_payment` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
+  `payment_node` varchar(200) NOT NULL COMMENT '收款节点名称',
+  `receive_amount` decimal(14,2) DEFAULT NULL COMMENT '收款金额(元)',
+  `payment_rate` decimal(5,2) DEFAULT NULL COMMENT '收款比例(百分比，如30代表30%)',
+  `expect_pay_date` date DEFAULT NULL COMMENT '预计收款日期(yyyy-MM-dd)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目收款节点表';

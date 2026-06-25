@@ -1,11 +1,13 @@
 package com.zjhl.project.entity;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
 
-import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 @TableName("project_extend")
@@ -18,7 +20,7 @@ public class ProjectExtend {
     private Integer isSign;
     
     private LocalDateTime signEndTime;
-    private LocalDateTime signTime;
+    private LocalDate signTime;
     
     private Integer isReceiveMoney;
     private Integer isDeliver;
@@ -66,10 +68,10 @@ public class ProjectExtend {
 	public void setSignEndTime(LocalDateTime signEndTime) {
 		this.signEndTime = signEndTime;
 	}
-	public LocalDateTime getSignTime() {
+	public LocalDate getSignTime() {
 		return signTime;
 	}
-	public void setSignTime(LocalDateTime signTime) {
+	public void setSignTime(LocalDate signTime) {
 		this.signTime = signTime;
 	}
     

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传合同</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .section-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-row {
+            display: flex; line-height: 32px; font-size: 14px; margin-bottom: 8px;
+        }
+        .info-label {
+            color: #666; min-width: 100px; text-align: right; margin-right: 10px;
+        }
+        .info-value { color: #333; flex: 1; word-break: break-all; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .btn-red:hover { background-color: #e64a19 !important; }
+        .contract-file-item {
+            display: inline-flex; align-items: center;
+            margin-right: 10px; margin-bottom: 8px;
+            padding: 4px 10px; background: #f8f8f8; border-radius: 3px;
+            font-size: 13px;
+        }
+        .contract-file-item a { color: #1e9fff; text-decoration: none; }
+        .contract-file-item a:hover { text-decoration: underline; }
+        .contract-file-item .del-icon {
+            color: #ff5722; cursor: pointer; margin-left: 6px; font-size: 14px;
+        }
+        .layui-form-item { margin-bottom: 12px; }
+        .layui-form-label { width: 100px !important; }
+        .layui-input-block { margin-left: 130px !important; }
+        .layui-input-inline { width: 260px !important; }
+        .node-table {
+            width: 100%; border-collapse: collapse; margin-top: 10px;
+        }
+        .node-table th {
+            background: #f2f2f2; color: #333; font-weight: bold;
+            padding: 8px 10px; text-align: center; font-size: 14px;
+            border: 1px solid #e6e6e6;
+        }
+        .node-table td {
+            padding: 8px 10px; text-align: center; font-size: 13px;
+            border: 1px solid #e6e6e6; color: #555;
+        }
+        .node-table td .layui-btn { margin: 0 2px; }
+        .footer-btns {
+            text-align: center; margin-top: 20px; padding-top: 15px;
+            border-top: 1px solid #e6e6e6;
+        }
+        /* 弹窗表单样式 */
+        .form-popup .layui-form-label { width: 110px !important; }
+        .form-popup .layui-input-block { margin-left: 140px !important; }
+        .form-popup .layui-input-inline { width: 260px !important; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+
+    <!-- 第一部分：项目基本信息 + 签约日期 + 合同附件 -->
+    <div class="section-card">
+        <div class="section-title">项目签约信息</div>
+        <div class="info-row">
+            <span class="info-label">项目名称：</span>
+            <span class="info-value" id="projectName">加载中...</span>
+        </div>
+        <form class="layui-form" lay-filter="signForm">
+            <div class="layui-form-item">
+                <label class="layui-form-label">签约日期</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="signTime" id="signTime" placeholder="请选择签约日期" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">合同附件</label>
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn layui-btn-sm btn-blue" id="uploadContractBtn"><i class="layui-icon">&#xe67c;</i> 上传附件</button>
+                    <div id="contractFileList" style="margin-top:8px;"></div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 第二部分：里程碑节点 -->
+    <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="section-title" style="border-bottom:none;margin-bottom:0;padding-bottom:0;">项目里程碑节点</div>
+            <button type="button" class="layui-btn layui-btn-sm btn-green" id="addMilestoneBtn"><i class="layui-icon">&#xe654;</i> 新增里程碑</button>
+        </div>
+        <div id="milestoneTableWrap" style="margin-top:10px;">
+            <table class="node-table" id="milestoneTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">序号</th>
+                        <th style="width:200px;">里程碑节点</th>
+                        <th style="width:120px;">预计完成日期</th>
+                        <th>节点说明</th>
+                        <th style="width:120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="milestoneTbody">
+                    <tr><td colspan="5" style="color:#999;">暂无里程碑节点</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 第三部分：收款节点 -->
+    <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="section-title" style="border-bottom:none;margin-bottom:0;padding-bottom:0;">项目收款节点</div>
+            <button type="button" class="layui-btn layui-btn-sm btn-green" id="addPaymentBtn"><i class="layui-icon">&#xe654;</i> 新增收款节点</button>
+        </div>
+        <div id="paymentTableWrap" style="margin-top:10px;">
+            <table class="node-table" id="paymentTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">序号</th>
+                        <th style="width:200px;">收款节点</th>
+                        <th style="width:120px;">收款金额(元)</th>
+                        <th style="width:100px;">收款比例(%)</th>
+                        <th style="width:120px;">预计收款日期</th>
+                        <th style="width:120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentTbody">
+                    <tr><td colspan="6" style="color:#999;">暂无收款节点</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="section-card">
+        <div class="footer-btns">
+            <button type="button" class="layui-btn btn-green" id="saveAllBtn"><i class="layui-icon">&#xe605;</i> 保存</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelBtn">取消</button>
+        </div>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = new URLSearchParams(window.location.search).get('projectId');
+
+layui.use(['layer', 'form', 'laydate', 'upload'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+    var $ = layui.jquery;
+
+    if (!projectId) {
+        $('#projectName').text('缺少项目ID参数');
+        return;
+    }
+
+    // ========== 数据容器 ==========
+    var contractFiles = []; // 临时合同附件列表（新增的）
+    var existingFileIds = []; // 已有附件的id列表（用于区分新旧）
+    var milestones = [];
+    var payments = [];
+
+    // ========== 签约日期控件 ==========
+    laydate.render({elem: '#signTime', type: 'date', format: 'yyyy-MM-dd'});
+
+    // ========== 加载合同页面数据 ==========
+    function loadContractInfo() {
+        $.ajax({
+            url: '/project/sign/contractInfo/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (!res || res.code !== 200) {
+                    layer.msg('加载失败', {icon: 2});
+                    return;
+                }
+
+                // 项目名称
+                var p = res.project;
+                if (p) {
+                    $('#projectName').text(p.projectName || '-');
+                }
+
+                // 签约日期回填
+                var ext = res.extend;
+                if (ext && ext.signTime) {
+                    $('#signTime').val(ext.signTime);
+                }
+
+                // 合同附件回填
+                var files = res.contractFiles || [];
+                contractFiles = [];
+                existingFileIds = [];
+                for (var i = 0; i < files.length; i++) {
+                    contractFiles.push({
+                        id: files[i].id,
+                        filePath: files[i].filePath,
+                        fileName: files[i].originalName || '附件',
+                        isExisting: true
+                    });
+                    existingFileIds.push(files[i].id);
+                }
+                renderContractFiles();
+
+                // 里程碑节点
+                milestones = res.milestones || [];
+                renderMilestones();
+
+                // 收款节点
+                payments = res.payments || [];
+                renderPayments();
+            },
+            error: function() {
+                layer.msg('请求失败', {icon: 2});
+            }
+        });
+    }
+
+    loadContractInfo();
+
+    // ========== 合同附件上传 ==========
+    upload.render({
+        elem: '#uploadContractBtn',
+        url: '/file/upload',
+        headers: {token: token},
+        accept: 'file',
+        size: 102400,
+        multiple: true,
+        auto: true,
+        before: function(obj) {
+            layer.msg('正在上传...', {icon: 16, time: 0, shade: 0.3});
+        },
+        done: function(res) {
+            layer.closeAll('msg');
+            if (res && res.code === 200) {
+                contractFiles.push({
+                    filePath: res.data,
+                    fileName: res.originalName || '',
+                    isExisting: false
+                });
+                renderContractFiles();
+                layer.msg('上传成功', {icon: 1});
+            } else {
+                layer.msg(res && res.msg ? res.msg : '上传失败', {icon: 2});
+            }
+        },
+        error: function() {
+            layer.closeAll('msg');
+            layer.msg('上传请求失败', {icon: 2});
+        }
+    });
+
+    // ========== 渲染合同附件列表 ==========
+    function renderContractFiles() {
+        if (contractFiles.length === 0) {
+            $('#contractFileList').html('<span style="color:#999;font-size:13px;">暂无合同附件</span>');
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < contractFiles.length; i++) {
+            var f = contractFiles[i];
+            html += '<div class="contract-file-item">';
+            if (f.isExisting && f.id) {
+                // 已有的附件：下载链接 + 删除图标（调后端删除接口）
+                html += '<a href="/file/download?filePath=' + encodeURIComponent(f.filePath || '') + '&fileName=' + encodeURIComponent(f.fileName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (f.fileName || '附件') + '</a>';
+                html += '<i class="layui-icon del-icon" data-index="' + i + '" data-file-id="' + f.id + '" title="删除">&#xe640;</i>';
+            } else {
+                // 新上传的附件：显示文件名 + 删除图标（仅从前端列表移除）
+                html += '<span><i class="layui-icon">&#xe61e;</i> ' + (f.fileName || '附件') + '</span>';
+                html += '<i class="layui-icon del-icon" data-index="' + i + '" title="删除">&#xe640;</i>';
+            }
+            html += '</div>';
+        }
+        $('#contractFileList').html(html);
+
+        // 删除附件事件
+        $('#contractFileList .del-icon').on('click', function(){
+            var idx = parseInt($(this).attr('data-index'));
+            var fileId = $(this).attr('data-file-id');
+
+            if (fileId) {
+                // 已有的附件：调后端删除
+                layer.confirm('确认删除该附件？', {icon: 3}, function(confirmIndex){
+                    $.ajax({
+                        url: '/project/sign/deleteContractFile/' + fileId,
+                        type: 'POST',
+                        headers: {token: token},
+                        success: function(res) {
+                            if (res && res.code === 200) {
+                                contractFiles.splice(idx, 1);
+                                existingFileIds = existingFileIds.filter(function(id){ return id != fileId; });
+                                renderContractFiles();
+                                layer.msg('删除成功', {icon: 1});
+                            } else {
+                                layer.msg(res && res.msg ? res.msg : '删除失败', {icon: 2});
+                            }
+                            layer.close(confirmIndex);
+                        },
+                        error: function() {
+                            layer.msg('请求失败', {icon: 2});
+                            layer.close(confirmIndex);
+                        }
+                    });
+                });
+            } else {
+                // 新上传的附件：直接从前端列表移除
+                contractFiles.splice(idx, 1);
+                renderContractFiles();
+            }
+        });
+    }
+
+    // ========== 里程碑节点操作 ==========
+    $('#addMilestoneBtn').on('click', function(){
+        showMilestoneForm(null);
+    });
+
+    window.editMilestone = function(idx) {
+        showMilestoneForm(milestones[idx]);
+    };
+
+    window.deleteMilestone = function(idx) {
+        var m = milestones[idx];
+        layer.confirm('确认删除里程碑节点"' + (m.milestoneName || '') + '"？', {icon: 3}, function(confirmIndex){
+            if (m.id) {
+                $.ajax({
+                    url: '/project/sign/deleteMilestone/' + m.id,
+                    type: 'POST',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res && res.code === 200) {
+                            milestones.splice(idx, 1);
+                            renderMilestones();
+                            layer.msg('删除成功', {icon: 1});
+                        } else {
+                            layer.msg(res && res.msg ? res.msg : '删除失败', {icon: 2});
+                        }
+                        layer.close(confirmIndex);
+                    },
+                    error: function() {
+                        layer.msg('请求失败', {icon: 2});
+                        layer.close(confirmIndex);
+                    }
+                });
+            } else {
+                milestones.splice(idx, 1);
+                renderMilestones();
+                layer.close(confirmIndex);
+            }
+        });
+    };
+
+    function showMilestoneForm(mData) {
+        var isEdit = mData !== null;
+        var title = isEdit ? '编辑里程碑节点' : '新增里程碑节点';
+
+        var formHtml = '<div class="form-popup" style="padding:15px;">';
+        formHtml += '<form class="layui-form" lay-filter="milestoneForm">';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">里程碑节点</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="milestoneName" id="mMilestoneName" placeholder="请输入里程碑节点名称" class="layui-input" style="width:350px;">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">预计完成日期</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="text" name="expectFinishDate" id="mExpectFinishDate" placeholder="请选择日期" class="layui-input">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">节点说明</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<textarea name="milestoneDesc" id="mMilestoneDesc" placeholder="请输入节点说明" class="layui-textarea" style="width:350px;height:100px;"></textarea>';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item" style="text-align:center;">';
+        formHtml += '<button type="button" class="layui-btn btn-green" id="mSaveBtn">保存</button>';
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="mCancelBtn">取消</button>';
+        formHtml += '</div></form></div>';
+
+        var editIdx = layer.open({
+            type: 1, title: title, area: ['550px', '380px'],
+            content: formHtml,
+            success: function(layero, index){
+                laydate.render({elem: '#mExpectFinishDate', type: 'date', format: 'yyyy-MM-dd'});
+
+                if (isEdit) {
+                    $('#mMilestoneName').val(mData.milestoneName || '');
+                    $('#mExpectFinishDate').val(mData.expectFinishDate || '');
+                    $('#mMilestoneDesc').val(mData.milestoneDesc || '');
+                }
+
+                $('#mSaveBtn').on('click', function(){
+                    var milestoneName = $('#mMilestoneName').val();
+                    if (!milestoneName) {
+                        layer.msg('请输入里程碑节点名称', {icon: 5});
+                        return;
+                    }
+
+                    var mDataNew = {
+                        milestoneName: milestoneName,
+                        expectFinishDate: $('#mExpectFinishDate').val(),
+                        milestoneDesc: $('#mMilestoneDesc').val()
+                    };
+
+                    if (isEdit && mData.id) {
+                        // 编辑已有节点：调后端接口
+                        mDataNew.id = mData.id;
+                        $.ajax({
+                            url: '/project/sign/editMilestone',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {token: token},
+                            data: JSON.stringify(mDataNew),
+                            success: function(res) {
+                                if (res && res.code === 200) {
+                                    // 更新本地数据
+                                    var idx = milestones.findIndex(function(m){ return m.id == mData.id; });
+                                    if (idx >= 0) {
+                                        milestones[idx].milestoneName = milestoneName;
+                                        milestones[idx].expectFinishDate = mDataNew.expectFinishDate;
+                                        milestones[idx].milestoneDesc = mDataNew.milestoneDesc;
+                                    }
+                                    renderMilestones();
+                                    layer.close(editIdx);
+                                    layer.msg('编辑成功', {icon: 1});
+                                } else {
+                                    layer.msg(res && res.msg ? res.msg : '编辑失败', {icon: 2});
+                                }
+                            },
+                            error: function() { layer.msg('请求失败', {icon: 2}); }
+                        });
+                    } else {
+                        // 新增节点：调后端接口
+                        mDataNew.projectId = projectId;
+                        $.ajax({
+                            url: '/project/sign/addMilestone',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {token: token},
+                            data: JSON.stringify(mDataNew),
+                            success: function(res) {
+                                if (res && res.code === 200) {
+                                    mDataNew.id = res.milestoneId;
+                                    milestones.push(mDataNew);
+                                    renderMilestones();
+                                    layer.close(editIdx);
+                                    layer.msg('新增成功', {icon: 1});
+                                } else {
+                                    layer.msg(res && res.msg ? res.msg : '新增失败', {icon: 2});
+                                }
+                            },
+                            error: function() { layer.msg('请求失败', {icon: 2}); }
+                        });
+                    }
+                });
+
+                $('#mCancelBtn').on('click', function(){ layer.close(editIdx); });
+            }
+        });
+    }
+
+    function renderMilestones() {
+        var tbody = $('#milestoneTbody');
+        if (milestones.length === 0) {
+            tbody.html('<tr><td colspan="5" style="color:#999;">暂无里程碑节点</td></tr>');
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < milestones.length; i++) {
+            var m = milestones[i];
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            html += '<td>' + (m.milestoneName || '-') + '</td>';
+            html += '<td>' + (m.expectFinishDate || '-') + '</td>';
+            html += '<td style="text-align:left;word-break:break-all;">' + (m.milestoneDesc || '-') + '</td>';
+            html += '<td>';
+            html += '<button type="button" class="layui-btn layui-btn-xs btn-blue" onclick="editMilestone(' + i + ')"><i class="layui-icon">&#xe642;</i> 编辑</button>';
+            html += '<button type="button" class="layui-btn layui-btn-xs btn-red" onclick="deleteMilestone(' + i + ')"><i class="layui-icon">&#xe640;</i> 删除</button>';
+            html += '</td>';
+            html += '</tr>';
+        }
+        tbody.html(html);
+    }
+
+    // ========== 收款节点操作 ==========
+    $('#addPaymentBtn').on('click', function(){
+        showPaymentForm(null);
+    });
+
+    window.editPayment = function(idx) {
+        showPaymentForm(payments[idx]);
+    };
+
+    window.deletePayment = function(idx) {
+        var pm = payments[idx];
+        layer.confirm('确认删除收款节点"' + (pm.paymentNode || '') + '"？', {icon: 3}, function(confirmIndex){
+            if (pm.id) {
+                $.ajax({
+                    url: '/project/sign/deletePayment/' + pm.id,
+                    type: 'POST',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res && res.code === 200) {
+                            payments.splice(idx, 1);
+                            renderPayments();
+                            layer.msg('删除成功', {icon: 1});
+                        } else {
+                            layer.msg(res && res.msg ? res.msg : '删除失败', {icon: 2});
+                        }
+                        layer.close(confirmIndex);
+                    },
+                    error: function() {
+                        layer.msg('请求失败', {icon: 2});
+                        layer.close(confirmIndex);
+                    }
+                });
+            } else {
+                payments.splice(idx, 1);
+                renderPayments();
+                layer.close(confirmIndex);
+            }
+        });
+    };
+
+    function showPaymentForm(pmData) {
+        var isEdit = pmData !== null;
+        var title = isEdit ? '编辑收款节点' : '新增收款节点';
+
+        var formHtml = '<div class="form-popup" style="padding:15px;">';
+        formHtml += '<form class="layui-form" lay-filter="paymentForm">';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">收款节点</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="paymentNode" id="pPaymentNode" placeholder="请输入收款节点名称" class="layui-input" style="width:350px;">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">收款金额(元)</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="number" name="receiveAmount" id="pReceiveAmount" placeholder="请输入收款金额" class="layui-input">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">收款比例(%)</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="number" name="paymentRate" id="pPaymentRate" placeholder="如30代表30%" class="layui-input">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">预计收款日期</label>';
+        formHtml += '<div class="layui-input-inline">';
+        formHtml += '<input type="text" name="expectPayDate" id="pExpectPayDate" placeholder="请选择日期" class="layui-input">';
+        formHtml += '</div></div>';
+        formHtml += '<div class="layui-form-item" style="text-align:center;">';
+        formHtml += '<button type="button" class="layui-btn btn-green" id="pSaveBtn">保存</button>';
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="pCancelBtn">取消</button>';
+        formHtml += '</div></form></div>';
+
+        var editIdx = layer.open({
+            type: 1, title: title, area: ['550px', '420px'],
+            content: formHtml,
+            success: function(layero, index){
+                laydate.render({elem: '#pExpectPayDate', type: 'date', format: 'yyyy-MM-dd'});
+
+                if (isEdit) {
+                    $('#pPaymentNode').val(pmData.paymentNode || '');
+                    $('#pReceiveAmount').val(pmData.receiveAmount || '');
+                    $('#pPaymentRate').val(pmData.paymentRate || '');
+                    $('#pExpectPayDate').val(pmData.expectPayDate || '');
+                }
+
+                $('#pSaveBtn').on('click', function(){
+                    var paymentNode = $('#pPaymentNode').val();
+                    if (!paymentNode) {
+                        layer.msg('请输入收款节点名称', {icon: 5});
+                        return;
+                    }
+
+                    var pmDataNew = {
+                        paymentNode: paymentNode,
+                        receiveAmount: $('#pReceiveAmount').val(),
+                        paymentRate: $('#pPaymentRate').val(),
+                        expectPayDate: $('#pExpectPayDate').val()
+                    };
+
+                    if (isEdit && pmData.id) {
+                        pmDataNew.id = pmData.id;
+                        $.ajax({
+                            url: '/project/sign/editPayment',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {token: token},
+                            data: JSON.stringify(pmDataNew),
+                            success: function(res) {
+                                if (res && res.code === 200) {
+                                    var idx = payments.findIndex(function(p){ return p.id == pmData.id; });
+                                    if (idx >= 0) {
+                                        payments[idx].paymentNode = paymentNode;
+                                        payments[idx].receiveAmount = pmDataNew.receiveAmount;
+                                        payments[idx].paymentRate = pmDataNew.paymentRate;
+                                        payments[idx].expectPayDate = pmDataNew.expectPayDate;
+                                    }
+                                    renderPayments();
+                                    layer.close(editIdx);
+                                    layer.msg('编辑成功', {icon: 1});
+                                } else {
+                                    layer.msg(res && res.msg ? res.msg : '编辑失败', {icon: 2});
+                                }
+                            },
+                            error: function() { layer.msg('请求失败', {icon: 2}); }
+                        });
+                    } else {
+                        pmDataNew.projectId = projectId;
+                        $.ajax({
+                            url: '/project/sign/addPayment',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {token: token},
+                            data: JSON.stringify(pmDataNew),
+                            success: function(res) {
+                                if (res && res.code === 200) {
+                                    pmDataNew.id = res.paymentId;
+                                    payments.push(pmDataNew);
+                                    renderPayments();
+                                    layer.close(editIdx);
+                                    layer.msg('新增成功', {icon: 1});
+                                } else {
+                                    layer.msg(res && res.msg ? res.msg : '新增失败', {icon: 2});
+                                }
+                            },
+                            error: function() { layer.msg('请求失败', {icon: 2}); }
+                        });
+                    }
+                });
+
+                $('#pCancelBtn').on('click', function(){ layer.close(editIdx); });
+            }
+        });
+    }
+
+    function renderPayments() {
+        var tbody = $('#paymentTbody');
+        if (payments.length === 0) {
+            tbody.html('<tr><td colspan="6" style="color:#999;">暂无收款节点</td></tr>');
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < payments.length; i++) {
+            var pm = payments[i];
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            html += '<td>' + (pm.paymentNode || '-') + '</td>';
+            html += '<td>' + (pm.receiveAmount != null ? parseFloat(pm.receiveAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-') + '</td>';
+            html += '<td>' + (pm.paymentRate != null ? pm.paymentRate + '%' : '-') + '</td>';
+            html += '<td>' + (pm.expectPayDate || '-') + '</td>';
+            html += '<td>';
+            html += '<button type="button" class="layui-btn layui-btn-xs btn-blue" onclick="editPayment(' + i + ')"><i class="layui-icon">&#xe642;</i> 编辑</button>';
+            html += '<button type="button" class="layui-btn layui-btn-xs btn-red" onclick="deletePayment(' + i + ')"><i class="layui-icon">&#xe640;</i> 删除</button>';
+            html += '</td>';
+            html += '</tr>';
+        }
+        tbody.html(html);
+    }
+
+    // ========== 保存全部（签约日期 + 合同附件 + 标记签约）==========
+    $('#saveAllBtn').on('click', function(){
+        var signTime = $('#signTime').val();
+        if (!signTime) {
+            layer.msg('请选择签约日期', {icon: 5});
+            return;
+        }
+
+        // 构建合同附件列表（只传新增的，已有的已存在于数据库）
+        var newFiles = [];
+        for (var i = 0; i < contractFiles.length; i++) {
+            if (!contractFiles[i].isExisting) {
+                newFiles.push({
+                    filePath: contractFiles[i].filePath,
+                    fileName: contractFiles[i].fileName
+                });
+            }
+        }
+
+        var postData = {
+            projectId: projectId,
+            signTime: signTime,
+            contractFiles: newFiles
+        };
+
+        var $btn = $('#saveAllBtn');
+        if ($btn.hasClass('layui-btn-disabled')) return;
+        $btn.addClass('layui-btn-disabled').prop('disabled', true);
+
+        $.ajax({
+            url: '/project/sign/saveSignInfo',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                if (res && res.code === 200) {
+                    layer.msg('保存成功', {icon: 1}, function(){
+                        // 通知父页面刷新
+                        if (window.parent && window.parent.layui) {
+                            window.parent.layui.table.reload('signTable');
+                        }
+                        var parentIndex = window.parent.layer.getFrameIndex(window.name);
+                        window.parent.layer.close(parentIndex);
+                    });
+                } else {
+                    layer.msg(res && res.msg ? res.msg : '保存失败', {icon: 2});
+                }
+            },
+            error: function() {
+                $btn.removeClass('layui-btn-disabled').prop('disabled', false);
+                layer.msg('请求失败', {icon: 2});
+            }
+        });
+    });
+
+    // ========== 取消 ==========
+    $('#cancelBtn').on('click', function(){
+        var parentIndex = window.parent.layer.getFrameIndex(window.name);
+        window.parent.layer.close(parentIndex);
+    });
+});
+</script>
+</body>
+</html>

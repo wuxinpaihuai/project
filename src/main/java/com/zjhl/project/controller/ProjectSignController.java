@@ -8,6 +8,8 @@ import com.zjhl.project.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -29,18 +31,14 @@ public class ProjectSignController {
     @Autowired
     private SignVisitFileService signVisitFileService;
 
-    private LocalDateTime parseVisitTime(String timeStr) {
-        if (timeStr == null || timeStr.isEmpty()) {
-            return null;
-        }
-        // 兼容前端可能传回的 yyyy-MM-dd HH:mm 与 yyyy-MM-dd HH:mm:ss
-        if (timeStr.length() == "yyyy-MM-dd HH:mm".length()) {
-            timeStr = timeStr + ":00";
-        }
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        return LocalDateTime.parse(timeStr, formatter);
-    }
+    @Autowired
+    private ProjectFileService projectFileService;
 
+    @Autowired
+    private SignMilestoneService signMilestoneService;
+
+    @Autowired
+    private SignPaymentService signPaymentService;
     /**
      * 合同签订列表 - 查询已中标的项目（分页）
      */
@@ -339,6 +337,314 @@ public class ProjectSignController {
 
         result.put("code", 200);
         result.put("msg", "签约成功");
+        return result;
+    }
+
+    /**
+     * 保存签约信息（签约日期 + 合同附件 + 标记签约）
+     */
+    @PostMapping("/saveSignInfo")
+    public Map<String, Object> saveSignInfo(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long projectId = Long.parseLong(params.get("projectId").toString());
+
+        // 1. 更新 project_extend：签约日期 + 标记签约
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        if (extend == null) {
+            result.put("code", 404);
+            result.put("msg", "项目扩展信息不存在");
+            return result;
+        }
+
+        String signTimeStr = (String) params.get("signTime");
+        if (signTimeStr != null && !signTimeStr.isEmpty()) {
+            extend.setSignTime(LocalDate.parse(signTimeStr));
+        }
+        extend.setIsSign(1);
+        extend.setUpdateTime(LocalDateTime.now());
+        projectExtendService.updateById(extend);
+
+        // 2. 保存合同附件到 project_file（stage_type=2，先删旧后存新）
+        QueryWrapper<ProjectFile> fileDeleteWrapper = new QueryWrapper<>();
+        fileDeleteWrapper.eq("project_id", projectId).eq("stage_type", 2);
+        projectFileService.remove(fileDeleteWrapper);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> fileList = (List<Map<String, Object>>) params.get("contractFiles");
+        if (fileList != null && !fileList.isEmpty()) {
+            for (Map<String, Object> f : fileList) {
+                ProjectFile pf = new ProjectFile();
+                pf.setProjectId(projectId);
+                pf.setStageType(2);
+                pf.setFilePath((String) f.get("filePath"));
+                pf.setOriginalName((String) f.get("fileName"));
+                pf.setCreateTime(LocalDateTime.now());
+                projectFileService.save(pf);
+            }
+        }
+
+        result.put("code", 200);
+        result.put("msg", "保存成功");
+        return result;
+    }
+
+    /**
+     * 查询合同页面数据（项目信息 + 签约日期 + 合同附件 + 里程碑 + 收款节点）
+     */
+    @GetMapping("/contractInfo/{projectId}")
+    public Map<String, Object> contractInfo(@PathVariable Long projectId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        // 项目基本信息
+        ProjectInfo project = projectInfoService.getById(projectId);
+        result.put("project", project);
+
+        // project_extend 信息
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        result.put("extend", extend);
+
+        // 合同附件（stage_type=2）
+        QueryWrapper<ProjectFile> fileWrapper = new QueryWrapper<>();
+        fileWrapper.eq("project_id", projectId).eq("stage_type", 2);
+        List<ProjectFile> contractFiles = projectFileService.list(fileWrapper);
+        result.put("contractFiles", contractFiles);
+
+        // 里程碑节点
+        QueryWrapper<SignMilestone> milestoneWrapper = new QueryWrapper<>();
+        milestoneWrapper.eq("project_id", projectId).orderByAsc("id");
+        List<SignMilestone> milestones = signMilestoneService.list(milestoneWrapper);
+        result.put("milestones", milestones);
+
+        // 收款节点
+        QueryWrapper<SignPayment> paymentWrapper = new QueryWrapper<>();
+        paymentWrapper.eq("project_id", projectId).orderByAsc("id");
+        List<SignPayment> payments = signPaymentService.list(paymentWrapper);
+        result.put("payments", payments);
+
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        return result;
+    }
+
+    /**
+     * 删除合同附件
+     */
+    @PostMapping("/deleteContractFile/{fileId}")
+    public Map<String, Object> deleteContractFile(@PathVariable Long fileId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        projectFileService.removeById(fileId);
+
+        result.put("code", 200);
+        result.put("msg", "删除成功");
+        return result;
+    }
+
+    /**
+     * 新增里程碑节点
+     */
+    @PostMapping("/addMilestone")
+    public Map<String, Object> addMilestone(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long projectId = Long.parseLong(params.get("projectId").toString());
+        SignMilestone milestone = new SignMilestone();
+        milestone.setProjectId(projectId);
+        milestone.setMilestoneName((String) params.get("milestoneName"));
+
+        String expectFinishDateStr = (String) params.get("expectFinishDate");
+        if (expectFinishDateStr != null && !expectFinishDateStr.isEmpty()) {
+            milestone.setExpectFinishDate(LocalDate.parse(expectFinishDateStr));
+        }
+        milestone.setMilestoneDesc((String) params.get("milestoneDesc"));
+        milestone.setCreateTime(LocalDateTime.now());
+        signMilestoneService.save(milestone);
+
+        result.put("code", 200);
+        result.put("msg", "新增成功");
+        result.put("milestoneId", milestone.getId());
+        return result;
+    }
+
+    /**
+     * 编辑里程碑节点
+     */
+    @PostMapping("/editMilestone")
+    public Map<String, Object> editMilestone(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long milestoneId = Long.parseLong(params.get("id").toString());
+        SignMilestone milestone = signMilestoneService.getById(milestoneId);
+        if (milestone == null) {
+            result.put("code", 404);
+            result.put("msg", "里程碑节点不存在");
+            return result;
+        }
+
+        milestone.setMilestoneName((String) params.get("milestoneName"));
+        String expectFinishDateStr = (String) params.get("expectFinishDate");
+        if (expectFinishDateStr != null && !expectFinishDateStr.isEmpty()) {
+            milestone.setExpectFinishDate(LocalDate.parse(expectFinishDateStr));
+        } else {
+            milestone.setExpectFinishDate(null);
+        }
+        milestone.setMilestoneDesc((String) params.get("milestoneDesc"));
+        signMilestoneService.updateById(milestone);
+
+        result.put("code", 200);
+        result.put("msg", "编辑成功");
+        return result;
+    }
+
+    /**
+     * 删除里程碑节点
+     */
+    @PostMapping("/deleteMilestone/{milestoneId}")
+    public Map<String, Object> deleteMilestone(@PathVariable Long milestoneId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        signMilestoneService.removeById(milestoneId);
+
+        result.put("code", 200);
+        result.put("msg", "删除成功");
+        return result;
+    }
+
+    /**
+     * 新增收款节点
+     */
+    @PostMapping("/addPayment")
+    public Map<String, Object> addPayment(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long projectId = Long.parseLong(params.get("projectId").toString());
+        SignPayment payment = new SignPayment();
+        payment.setProjectId(projectId);
+        payment.setPaymentNode((String) params.get("paymentNode"));
+
+        String receiveAmountStr = (String) params.get("receiveAmount");
+        if (receiveAmountStr != null && !receiveAmountStr.isEmpty()) {
+            payment.setReceiveAmount(new BigDecimal(receiveAmountStr));
+        }
+        String paymentRateStr = (String) params.get("paymentRate");
+        if (paymentRateStr != null && !paymentRateStr.isEmpty()) {
+            payment.setPaymentRate(new BigDecimal(paymentRateStr));
+        }
+        String expectPayDateStr = (String) params.get("expectPayDate");
+        if (expectPayDateStr != null && !expectPayDateStr.isEmpty()) {
+            payment.setExpectPayDate(LocalDate.parse(expectPayDateStr));
+        }
+        payment.setCreateTime(LocalDateTime.now());
+        signPaymentService.save(payment);
+
+        result.put("code", 200);
+        result.put("msg", "新增成功");
+        result.put("paymentId", payment.getId());
+        return result;
+    }
+
+    /**
+     * 编辑收款节点
+     */
+    @PostMapping("/editPayment")
+    public Map<String, Object> editPayment(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long paymentId = Long.parseLong(params.get("id").toString());
+        SignPayment payment = signPaymentService.getById(paymentId);
+        if (payment == null) {
+            result.put("code", 404);
+            result.put("msg", "收款节点不存在");
+            return result;
+        }
+
+        payment.setPaymentNode((String) params.get("paymentNode"));
+        String receiveAmountStr = (String) params.get("receiveAmount");
+        if (receiveAmountStr != null && !receiveAmountStr.isEmpty()) {
+            payment.setReceiveAmount(new BigDecimal(receiveAmountStr));
+        } else {
+            payment.setReceiveAmount(null);
+        }
+        String paymentRateStr = (String) params.get("paymentRate");
+        if (paymentRateStr != null && !paymentRateStr.isEmpty()) {
+            payment.setPaymentRate(new BigDecimal(paymentRateStr));
+        } else {
+            payment.setPaymentRate(null);
+        }
+        String expectPayDateStr = (String) params.get("expectPayDate");
+        if (expectPayDateStr != null && !expectPayDateStr.isEmpty()) {
+            payment.setExpectPayDate(LocalDate.parse(expectPayDateStr));
+        } else {
+            payment.setExpectPayDate(null);
+        }
+        signPaymentService.updateById(payment);
+
+        result.put("code", 200);
+        result.put("msg", "编辑成功");
+        return result;
+    }
+
+    /**
+     * 删除收款节点
+     */
+    @PostMapping("/deletePayment/{paymentId}")
+    public Map<String, Object> deletePayment(@PathVariable Long paymentId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        signPaymentService.removeById(paymentId);
+
+        result.put("code", 200);
+        result.put("msg", "删除成功");
         return result;
     }
 }
