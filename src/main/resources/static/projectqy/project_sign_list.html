@@ -46,6 +46,7 @@
         }
         .sign-yes { background-color: #86c566; }
         .sign-no { background-color: #999; }
+        .deadline-warn { color: #ff5722; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -87,6 +88,7 @@
 <!-- 行操作模板 -->
 <script type="text/html" id="signRowToolbar">
     <a class="layui-btn layui-btn-xs btn-orange" lay-event="visit">拜访记录</a>
+    <a class="layui-btn layui-btn-xs btn-blue" lay-event="detail">查看详情</a>
 </script>
 
 <script src="/layui/layui.js"></script>
@@ -136,9 +138,20 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'isSign', title: '是否签约', width: 90, align: 'center', templet: function(d){
                 return d.isSign === 1 ? '<span class="sign-tag sign-yes">已签约</span>' : '<span class="sign-tag sign-no">未签约</span>';
             }},
+            {field: 'signEndTime', title: '签约截止时间', width: 130, align: 'center', templet: function(d){
+                if (!d.signEndTime) return '-';
+                var endTime = new Date(d.signEndTime.replace('T', ' '));
+                var now = new Date();
+                var diffDays = Math.ceil((endTime - now) / (1000 * 60 * 60 * 24));
+                var dateStr = d.signEndTime.substring(0, 10);
+                if (diffDays <= 7 && d.isSign !== 1) {
+                    return '<span class="deadline-warn">' + dateStr + ' (即将到期)</span>';
+                }
+                return dateStr;
+            }},
             {field: 'techUserName', title: '技术负责人', width: 100, align: 'center'},
             {field: 'techUserPhone', title: '手机号', width: 120, align: 'center'},
-            {title: '操作', width: 100, align: 'center', fixed: 'right', toolbar: '#signRowToolbar'}
+            {title: '操作', width: 180, align: 'center', fixed: 'right', toolbar: '#signRowToolbar'}
         ]],
         done: function(res) {
             if (res.code === 401) {
@@ -183,10 +196,18 @@ layui.use(['table', 'layer', 'form'], function(){
                 maxmin: true,
                 shadeClose: false
             });
+        } else if (obj.event === 'detail') {
+            layer.open({
+                type: 2,
+                title: '签约详情 - ' + data.projectName,
+                area: ['1100px', '85%'],
+                content: '/projectqy/sign_detail.html?projectId=' + data.id,
+                maxmin: true,
+                shadeClose: false
+            });
         }
     });
 
-    // 上传合同
     // 上传合同
     $('#uploadContractBtn').on('click', function(){
         var checkData = table.checkStatus('signTable').data;

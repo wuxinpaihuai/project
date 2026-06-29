@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>签约详情</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px 30px;
+        }
+        .info-item {
+            display: flex; line-height: 28px; font-size: 14px;
+        }
+        .info-label {
+            color: #666; min-width: 90px; text-align: right; margin-right: 8px;
+        }
+        .info-value {
+            color: #333; flex: 1; word-break: break-all;
+        }
+        .project-type-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 2px;
+            font-size: 12px; color: #fff;
+        }
+        .type-hp { background-color: #1e9fff; }
+        .type-cd { background-color: #ff5722; }
+        .type-ya { background-color: #ffb800; }
+        .type-ys { background-color: #86c566; }
+        .type-hprw { background-color: #a233c6; }
+        .type-cdrw { background-color: #ff6600; }
+        .type-other { background-color: #999; }
+        .file-item {
+            display: inline-block; margin-right: 10px; margin-bottom: 5px;
+        }
+        .file-item a {
+            color: #1e9fff; text-decoration: none;
+        }
+        .file-item a:hover {
+            text-decoration: underline;
+        }
+        .task-status-0 { color: #999; }
+        .task-status-1 { color: #ff5722; }
+        .task-status-2 { color: #ff5722; }
+        .task-status-3 { color: #86c566; }
+        .task-status-4 { color: #ffb800; }
+        .task-status-5 { color: #999; }
+        .win-tag { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; color: #fff; }
+        .win-yes { background-color: #86c566; }
+        .win-no { background-color: #999; }
+        .sign-tag { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; color: #fff; }
+        .sign-yes { background-color: #86c566; }
+        .sign-no { background-color: #999; }
+        .deadline-warn { color: #ff5722; font-weight: bold; }
+        .timeline-item {
+            position: relative; padding-left: 25px; margin-bottom: 20px;
+            border-left: 2px solid #1e9fff;
+        }
+        .timeline-item:last-child { border-left: 2px solid transparent; }
+        .timeline-dot {
+            position: absolute; left: -6px; top: 5px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #1e9fff; border: 2px solid #fff;
+        }
+        .timeline-title { font-weight: bold; color: #333; font-size: 14px; }
+        .timeline-time { color: #999; font-size: 12px; margin-top: 3px; }
+        .timeline-content { color: #666; font-size: 13px; margin-top: 5px; }
+        .error-msg { color: red; text-align: center; padding: 50px; font-size: 14px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div id="detailContent">加载中...</div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = new URLSearchParams(window.location.search).get('projectId');
+
+layui.use(['layer'], function(){
+    var layer = layui.layer;
+    var $ = layui.$ || layui.jquery;
+
+    if (!projectId) {
+        $('#detailContent').html('<p class="error-msg">缺少项目ID参数</p>');
+        return;
+    }
+
+    if (!token) {
+        $('#detailContent').html('<p class="error-msg">未登录或登录已过期，请重新登录</p>');
+        return;
+    }
+
+    var projectTypeMap = {
+        1: {name: '环评', cls: 'type-hp'},
+        2: {name: '场调', cls: 'type-cd'},
+        3: {name: '应急预案', cls: 'type-ya'},
+        4: {name: '验收', cls: 'type-ys'},
+        5: {name: '环评入围', cls: 'type-hprw'},
+        6: {name: '场调入围', cls: 'type-cdrw'},
+        99: {name: '其他', cls: 'type-other'}
+    };
+
+    var taskStatusMap = {
+        0: {name: '未完成', cls: 'task-status-0'},
+        1: {name: '进行中', cls: 'task-status-1'},
+        2: {name: '进行中', cls: 'task-status-2'},
+        3: {name: '已完成', cls: 'task-status-3'},
+        4: {name: '延迟完成', cls: 'task-status-4'},
+        5: {name: '任务失败', cls: 'task-status-5'}
+    };
+
+    var deliverTypeMap = {1: '文档', 2: '表格', 3: '图片', 4: '其他'};
+
+    function formatTime(t) {
+        return t ? t.replace('T', ' ') : '-';
+    }
+
+    function formatShortDate(t) {
+        if (!t) return '-';
+        return t.substring(0, 10);
+    }
+
+    function formatAmount(v) {
+        if (v == null) return '-';
+        var n = parseFloat(v);
+        if (isNaN(n)) return '-';
+        return n.toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    function safeStr(v) {
+        return (v != null && v !== '') ? String(v) : '-';
+    }
+
+    // 加载详情数据
+    $.ajax({
+        url: '/project/sign/signDetail/' + projectId,
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            try {
+                if (!res || res.code !== 200) {
+                    $('#detailContent').html('<p class="error-msg">' + (res && res.msg ? res.msg : '加载失败') + '</p>');
+                    return;
+                }
+
+                var p = res.project;
+                var files = res.files || [];
+                var tasks = res.tasks || [];
+                var taskAttachments = res.taskAttachments || [];
+                var extend = res.extend;
+                var bidResults = res.bidResults || [];
+                var contractFiles = res.contractFiles || [];
+                var milestones = res.milestones || [];
+                var payments = res.payments || [];
+                var visits = res.visits || [];
+
+                if (!p) {
+                    $('#detailContent').html('<p class="error-msg">项目数据为空</p>');
+                    return;
+                }
+
+                // 构建 taskAttachments 查找映射
+                var taskAttachMap = {};
+                for (var k = 0; k < taskAttachments.length; k++) {
+                    taskAttachMap[taskAttachments[k].taskId] = taskAttachments[k].attachments || [];
+                }
+
+                var html = '';
+
+                // ========== 第一大模块：项目基本信息 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">一、项目基本信息</div>';
+                html += '<div class="info-grid">';
+                html += '<div class="info-item"><span class="info-label">项目编号：</span><span class="info-value">' + safeStr(p.projectNo) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + safeStr(p.projectName) + '</span></div>';
+                var ptInfo = projectTypeMap[p.projectType];
+                html += '<div class="info-item"><span class="info-label">项目类型：</span><span class="info-value">' + (ptInfo ? '<span class="project-type-tag ' + ptInfo.cls + '">' + ptInfo.name + '</span>' : '-') + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目金额：</span><span class="info-value">' + formatAmount(p.projectAmount) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目地址：</span><span class="info-value">' + safeStr(p.area) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">业主单位：</span><span class="info-value">' + safeStr(p.ownerCompany) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + safeStr(p.ownerContact) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + safeStr(p.ownerPhone) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">投标时间：</span><span class="info-value">' + formatTime(p.bidTime) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目来源：</span><span class="info-value">' + safeStr(p.projectSource) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">报价类型：</span><span class="info-value">' + (p.priceType === 1 ? '金额' : (p.priceType === 0 ? '其他' : '-')) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">最高限价：</span><span class="info-value">' + formatAmount(p.maxPrice) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">最低限价：</span><span class="info-value">' + formatAmount(p.minPrice) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">投标保证金：</span><span class="info-value">' + formatAmount(p.bidDeposit) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">业务员：</span><span class="info-value">' + safeStr(p.bisnessUserName) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">项目详细内容：</span><span class="info-value">' + safeStr(p.contentDetail) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">资质要求：</span><span class="info-value">' + safeStr(p.qualificationRequire) + '</span></div>';
+                html += '<div class="info-item info-item-full"><span class="info-label">评分方式：</span><span class="info-value">' + safeStr(p.scoreMethod) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">招标网站：</span><span class="info-value">' + safeStr(p.bidWebsite) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">备注：</span><span class="info-value">' + safeStr(p.remark) + '</span></div>';
+                html += '</div>';
+
+                // 附件（投标阶段）
+                if (files.length > 0) {
+                    html += '<div style="margin-top:15px;"><strong>投标阶段附件：</strong>';
+                    for (var i = 0; i < files.length; i++) {
+                        var f = files[i];
+                        html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(f.filePath || '') + '&fileName=' + encodeURIComponent(f.originalName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (f.originalName || '附件' + (i+1)) + '</a></div>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+
+                // ========== 第二大模块：体系作战任务执行情况 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">二、体系作战任务执行情况</div>';
+                if (tasks.length === 0) {
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无任务</p>';
+                } else {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr>';
+                    html += '<th>序号</th><th>负责人</th><th>联系方式</th><th>任务内容</th><th>交付类型</th><th>完成描述</th><th>交付物</th><th>任务截止</th><th>完成时间</th><th>状态</th>';
+                    html += '</tr></thead><tbody>';
+                    for (var i = 0; i < tasks.length; i++) {
+                        var t = tasks[i];
+                        var statusInfo = taskStatusMap[t.taskStatus] || {name: '-', cls: ''};
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(t.execUserName) + '</td>';
+                        html += '<td>' + safeStr(t.execUserPhone) + '</td>';
+                        html += '<td>' + safeStr(t.taskContent) + '</td>';
+                        html += '<td>' + (deliverTypeMap[t.deliverType] || '-') + '</td>';
+                        html += '<td>' + safeStr(t.taskDesc) + '</td>';
+                        // 交付物附件
+                        var attaches = taskAttachMap[t.id] || [];
+                        if (attaches.length > 0) {
+                            var attachHtml = '';
+                            for (var j = 0; j < attaches.length; j++) {
+                                var a = attaches[j];
+                                attachHtml += '<a href="/file/download?filePath=' + encodeURIComponent(a.filePath || '') + '&fileName=' + encodeURIComponent(a.fileName || '') + '" target="_blank" style="color:#1e9fff;margin-right:8px;">' + (a.fileName || '附件') + '</a>';
+                            }
+                            html += '<td>' + attachHtml + '</td>';
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                        html += '<td>' + formatTime(t.taskEndTime) + '</td>';
+                        html += '<td>' + formatTime(t.execFinishTime) + '</td>';
+                        html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                }
+                html += '</div>';
+
+                // ========== 第三大模块：投标结果 + 签约截止时间 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">三、投标结果</div>';
+
+                var isWinBid = extend && extend.isWinBid === 1;
+                html += '<div style="margin-bottom:15px;">';
+                html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">是否中标：</span>';
+                html += isWinBid ? '<span class="win-tag win-yes">是</span>' : '<span class="win-tag win-no">否</span>';
+                if (isWinBid && extend.winBidAmount) {
+                    html += '<span style="margin-left:15px;color:#333;">中标金额/费率：' + safeStr(extend.winBidAmount) + '</span>';
+                }
+                html += '</div>';
+
+                // 中标通知书下载
+                if (isWinBid && extend.filePath) {
+                    html += '<div style="margin-bottom:15px;">';
+                    html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">中标通知书：</span>';
+                    html += '<a href="/file/download?filePath=' + encodeURIComponent(extend.filePath) + '&fileName=' + encodeURIComponent(extend.fileName || '') + '" target="_blank" style="color:#1e9fff;"><i class="layui-icon">&#xe61e;</i> ' + safeStr(extend.fileName) + '</a>';
+                    html += '</div>';
+                }
+
+                // 签约截止时间（中标后额外展示）
+                if (isWinBid && extend.signEndTime) {
+                    html += '<div style="margin-bottom:15px;">';
+                    html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">签约截止时间：</span>';
+                    var endTime = new Date(extend.signEndTime.replace('T', ' '));
+                    var now = new Date();
+                    var diffDays = Math.ceil((endTime - now) / (1000 * 60 * 60 * 24));
+                    var dateStr = extend.signEndTime.substring(0, 10);
+                    if (diffDays <= 7 && extend.isSign !== 1) {
+                        html += '<span class="deadline-warn">' + dateStr + ' (即将到期)</span>';
+                    } else {
+                        html += '<span>' + dateStr + '</span>';
+                    }
+                    html += '</div>';
+                }
+
+                // 投标单位得分布
+                if (bidResults.length > 0) {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr>';
+                    html += '<th>序号</th><th>投标单位名称</th><th>报价</th><th>报价得分</th><th>商务得分</th><th>技术得分</th><th>最终得分</th><th>最终排名</th>';
+                    html += '</tr></thead><tbody>';
+                    for (var i = 0; i < bidResults.length; i++) {
+                        var b = bidResults[i];
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(b.bidCompanyName) + '</td>';
+                        html += '<td>' + safeStr(b.bidPrice) + '</td>';
+                        html += '<td>' + (b.priceScore != null ? b.priceScore : '-') + '</td>';
+                        html += '<td>' + (b.businessScore != null ? b.businessScore : '-') + '</td>';
+                        html += '<td>' + (b.techScore != null ? b.techScore : '-') + '</td>';
+                        html += '<td>' + (b.finalScore != null ? b.finalScore : '-') + '</td>';
+                        html += '<td>' + (b.finalRank != null ? b.finalRank : '-') + '</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无投标结果数据</p>';
+                }
+                html += '</div>';
+
+                // ========== 第四大模块：签约详情 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">四、签约详情</div>';
+
+                // 签约状态
+                var isSign = extend && extend.isSign === 1;
+                html += '<div style="margin-bottom:15px;">';
+                html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">是否签约：</span>';
+                html += isSign ? '<span class="sign-tag sign-yes">已签约</span>' : '<span class="sign-tag sign-no">未签约</span>';
+                if (isSign && extend.signTime) {
+                    html += '<span style="margin-left:15px;color:#333;">签约日期：' + formatShortDate(extend.signTime) + '</span>';
+                }
+                html += '</div>';
+
+                // 合同附件
+                if (contractFiles.length > 0) {
+                    html += '<div style="margin-bottom:20px;">';
+                    html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">合同附件：</span>';
+                    for (var i = 0; i < contractFiles.length; i++) {
+                        var cf = contractFiles[i];
+                        html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(cf.filePath || '') + '&fileName=' + encodeURIComponent(cf.originalName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (cf.originalName || '附件' + (i+1)) + '</a></div>';
+                    }
+                    html += '</div>';
+                }
+
+                // 里程碑节点
+                html += '<div style="margin-bottom:20px;">';
+                html += '<div style="font-weight:bold;margin-bottom:10px;color:#333;">项目里程碑节点</div>';
+                if (milestones.length > 0) {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr><th>序号</th><th>里程碑名称</th><th>预计完成日期</th><th>描述</th></tr></thead><tbody>';
+                    for (var i = 0; i < milestones.length; i++) {
+                        var m = milestones[i];
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(m.milestoneName) + '</td>';
+                        html += '<td>' + formatShortDate(m.expectFinishDate) + '</td>';
+                        html += '<td>' + safeStr(m.milestoneDesc) + '</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;">暂无里程碑节点</p>';
+                }
+                html += '</div>';
+
+                // 收款节点
+                html += '<div style="margin-bottom:20px;">';
+                html += '<div style="font-weight:bold;margin-bottom:10px;color:#333;">项目收款节点</div>';
+                if (payments.length > 0) {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr><th>序号</th><th>收款节点</th><th>收款金额(元)</th><th>收款比例(%)</th><th>预计收款日期</th></tr></thead><tbody>';
+                    for (var i = 0; i < payments.length; i++) {
+                        var pay = payments[i];
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(pay.paymentNode) + '</td>';
+                        html += '<td>' + formatAmount(pay.receiveAmount) + '</td>';
+                        html += '<td>' + (pay.paymentRate != null ? pay.paymentRate : '-') + '</td>';
+                        html += '<td>' + formatShortDate(pay.expectPayDate) + '</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;">暂无收款节点</p>';
+                }
+                html += '</div>';
+
+                // 拜访记录（时间轴样式）
+                html += '<div>';
+                html += '<div style="font-weight:bold;margin-bottom:10px;color:#333;">拜访记录</div>';
+                if (visits.length > 0) {
+                    html += '<div style="padding-left:5px;">';
+                    for (var i = 0; i < visits.length; i++) {
+                        var v = visits[i];
+                        html += '<div class="timeline-item">';
+                        html += '<div class="timeline-dot"></div>';
+                        html += '<div class="timeline-title">' + safeStr(v.visitTarget) + '</div>';
+                        html += '<div class="timeline-time">' + formatTime(v.visitStartTime) + ' ~ ' + formatTime(v.visitEndTime) + '</div>';
+                        html += '<div class="timeline-content">' + safeStr(v.communicateContent) + '</div>';
+                        // 附件
+                        var vFiles = v.files || [];
+                        if (vFiles.length > 0) {
+                            html += '<div style="margin-top:5px;">';
+                            for (var j = 0; j < vFiles.length; j++) {
+                                var vf = vFiles[j];
+                                html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(vf.filePath || '') + '&fileName=' + encodeURIComponent(vf.fileName || '') + '" target="_blank" style="color:#1e9fff;"><i class="layui-icon">&#xe61e;</i> ' + safeStr(vf.fileName) + '</a></div>';
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;">暂无拜访记录</p>';
+                }
+                html += '</div>';
+
+                html += '</div>'; // 签约详情card结束
+
+                $('#detailContent').html(html);
+
+            } catch(e) {
+                $('#detailContent').html('<p class="error-msg">页面渲染异常：' + e.message + '</p>');
+            }
+        },
+        error: function(xhr, status, err) {
+            var msg = '请求失败';
+            if (xhr.status === 401) {
+                msg = '登录已过期，请重新登录';
+            } else if (xhr.status === 404) {
+                msg = '接口不存在(404)';
+            } else if (xhr.status === 500) {
+                msg = '服务器内部错误(500)';
+            } else if (status === 'timeout') {
+                msg = '请求超时';
+            }
+            $('#detailContent').html('<p class="error-msg">' + msg + '</p>');
+        }
+    });
+});
+</script>
+</body>
+</html>

@@ -39,6 +39,16 @@ public class ProjectSignController {
 
     @Autowired
     private SignPaymentService signPaymentService;
+    
+    
+    @Autowired
+    private ProjectBidResultService projectBidResultService;
+
+    @Autowired
+    private ProjectTaskService projectTaskService;
+
+    @Autowired
+    private ProjectTaskAttachmentService projectTaskAttachmentService;
     /**
      * 合同签订列表 - 查询已中标的项目（分页）
      */
@@ -105,6 +115,7 @@ public class ProjectSignController {
                 row.put("filePath", ext.getFilePath());
                 row.put("isSign", ext.getIsSign());
                 row.put("extendId", ext.getId());
+                row.put("signEndTime", ext.getSignEndTime());
             } else {
                 row.put("winBidAmount", null);
                 row.put("fileName", null);
@@ -647,4 +658,122 @@ public class ProjectSignController {
         result.put("msg", "删除成功");
         return result;
     }
+    
+    /**
+     * 签约详情页面数据（项目基本信息 + 任务执行 + 投标结果 + 签约详情）
+     */
+    @GetMapping("/signDetail/{projectId}")
+    public Map<String, Object> signDetail(@PathVariable Long projectId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        // 1. 项目基本信息
+        ProjectInfo project = projectInfoService.getById(projectId);
+        if (project == null) {
+            result.put("code", 404);
+            result.put("msg", "项目不存在");
+            return result;
+        }
+        result.put("project", project);
+
+        // 2. 项目附件（投标阶段 stage_type=1）
+        QueryWrapper<ProjectFile> fileWrapper = new QueryWrapper<>();
+        fileWrapper.eq("project_id", projectId);
+        fileWrapper.eq("stage_type", 1);
+        fileWrapper.orderByAsc("create_time");
+        List<ProjectFile> files = projectFileService.list(fileWrapper);
+        result.put("files", files);
+
+        // 3. 任务执行情况（stage_type=1）
+        QueryWrapper<ProjectTask> taskWrapper = new QueryWrapper<>();
+        taskWrapper.eq("project_id", projectId);
+        taskWrapper.eq("stage_type", 1);
+        taskWrapper.orderByAsc("create_time");
+        List<ProjectTask> tasks = projectTaskService.list(taskWrapper);
+        result.put("tasks", tasks);
+
+        // 4. 每个任务的交付物附件（attach_type=2）
+        List<Map<String, Object>> taskAttachList = new ArrayList<>();
+        for (ProjectTask task : tasks) {
+            QueryWrapper<ProjectTaskAttachment> attachWrapper = new QueryWrapper<>();
+            attachWrapper.eq("task_id", task.getId());
+            attachWrapper.eq("attach_type", 2);
+            attachWrapper.orderByAsc("create_time");
+            List<ProjectTaskAttachment> attachments = projectTaskAttachmentService.list(attachWrapper);
+            Map<String, Object> taskMap = new HashMap<>();
+            taskMap.put("taskId", task.getId());
+            taskMap.put("attachments", attachments);
+            taskAttachList.add(taskMap);
+        }
+        result.put("taskAttachments", taskAttachList);
+
+        // 5. project_extend（是否中标、中标金额、签约截止时间等）
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        result.put("extend", extend);
+
+        // 6. 投标单位得分
+        QueryWrapper<ProjectBidResult> bidWrapper = new QueryWrapper<>();
+        bidWrapper.eq("project_id", projectId);
+        bidWrapper.orderByAsc("final_rank");
+        List<ProjectBidResult> bidResults = projectBidResultService.list(bidWrapper);
+        result.put("bidResults", bidResults);
+
+        // 7. 合同附件（stage_type=2）
+        QueryWrapper<ProjectFile> contractWrapper = new QueryWrapper<>();
+        contractWrapper.eq("project_id", projectId);
+        contractWrapper.eq("stage_type", 2);
+        contractWrapper.orderByAsc("create_time");
+        List<ProjectFile> contractFiles = projectFileService.list(contractWrapper);
+        result.put("contractFiles", contractFiles);
+
+        // 8. 里程碑节点
+        QueryWrapper<SignMilestone> milestoneWrapper = new QueryWrapper<>();
+        milestoneWrapper.eq("project_id", projectId).orderByAsc("id");
+        List<SignMilestone> milestones = signMilestoneService.list(milestoneWrapper);
+        result.put("milestones", milestones);
+
+        // 9. 收款节点
+        QueryWrapper<SignPayment> paymentWrapper = new QueryWrapper<>();
+        paymentWrapper.eq("project_id", projectId).orderByAsc("id");
+        List<SignPayment> payments = signPaymentService.list(paymentWrapper);
+        result.put("payments", payments);
+
+        // 10. 拜访记录（含附件）
+        QueryWrapper<SignVisit> visitWrapper = new QueryWrapper<>();
+        visitWrapper.eq("project_id", projectId);
+        visitWrapper.orderByDesc("visit_start_time");
+        List<SignVisit> visits = signVisitService.list(visitWrapper);
+
+        List<Map<String, Object>> visitList = new ArrayList<>();
+        for (SignVisit v : visits) {
+            Map<String, Object> visitMap = new HashMap<>();
+            visitMap.put("id", v.getId());
+            visitMap.put("projectId", v.getProjectId());
+            visitMap.put("visitTarget", v.getVisitTarget());
+            visitMap.put("communicateContent", v.getCommunicateContent());
+            visitMap.put("visitStartTime", v.getVisitStartTime() != null ? v.getVisitStartTime().toString() : null);
+            visitMap.put("visitEndTime", v.getVisitEndTime() != null ? v.getVisitEndTime().toString() : null);
+            visitMap.put("createTime", v.getCreateTime() != null ? v.getCreateTime().toString() : null);
+
+            // 查询附件
+            QueryWrapper<SignVisitFile> vFileWrapper = new QueryWrapper<>();
+            vFileWrapper.eq("visit_id", v.getId());
+            List<SignVisitFile> vFiles = signVisitFileService.list(vFileWrapper);
+            visitMap.put("files", vFiles);
+
+            visitList.add(visitMap);
+        }
+        result.put("visits", visitList);
+
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        return result;
+    }
+     
 }

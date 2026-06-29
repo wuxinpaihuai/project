@@ -35,6 +35,10 @@ public class ProjectTask {
     private LocalDateTime execFinishTime;
     private String taskDesc;
     private String remark;
+    
+    private String workContent;
+    private String relateUserIds;
+    private String workAmount;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -82,4 +86,23 @@ public class ProjectTask {
     public void setTaskDesc(String taskDesc) { this.taskDesc = taskDesc; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
+	public String getWorkContent() {
+		return workContent;
+	}
+	public void setWorkContent(String workContent) {
+		this.workContent = workContent;
+	}
+	public String getRelateUserIds() {
+		return relateUserIds;
+	}
+	public void setRelateUserIds(String relateUserIds) {
+		this.relateUserIds = relateUserIds;
+	}
+	public String getWorkAmount() {
+		return workAmount;
+	}
+	public void setWorkAmount(String workAmount) {
+		this.workAmount = workAmount;
+	}
+    
 }
