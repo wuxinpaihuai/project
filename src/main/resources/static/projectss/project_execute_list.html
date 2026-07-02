@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目实施</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 200px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .sign-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 2px;
+            font-size: 12px; color: #fff;
+        }
+        .sign-yes { background-color: #86c566; }
+        .sign-no { background-color: #999; }
+        .deadline-warn { color: #ff5722; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card">
+        <form class="layui-form" lay-filter="executeSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">项目名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="projectName" id="searchProjectName" placeholder="请输入项目名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">是否签约</label>
+                    <div class="layui-input-inline">
+                        <select name="isSign" id="searchIsSign">
+                            <option value="">全部</option>
+                            <option value="0">未签约</option>
+                            <option value="1">已签约</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-blue" id="taskAssignBtn"><i class="layui-icon">&#xe67c;</i> 任务分配</button>
+        </div>
+        <table id="executeTable" lay-filter="executeTable"></table>
+    </div>
+</div>
+
+<!-- 行操作模板 -->
+<script type="text/html" id="executeRowToolbar">
+    <a class="layui-btn layui-btn-xs btn-blue" lay-event="detail">查看详情</a>
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    // 渲染项目实施列表
+    table.render({
+        elem: '#executeTable',
+        url: '/project/execute/executeList',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'checkbox', width: 50, align: 'center'},
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'projectName', title: '项目名称', minWidth: 180},
+            {field: 'projectNo', title: '项目编号', width: 140, align: 'center'},
+            {field: 'area', title: '项目地址', width: 130, align: 'center'},
+            {field: 'projectAmount', title: '项目金额(元)', width: 130, align: 'right', templet: function(d){
+                return d.projectAmount != null ? parseFloat(d.projectAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+            }},
+            {field: 'winBidAmount', title: '中标金额', width: 130, align: 'center', templet: function(d){
+                return d.winBidAmount || '-';
+            }},
+            {field: 'fileName', title: '中标通知书', width: 130, align: 'center', templet: function(d){
+                if (d.fileName && d.filePath) {
+                    return '<a href="/file/download?filePath=' + encodeURIComponent(d.filePath) + '&fileName=' + encodeURIComponent(d.fileName) + '" target="_blank" style="color:#1e9fff;">' + d.fileName + '</a>';
+                }
+                return '-';
+            }},
+            {field: 'isSign', title: '是否签约', width: 90, align: 'center', templet: function(d){
+                return d.isSign === 1 ? '<span class="sign-tag sign-yes">已签约</span>' : '<span class="sign-tag sign-no">未签约</span>';
+            }},
+            {field: 'bisnessUserName', title: '业务员', width: 100, align: 'center'},
+            {field: 'bisnessUserPhone', title: '手机号', width: 120, align: 'center'},
+            {title: '操作', width: 100, align: 'center', fixed: 'right', toolbar: '#executeRowToolbar'}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('executeTable', {
+            where: {
+                projectName: $('#searchProjectName').val(),
+                isSign: $('#searchIsSign').val()
+            },
+            page: {curr: 1}
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchProjectName').val('');
+        $('#searchIsSign').val('');
+        form.render('select');
+        table.reload('executeTable', {
+            where: {},
+            page: {curr: 1}
+        });
+    });
+
+    // 行操作
+    table.on('tool(executeTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'detail') {
+            layer.open({
+                type: 2,
+                title: '项目实施详情 - ' + data.projectName,
+                area: ['1100px', '85%'],
+                content: '/projectss/project_ss_detail.html?projectId=' + data.id,
+                maxmin: true,
+                shadeClose: false
+            });
+        }
+    });
+
+    // 任务分配
+    $('#taskAssignBtn').on('click', function(){
+        var checkData = table.checkStatus('executeTable').data;
+        if (checkData.length === 0) {
+            layer.msg('请先选择一个项目', {icon: 5});
+            return;
+        }
+        if (checkData.length > 1) {
+            layer.msg('任务分配只能选择一个项目', {icon: 5});
+            return;
+        }
+        var selectedProject = checkData[0];
+        layer.open({
+            type: 2,
+            title: '任务分配 - ' + selectedProject.projectName,
+            area: ['1100px', '85%'],
+            content: '/projectss/task_share.html?projectId=' + selectedProject.id,
+            maxmin: true,
+            shadeClose: false
+        });
+    });
+});
+</script>
+</body>
+</html>

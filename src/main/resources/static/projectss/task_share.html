@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务分配</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px 30px;
+        }
+        .info-item {
+            display: flex; line-height: 28px; font-size: 14px;
+        }
+        .info-label {
+            color: #666; min-width: 90px; text-align: right; margin-right: 8px;
+        }
+        .info-value {
+            color: #333; flex: 1; word-break: break-all;
+        }
+        .file-item {
+            display: inline-block; margin-right: 10px; margin-bottom: 5px;
+        }
+        .file-item a {
+            color: #1e9fff; text-decoration: none;
+        }
+        .file-item a:hover {
+            text-decoration: underline;
+        }
+        .task-status-0 { color: #999; }
+        .task-status-1 { color: #ff5722; }
+        .task-status-2 { color: #ff5722; }
+        .task-status-3 { color: #86c566; }
+        .task-status-4 { color: #ffb800; }
+        .task-status-5 { color: #ff5722; }
+        .task-status-6 { color: #ffb800; }
+        .sign-tag { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 12px; color: #fff; }
+        .sign-yes { background-color: #86c566; }
+        .sign-no { background-color: #999; }
+        .deadline-warn { color: #ff5722; font-weight: bold; }
+        .timeline-item {
+            position: relative; padding-left: 25px; margin-bottom: 20px;
+            border-left: 2px solid #1e9fff;
+        }
+        .timeline-item:last-child { border-left: 2px solid transparent; }
+        .timeline-dot {
+            position: absolute; left: -6px; top: 5px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #1e9fff; border: 2px solid #fff;
+        }
+        .timeline-title { font-weight: bold; color: #333; font-size: 14px; }
+        .timeline-time { color: #999; font-size: 12px; margin-top: 3px; }
+        .timeline-content { color: #666; font-size: 13px; margin-top: 5px; white-space: pre-wrap; }
+        .error-msg { color: red; text-align: center; padding: 50px; font-size: 14px; }
+
+        /* Task table styles */
+        .task-toolbar { margin-bottom: 10px; }
+        .task-table-wrap { overflow-x: auto; }
+        .task-table-wrap .layui-table { min-width: 900px; }
+
+        /* Task form styles */
+        .task-form-container { padding: 20px 20px 10px; }
+        .task-form-container .layui-form-label { width: 90px; }
+        .task-form-container .layui-input-block { margin-left: 120px; }
+        .task-form-container .layui-input-inline { margin-left: 0; width: auto; }
+        .task-form-container .layui-form-item-inline { display: flex; gap: 15px; }
+        .task-form-container .layui-form-item-inline .layui-inline { flex: 1; min-width: 0; }
+        .task-form-container .layui-form-item-inline .layui-inline .layui-form-label { width: 90px; }
+        .task-form-container .layui-form-item-inline .layui-inline .layui-input-block { margin-left: 120px; }
+
+        /* User select component styles */
+        .user-select-wrapper { position: relative; }
+        .user-select-input { width: 100%; }
+        .user-select-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #fff; border: 1px solid #e2e2e2;
+            border-radius: 2px; max-height: 150px; overflow-y: auto;
+            z-index: 9999; display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        }
+        .user-select-dropdown .user-select-option {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            color: #333; border-bottom: 1px solid #f2f2f2;
+        }
+        .user-select-dropdown .user-select-option:hover {
+            background-color: #f2f2f2; color: #1e9fff;
+        }
+        .user-select-tags {
+            margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+        }
+        .user-select-tag {
+            display: inline-flex; align-items: center;
+            padding: 3px 8px; border-radius: 2px;
+            background: #1e9fff; color: #fff; font-size: 12px;
+        }
+        .user-select-tag .tag-remove {
+            margin-left: 5px; cursor: pointer; font-size: 14px; font-weight: bold;
+        }
+        .user-select-tag .tag-remove:hover { color: #ff5722; }
+
+        /* Car fields group */
+        .car-fields-group { display: none; }
+
+        /* Bottom buttons */
+        .bottom-btns { text-align: center; padding: 20px 0; margin-top: 15px; }
+        .disabled-op { color: #999; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div id="detailContent">加载中...</div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = new URLSearchParams(window.location.search).get('projectId');
+
+layui.use(['layer', 'form', 'laydate', 'table'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var table = layui.table;
+    var $ = layui.$;
+
+    if (!projectId) {
+        $('#detailContent').html('<p class="error-msg">缺少项目ID参数</p>');
+        return;
+    }
+
+    if (!token) {
+        $('#detailContent').html('<p class="error-msg">未登录或登录已过期，请重新登录</p>');
+        return;
+    }
+
+    var taskStatusMap = {
+        0: {name: '未开始', cls: 'task-status-0'},
+        1: {name: '执行中', cls: 'task-status-1'},
+        2: {name: '延时执行中', cls: 'task-status-2'},
+        3: {name: '按时完成', cls: 'task-status-3'},
+        4: {name: '延时完成', cls: 'task-status-4'},
+        5: {name: '未完成', cls: 'task-status-5'},
+        6: {name: '申请延期中', cls: 'task-status-6'}
+    };
+
+    function formatTime(t) {
+        return t ? t.replace('T', ' ') : '-';
+    }
+
+    function formatShortDate(t) {
+        if (!t) return '-';
+        return t.substring(0, 10);
+    }
+
+    function safeStr(v) {
+        return (v != null && v !== '') ? String(v) : '-';
+    }
+
+    // Resolve relateUserIds to display names
+    function resolveRelateNames(relateUserIds) {
+        if (!relateUserIds || relateUserIds === '') return '-';
+        var ids = relateUserIds.split(',');
+        var names = [];
+        // We need to resolve each ID to a name using the cached user map
+        for (var i = 0; i < ids.length; i++) {
+            var uid = ids[i].trim();
+            if (uid !== '' && userMap[uid]) {
+                names.push(userMap[uid]);
+            }
+        }
+        return names.length > 0 ? names.join(', ') : '-';
+    }
+
+    // Cache user names from search results for resolving relateUserIds
+    var userMap = {};
+
+    function loadUserMap(taskData) {
+        // Collect all relateUserIds from tasks
+        var allIds = [];
+        if (taskData) {
+            for (var i = 0; i < taskData.length; i++) {
+                var rids = taskData[i].relateUserIds;
+                if (rids) {
+                    var ids = rids.split(',');
+                    for (var j = 0; j < ids.length; j++) {
+                        var uid = ids[j].trim();
+                        if (uid !== '' && !userMap[uid]) {
+                            allIds.push(uid);
+                        }
+                    }
+                }
+            }
+        }
+        // Batch resolve by searching each unknown ID
+        if (allIds.length > 0) {
+            // Use a single search call to get all users, then match by ID
+            $.ajax({
+                url: '/sys/user/searchByName?name=',
+                type: 'GET',
+                headers: {token: token},
+                async: false,
+                success: function(res) {
+                    if (res && res.code === 200 && res.data) {
+                        for (var i = 0; i < res.data.length; i++) {
+                            var u = res.data[i];
+                            userMap[String(u.id)] = u.realName || u.name || '-';
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Store task list data for table rendering
+    var taskListData = [];
+
+    // 加载详情数据
+    $.ajax({
+        url: '/project/execute/executeDetail/' + projectId,
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            try {
+                if (!res || res.code !== 200) {
+                    $('#detailContent').html('<p class="error-msg">' + (res && res.msg ? res.msg : '加载失败') + '</p>');
+                    return;
+                }
+
+                var p = res.project || res.data || {};
+                var visits = res.visits || [];
+                var extend = res.extend || {};
+                var contractFiles = res.contractFiles || [];
+                var milestones = res.milestones || [];
+                var tasks = res.tasks || [];
+
+                // Filter tasks for stage_type=3 (任务分配)
+                taskListData = [];
+                for (var i = 0; i < tasks.length; i++) {
+                    if (tasks[i].stageType === 3 || tasks[i].stage_type === 3) {
+                        taskListData.push(tasks[i]);
+                    }
+                }
+
+                // Load user name map for relateUserIds resolution
+                loadUserMap(taskListData);
+
+                if (!p) {
+                    $('#detailContent').html('<p class="error-msg">项目数据为空</p>');
+                    return;
+                }
+
+                var html = '';
+
+                // ========== 第一大模块：项目基本信息 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">一、项目基本信息</div>';
+                html += '<div class="info-grid">';
+                html += '<div class="info-item"><span class="info-label">项目编号：</span><span class="info-value">' + safeStr(p.projectNo) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + safeStr(p.projectName) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目地址：</span><span class="info-value">' + safeStr(p.area) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">业主方：</span><span class="info-value">' + safeStr(p.ownerCompany) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + safeStr(p.ownerContact) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + safeStr(p.ownerPhone) + '</span></div>';
+                html += '</div>';
+                html += '</div>';
+
+                // ========== 第二大模块：业务员拜访记录 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">二、业务员拜访记录</div>';
+                if (visits.length > 0) {
+                    html += '<div style="padding-left:5px;">';
+                    for (var i = 0; i < visits.length; i++) {
+                        var v = visits[i];
+                        html += '<div class="timeline-item">';
+                        html += '<div class="timeline-dot"></div>';
+                        html += '<div class="timeline-title">' + safeStr(v.visitTarget) + '</div>';
+                        html += '<div class="timeline-time">' + formatTime(v.visitStartTime) + ' ~ ' + formatTime(v.visitEndTime) + '</div>';
+                        html += '<div class="timeline-content">' + safeStr(v.communicateContent) + '</div>';
+                        var vFiles = v.files || [];
+                        if (vFiles.length > 0) {
+                            html += '<div style="margin-top:5px;">';
+                            for (var j = 0; j < vFiles.length; j++) {
+                                var vf = vFiles[j];
+                                html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(vf.filePath || '') + '&fileName=' + encodeURIComponent(vf.fileName || '') + '" target="_blank" style="color:#1e9fff;"><i class="layui-icon">&#xe61e;</i> ' + safeStr(vf.fileName) + '</a></div>';
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无拜访记录</p>';
+                }
+                html += '</div>';
+
+                // ========== 第三大模块：签约信息 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">三、签约信息</div>';
+
+                var isSign = extend && extend.isSign === 1;
+                html += '<div style="margin-bottom:15px;">';
+                html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">是否签约：</span>';
+                html += isSign ? '<span class="sign-tag sign-yes">已签约</span>' : '<span class="sign-tag sign-no">未签约</span>';
+                if (isSign && extend.signTime) {
+                    html += '<span style="margin-left:15px;color:#333;">签约日期：' + formatShortDate(extend.signTime) + '</span>';
+                }
+                html += '</div>';
+
+                // 合同附件
+                if (contractFiles.length > 0) {
+                    html += '<div style="margin-bottom:20px;">';
+                    html += '<span class="info-label" style="display:inline-block;min-width:80px;text-align:right;margin-right:8px;">合同附件：</span>';
+                    for (var i = 0; i < contractFiles.length; i++) {
+                        var cf = contractFiles[i];
+                        html += '<div class="file-item"><a href="/file/download?filePath=' + encodeURIComponent(cf.filePath || '') + '&fileName=' + encodeURIComponent(cf.originalName || '') + '" target="_blank"><i class="layui-icon">&#xe61e;</i> ' + (cf.originalName || '附件' + (i+1)) + '</a></div>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+
+                // ========== 第四大模块：项目里程碑节点 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">四、项目里程碑节点</div>';
+                if (milestones.length > 0) {
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<thead><tr><th>序号</th><th>里程碑节点</th><th>预计完成时间</th><th>节点说明</th></tr></thead><tbody>';
+                    for (var i = 0; i < milestones.length; i++) {
+                        var m = milestones[i];
+                        html += '<tr>';
+                        html += '<td>' + (i+1) + '</td>';
+                        html += '<td>' + safeStr(m.milestoneName) + '</td>';
+                        html += '<td>' + formatShortDate(m.expectFinishDate) + '</td>';
+                        html += '<td>' + safeStr(m.milestoneDesc) + '</td>';
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#999;text-align:center;">暂无里程碑节点</p>';
+                }
+                html += '</div>';
+
+                // ========== 第五大模块：任务分配 ==========
+                html += '<div class="info-card">';
+                html += '<div class="section-title">五、任务分配</div>';
+                html += '<div class="task-toolbar">';
+                html += '<button class="layui-btn btn-blue" id="addTaskBtn"><i class="layui-icon">&#xe654;</i> 新增任务</button>';
+                html += '(注：任务自动保存,如果暂时不发布任务，直接关闭当前页面即可！)</div>';
+                html += '<div class="task-table-wrap">';
+                html += '<table id="taskTable" lay-filter="taskTable"></table>';
+                html += '</div>';
+                html += '</div>';
+
+                // ========== 底部按钮 ==========
+                html += '<div class="bottom-btns">';
+                html += '<button class="layui-btn btn-blue" id="publishBtn"><i class="layui-icon">&#xe602;</i> 任务发布</button>';
+                html += '<button class="layui-btn layui-btn-primary" id="closeBtn">关闭</button>';
+                html += '</div>';
+
+                $('#detailContent').html(html);
+
+                // Render task table
+                renderTaskTable();
+
+                // Bind add task button
+                $('#addTaskBtn').on('click', function(){
+                    openTaskForm(null);
+                });
+
+                // Bind publish button
+                $('#publishBtn').on('click', function(){
+                    publishTasks();
+                });
+
+                // Bind close button
+                $('#closeBtn').on('click', function(){
+                    closePage();
+                });
+
+            } catch(e) {
+                $('#detailContent').html('<p class="error-msg">页面渲染异常：' + e.message + '</p>');
+            }
+        },
+        error: function(xhr, status, err) {
+            var msg = '请求失败';
+            if (xhr.status === 401) {
+                msg = '登录已过期，请重新登录';
+            } else if (xhr.status === 404) {
+                msg = '接口不存在(404)';
+            } else if (xhr.status === 500) {
+                msg = '服务器内部错误(500)';
+            } else if (status === 'timeout') {
+                msg = '请求超时';
+            }
+            $('#detailContent').html('<p class="error-msg">' + msg + '</p>');
+        }
+    });
+
+    // Render task table using layui table
+    function renderTaskTable() {
+        // Add relateNames to each task data for display
+        var displayData = [];
+        for (var i = 0; i < taskListData.length; i++) {
+            var t = taskListData[i];
+            var item = {};
+            for (var key in t) { item[key] = t[key]; }
+            item.relateNames = resolveRelateNames(t.relateUserIds);
+            displayData.push(item);
+        }
+
+        table.render({
+            elem: '#taskTable',
+            data: displayData,
+            cols: [[
+                {field: 'index', title: '序号', width: 60, templet: function(d){
+                    return d.LAY_INDEX+1;
+                }},
+                {field: 'execUserName', title: '责任人', width: 100},
+                {field: 'taskContent', title: '主体工作', minWidth: 150},
+                {field: 'taskEndTime', title: '截止时间', width: 120, templet: function(d){
+                    return formatShortDate(d.taskEndTime);
+                }},
+                {field: 'workAmount', title: '耗时(天)', width: 80},
+                {field: 'workContent', title: '工作成果', minWidth: 120},
+                {field: 'relateNames', title: '关联提醒', minWidth: 120},
+                {field: 'taskStatus', title: '任务状态', width: 100, templet: function(d){
+                    var statusInfo = taskStatusMap[d.taskStatus] || {name: '-', cls: ''};
+                    return '<span class="' + statusInfo.cls + '">' + statusInfo.name + '</span>';
+                }},
+                {field: 'operation', title: '操作', width: 130, fixed: 'right', templet: function(d){
+                    var status = d.taskStatus;
+                    if (status === 1 || status === 2 || status === 3 || status === 4 || status === 5) {
+                        return '<span class="disabled-op">不可操作</span>'; 
+                    } else if (status === 6) {
+                        return '<a class="layui-btn layui-btn-xs layui-btn-warm delay-btn" data-id="' + d.id + '">任务延期</a>'; 
+                    } else {
+                        return '<a class="layui-btn layui-btn-xs edit-btn" data-id="' + d.id + '">编辑</a> <a class="layui-btn layui-btn-xs layui-btn-danger delete-btn" data-id="' + d.id + '">删除</a>'; 
+                    }
+                }}
+            ]],
+            page: false,
+            skin: 'line',
+            even: true,
+            done: function(res) {
+                // Bind click events for operation buttons
+                $('.edit-btn').off('click').on('click', function(){
+                    var taskId = String($(this).data('id'));
+                    var taskData = null;
+                    for (var i = 0; i < taskListData.length; i++) {
+                        if (String(taskListData[i].id) === taskId) { taskData = taskListData[i]; break; }
+                    }
+                    if (taskData) openTaskForm(taskData);
+                });
+                $('.delete-btn').off('click').on('click', function(){
+                    var taskId = $(this).data('id');
+                    layer.confirm('确定删除该任务？', {icon: 3, title: '提示'}, function(confirmIndex){
+                        $.ajax({
+                            url: '/project/execute/deleteTask/' + taskId,
+                            type: 'POST',
+                            headers: {token: token},
+                            success: function(res) {
+                                if (res && res.code === 200) {
+                                    layer.msg('删除成功', {icon: 1});
+                                    layer.close(confirmIndex);
+                                    reloadTaskTable();
+                                } else {
+                                    layer.msg(res && res.msg ? res.msg : '删除失败', {icon: 2});
+                                }
+                            },
+                            error: function() { layer.msg('请求失败', {icon: 2}); }
+                        });
+                    });
+                });
+                $('.delay-btn').off('click').on('click', function(){
+                    var taskId = String($(this).data('id'));
+                    openDelayForm(taskId);
+                });
+            }
+        });
+    }
+
+    // Open task form popup (add or edit)
+    function openTaskForm(taskData) {
+        var isEdit = taskData !== null && taskData !== undefined;
+        var title = isEdit ? '编辑任务' : '新增任务';
+
+        var needCarVal = isEdit ? (taskData.needCar || 0) : 0;
+        var showCarFields = needCarVal === 1;
+
+        var formHtml = '<div class="task-form-container">';
+        formHtml += '<form class="layui-form" id="taskForm" lay-filter="taskForm">';
+        formHtml += '<input type="hidden" id="taskId" name="id" value="' + (isEdit ? taskData.id : '') + '">';
+
+        // Row 1: 责任人 + 任务截止时间 (同一行)
+        formHtml += '<div class="layui-form-item layui-form-item-inline">';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">责任人</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="execUserName" id="execUserName" lay-verify="required" placeholder="请输入责任人" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.execUserName || '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">截止时间</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="taskEndTime" id="taskEndTime" lay-verify="required" placeholder="请选择截止时间" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.taskEndTime ? taskData.taskEndTime.substring(0,10) : '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Row 2: 主体工作 (独占一行)
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">主体工作</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<textarea name="taskContent" id="taskContent" lay-verify="required" placeholder="请输入主体工作内容" class="layui-textarea" style="height:80px;">' + (isEdit ? (taskData.taskContent || '') : '') + '</textarea>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Row 3: 耗时(天) + 是否派车 (同一行)
+        formHtml += '<div class="layui-form-item layui-form-item-inline">';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">耗时(天)</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="workAmount" id="workAmount" placeholder="请输入耗时天数" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.workAmount || '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">是否派车</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<select name="needCar" id="needCar" lay-filter="needCar">';
+        formHtml += '<option value="0"' + (needCarVal === 0 ? ' selected' : '') + '>否</option>';
+        formHtml += '<option value="1"' + (needCarVal === 1 ? ' selected' : '') + '>是</option>';
+        formHtml += '</select>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Row 4: 通行费 + 里程数 (同一行, 条件显示)
+        formHtml += '<div class="layui-form-item layui-form-item-inline car-fields-group" id="carFieldsGroup" style="' + (showCarFields ? 'display:flex;' : 'display:none;') + '">';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">通行费</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="number" name="tollFee" id="tollFee" placeholder="请输入通行费" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.tollFee || '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '<div class="layui-inline">';
+        formHtml += '<label class="layui-form-label">里程数</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="number" name="mileage" id="mileage" placeholder="请输入里程数" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.mileage || '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Row 5: 工作成果 (独占一行)
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">工作成果</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<textarea name="workContent" id="workContent" placeholder="请输入工作成果" class="layui-textarea" style="height:80px;">' + (isEdit ? (taskData.workContent || '') : '') + '</textarea>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Row 6: 关联提醒 (独占一行, 带模糊搜索)
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">关联提醒</label>';
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<div class="user-select-wrapper" id="userSelectWrapper">';
+        formHtml += '<input type="text" id="userSearchInput" placeholder="输入姓名搜索用户" autocomplete="off" class="layui-input user-select-input">';
+        formHtml += '<div class="user-select-dropdown" id="userSelectDropdown"></div>';
+        formHtml += '<div class="user-select-tags" id="userSelectTags"></div>';
+        formHtml += '<input type="hidden" id="relateUserIds" name="relateUserIds" value="' + (isEdit ? (taskData.relateUserIds || '') : '') + '">';
+        formHtml += '</div>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Buttons
+        formHtml += '<div class="layui-form-item" style="text-align:center;margin-top:20px;">';
+        formHtml += '<button type="button" class="layui-btn btn-blue" id="submitTaskBtn" lay-submit lay-filter="submitTask">提交</button>';
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="cancelTaskBtn">取消</button>';
+        formHtml += '</div>';
+        formHtml += '</form>';
+        formHtml += '</div>';
+
+        var layerIndex = layer.open({
+            type: 1,
+            title: title,
+            area: ['680px', '560px'],
+            content: formHtml,
+            success: function(layero, index){
+                form.render(null, 'taskForm');
+
+                // Initialize date picker
+                laydate.render({
+                    elem: '#taskEndTime',
+                    format: 'yyyy-MM-dd',
+                    type: 'date'
+                });
+
+                // Initialize needCar toggle
+                form.on('select(needCar)', function(data){
+                    var val = parseInt(data.value);
+                    var carGroup = $('#carFieldsGroup');
+                    if (val === 1) {
+                        carGroup.show();
+                    } else {
+                        carGroup.hide();
+                        // Clear values when hiding
+                        $('#tollFee').val('');
+                        $('#mileage').val('');
+                    }
+                });
+
+                // Initialize user select component
+                initUserSelect(isEdit ? (taskData.relateUserIds || '') : '', isEdit ? taskData : null);
+
+                // Cancel button
+                layero.find('#cancelTaskBtn').on('click', function(){
+                    layer.close(index);
+                });
+
+                // Submit button
+                layero.find('#submitTaskBtn').on('click', function(){
+                    submitTaskForm(index, isEdit);
+                });
+            }
+        });
+    }
+
+    // Initialize user select component with fuzzy search
+    var selectedUsers = []; // {id, name}
+
+    function initUserSelect(existingIds, taskData) {
+        selectedUsers = [];
+        var dropdown = $('#userSelectDropdown');
+        var searchInput = $('#userSearchInput');
+        var tagsContainer = $('#userSelectTags');
+
+        // If editing, resolve existing relateUserIds to names
+        if (existingIds && existingIds !== '') {
+            var ids = existingIds.split(',');
+            for (var i = 0; i < ids.length; i++) {
+                var uid = ids[i].trim();
+                if (uid !== '') {
+                    // Use userMap to resolve ID -> name
+                    var uname = userMap[uid];
+                    if (uname) {
+                        selectedUsers.push({id: uid, name: uname});
+                    } else {
+                        // If not in map, try to fetch all users and find by ID
+                        // We'll use a fallback approach
+                        selectedUsers.push({id: uid, name: '用户' + uid});
+                    }
+                }
+            }
+            renderUserTags();
+            updateRelateUserIdsHidden();
+        }
+
+        // Fuzzy search on input
+        var searchTimer = null;
+        searchInput.off('input').on('input', function(){
+            var val = $(this).val().trim();
+            if (searchTimer) clearTimeout(searchTimer);
+            if (val === '') {
+                dropdown.hide();
+                dropdown.empty();
+                return;
+            }
+            searchTimer = setTimeout(function(){
+                $.ajax({
+                    url: '/sys/user/searchByName?name=' + encodeURIComponent(val),
+                    type: 'GET',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res && res.code === 200 && res.data && res.data.length > 0) {
+                            var optionsHtml = '';
+                            for (var i = 0; i < res.data.length; i++) {
+                                var u = res.data[i];
+                                var uName = u.realName || u.name || u.userName || '-';
+                                var uId = u.id;
+                                // Also update userMap
+                                userMap[String(uId)] = uName;
+
+                                // Check if already selected
+                                var alreadySelected = false;
+                                for (var j = 0; j < selectedUsers.length; j++) {
+                                    if (selectedUsers[j].id === String(uId)) {
+                                        alreadySelected = true;
+                                        break;
+                                    }
+                                }
+                                if (!alreadySelected) {
+                                    optionsHtml += '<div class="user-select-option" data-id="' + uId + '" data-name="' + uName + '">' + uName + (u.phone ? ' (' + u.phone + ')' : '') + '</div>';
+                                }
+                            }
+                            if (optionsHtml === '') {
+                                optionsHtml = '<div style="padding:10px;color:#999;text-align:center;">无匹配结果</div>';
+                            }
+                            dropdown.html(optionsHtml);
+                            dropdown.show();
+                        } else {
+                            dropdown.html('<div style="padding:10px;color:#999;text-align:center;">无匹配结果</div>');
+                            dropdown.show();
+                        }
+                    },
+                    error: function() {
+                        dropdown.html('<div style="padding:10px;color:#999;text-align:center;">搜索失败</div>');
+                        dropdown.show();
+                    }
+                });
+            }, 300);
+        });
+
+        // Click on dropdown option to add user
+        dropdown.off('click', '.user-select-option').on('click', '.user-select-option', function(){
+            var uid = String($(this).data('id'));
+            var uname = $(this).data('name');
+            // Add to selected
+            var exists = false;
+            for (var i = 0; i < selectedUsers.length; i++) {
+                if (selectedUsers[i].id === uid) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                selectedUsers.push({id: uid, name: uname});
+                renderUserTags();
+                updateRelateUserIdsHidden();
+            }
+            // Clear input and hide dropdown
+            searchInput.val('');
+            dropdown.hide();
+            dropdown.empty();
+        });
+
+        // Hide dropdown when clicking outside (scoped to the wrapper)
+        $(document).off('click.userSelect').on('click.userSelect', function(e){
+            if (!$(e.target).closest('#userSelectWrapper').length) {
+                dropdown.hide();
+            }
+        });
+    }
+
+    function renderUserTags() {
+        var tagsContainer = $('#userSelectTags');
+        var html = '';
+        for (var i = 0; i < selectedUsers.length; i++) {
+            html += '<div class="user-select-tag" data-id="' + selectedUsers[i].id + '">';
+            html += '<span>' + selectedUsers[i].name + '</span>';
+            html += '<span class="tag-remove" data-id="' + selectedUsers[i].id + '">×</span>';
+            html += '</div>';
+        }
+        tagsContainer.html(html);
+
+        // Bind remove click
+        tagsContainer.find('.tag-remove').off('click').on('click', function(){
+            var rid = String($(this).data('id'));
+            for (var i = 0; i < selectedUsers.length; i++) {
+                if (selectedUsers[i].id === rid) {
+                    selectedUsers.splice(i, 1);
+                    break;
+                }
+            }
+            renderUserTags();
+            updateRelateUserIdsHidden();
+        });
+    }
+
+    function updateRelateUserIdsHidden() {
+        var ids = [];
+        for (var i = 0; i < selectedUsers.length; i++) {
+            ids.push(selectedUsers[i].id);
+        }
+        $('#relateUserIds').val(ids.join(','));
+    }
+
+    // Submit task form
+    function submitTaskForm(layerIndex, isEdit) {
+        var execUserName = $('#execUserName').val();
+        var taskContent = $('#taskContent').val();
+        var taskEndTime = $('#taskEndTime').val();
+        var workAmount = $('#workAmount').val();
+        var workContent = $('#workContent').val();
+        var relateUserIds = $('#relateUserIds').val();
+        var needCar = $('#needCar').val();
+        var tollFee = $('#tollFee').val();
+        var mileage = $('#mileage').val();
+
+        if (!execUserName) {
+            layer.msg('请输入责任人', {icon: 5});
+            return;
+        }
+        if (!taskContent) {
+            layer.msg('请输入主体工作内容', {icon: 5});
+            return;
+        }
+        if (!taskEndTime) {
+            layer.msg('请选择任务截止时间', {icon: 5});
+            return;
+        }
+
+        var postData = {
+            projectId: projectId,
+            execUserName: execUserName,
+            taskContent: taskContent,
+            taskEndTime: taskEndTime,
+            workAmount: workAmount,
+            workContent: workContent,
+            relateUserIds: relateUserIds,
+            needCar: needCar,
+            tollFee: tollFee || 0,
+            mileage: mileage || 0
+        };
+
+        var url = '/project/execute/addTask';
+        if (isEdit) {
+            url = '/project/execute/editTask';
+            postData.id = $('#taskId').val();
+        }
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res && res.code === 200) {
+                    layer.msg(isEdit ? '编辑成功' : '新增成功', {icon: 1});
+                    layer.close(layerIndex);
+                    reloadTaskTable();
+                } else {
+                    layer.msg(res && res.msg ? res.msg : '操作失败', {icon: 2});
+                }
+            },
+            error: function(xhr) {
+                var msg = '请求失败';
+                if (xhr.status === 401) msg = '登录已过期';
+                else if (xhr.status === 500) msg = '服务器错误';
+                layer.msg(msg, {icon: 2});
+            }
+        });
+    }
+
+    // Reload task table data
+    function reloadTaskTable() {
+        $.ajax({
+            url: '/project/execute/executeDetail/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res && res.code === 200) {
+                    var tasks = res.tasks || [];
+                    taskListData = [];
+                    for (var i = 0; i < tasks.length; i++) {
+                        if (tasks[i].stageType === 3 || tasks[i].stage_type === 3) {
+                            taskListData.push(tasks[i]);
+                        }
+                    }
+                    // Refresh user map
+                    loadUserMap(taskListData);
+                    renderTaskTable();
+                }
+            }
+        });
+    }
+
+    // (Operation buttons are now handled via templet + done callback click bindings)
+    // ========== 任务延期弹窗 ==========
+    function openDelayForm(taskId) {
+        // Find task data
+        var taskData = null;
+        for (var i = 0; i < taskListData.length; i++) {
+            if (String(taskListData[i].id) === taskId) { taskData = taskListData[i]; break; }
+        }
+        if (!taskData) {
+            layer.msg('未找到任务数据', {icon: 2});
+            return;
+        }
+
+        var formHtml = '<div class="task-form-container">';
+        formHtml += '<form class="layui-form" id="delayForm" lay-filter="delayForm">';
+        formHtml += '<input type="hidden" id="delayTaskId" value="' + taskData.id + '">';
+        formHtml += '<div style="padding:10px 0;color:#666;font-size:13px;margin-bottom:10px;">以下仅可修改耗时和截止时间，保存后状态将变为"延时执行中"</div>'; 
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">耗时(天)</label>'; 
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="delayWorkAmount" id="delayWorkAmount" placeholder="请输入耗时天数" autocomplete="off" class="layui-input" value="' + (taskData.workAmount || '') + '">'; 
+        formHtml += '</div>';
+        formHtml += '</div>'; 
+        formHtml += '<div class="layui-form-item">';
+        formHtml += '<label class="layui-form-label">截止时间</label>'; 
+        formHtml += '<div class="layui-input-block">';
+        formHtml += '<input type="text" name="delayTaskEndTime" id="delayTaskEndTime" lay-verify="required" placeholder="请选择截止时间" autocomplete="off" class="layui-input" value="' + (taskData.taskEndTime ? taskData.taskEndTime.substring(0,10) : '') + '">'; 
+        formHtml += '</div>';
+        formHtml += '</div>'; 
+        formHtml += '<div class="layui-form-item" style="text-align:center;margin-top:20px;">';
+        formHtml += '<button type="button" class="layui-btn btn-blue" id="submitDelayBtn">提交延期</button>'; 
+        formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="cancelDelayBtn">取消</button>'; 
+        formHtml += '</div>'; 
+        formHtml += '</form>'; 
+        formHtml += '</div>'; 
+
+        var layerIndex = layer.open({
+            type: 1,
+            title: '任务延期',
+            area: ['500px', '350px'],
+            content: formHtml,
+            success: function(layero, index){
+                form.render(null, 'delayForm');
+
+                laydate.render({
+                    elem: '#delayTaskEndTime',
+                    format: 'yyyy-MM-dd',
+                    type: 'date'
+                });
+
+                layero.find('#cancelDelayBtn').on('click', function(){
+                    layer.close(index);
+                });
+
+                layero.find('#submitDelayBtn').on('click', function(){
+                    var delayWorkAmount = $('#delayWorkAmount').val();
+                    var delayTaskEndTime = $('#delayTaskEndTime').val();
+
+                    if (!delayTaskEndTime) {
+                        layer.msg('请选择截止时间', {icon: 5});
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/project/execute/delayTask',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {token: token},
+                        data: JSON.stringify({
+                            id: taskId,
+                            workAmount: delayWorkAmount,
+                            taskEndTime: delayTaskEndTime
+                        }),
+                        success: function(res) {
+                            if (res && res.code === 200) {
+                                layer.msg('延期处理成功', {icon: 1});
+                                layer.close(index);
+                                reloadTaskTable();
+                            } else {
+                                layer.msg(res && res.msg ? res.msg : '操作失败', {icon: 2});
+                            }
+                        },
+                        error: function(xhr) {
+                            var msg = '请求失败';
+                            if (xhr.status === 401) msg = '登录已过期';
+                            else if (xhr.status === 500) msg = '服务器错误';
+                            layer.msg(msg, {icon: 2});
+                        }
+                    });
+                });
+            }
+        });
+    }
+
+    // ========== 任务发布 ==========
+    function publishTasks() {
+        layer.confirm('确定发布该项目所有未开始的任务？发布后任务状态将变为"执行中"，且不可再编辑删除。', {icon: 3, title: '任务发布确认'}, function(confirmIndex){
+            $.ajax({
+                url: '/project/execute/publishTask/' + projectId,
+                type: 'POST',
+                headers: {token: token},
+                success: function(res) {
+                    if (res && res.code === 200) {
+                        var count = res.count || 0;
+                        layer.msg('发布成功，共发布 ' + count + ' 个任务', {icon: 1});
+                        layer.close(confirmIndex);
+                        reloadTaskTable();
+                    } else {
+                        layer.msg(res && res.msg ? res.msg : '发布失败', {icon: 2});
+                    }
+                },
+                error: function(xhr) {
+                    var msg = '请求失败';
+                    if (xhr.status === 401) msg = '登录已过期';
+                    else if (xhr.status === 500) msg = '服务器错误';
+                    layer.msg(msg, {icon: 2});
+                }
+            });
+        });
+    }
+
+    // ========== 关闭页面 ==========
+    function closePage() {
+        // 如果是iframe弹窗，关闭父级layer
+        var frameIndex = parent.layer.getFrameIndex(window.name);
+        if (frameIndex) {
+            parent.layer.close(frameIndex);
+        } else {
+            // 如果不是iframe，尝试关闭当前窗口
+            window.close();
+        }
+    }
+});
+</script>
+</body>
+</html>
