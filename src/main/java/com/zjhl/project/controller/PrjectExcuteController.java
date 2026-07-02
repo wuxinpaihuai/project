@@ -228,7 +228,22 @@ public class PrjectExcuteController {
             task.setAssignUserPhone(loginUser.getPhone());
         }
         
-        task.setExecUserName((String) params.get("execUserName"));
+        // 责任人信息：从选择框传入的execUserId解析出完整信息
+        if (params.get("execUserId") != null && !params.get("execUserId").toString().isEmpty()) {
+            Long execUserId = Long.parseLong(params.get("execUserId").toString());
+            task.setExecUserId(execUserId);
+            SysUser execUser = sysUserService.getById(execUserId);
+            if (execUser != null) {
+                task.setExecUserName(execUser.getRealName());
+                task.setExecUserPhone(execUser.getPhone());
+            } else {
+                task.setExecUserName((String) params.get("execUserName"));
+                task.setExecUserPhone((String) params.get("execUserPhone"));
+            }
+        } else {
+            task.setExecUserName((String) params.get("execUserName"));
+            task.setExecUserPhone(params.get("execUserPhone") != null ? (String) params.get("execUserPhone") : null);
+        }
         task.setTaskContent((String) params.get("taskContent"));
         task.setWorkAmount((String) params.get("workAmount"));
         task.setWorkContent((String) params.get("workContent"));
@@ -285,7 +300,22 @@ public class PrjectExcuteController {
             task.setAssignUserName(loginUser.getRealName());
             task.setAssignUserPhone(loginUser.getPhone());
         }
-        task.setExecUserName((String) params.get("execUserName"));
+        // 责任人信息：从选择框传入的execUserId解析出完整信息
+        if (params.get("execUserId") != null && !params.get("execUserId").toString().isEmpty()) {
+            Long execUserId = Long.parseLong(params.get("execUserId").toString());
+            task.setExecUserId(execUserId);
+            SysUser execUser = sysUserService.getById(execUserId);
+            if (execUser != null) {
+                task.setExecUserName(execUser.getRealName());
+                task.setExecUserPhone(execUser.getPhone());
+            } else {
+                task.setExecUserName((String) params.get("execUserName"));
+                task.setExecUserPhone((String) params.get("execUserPhone"));
+            }
+        } else {
+            task.setExecUserName((String) params.get("execUserName"));
+            task.setExecUserPhone(params.get("execUserPhone") != null ? (String) params.get("execUserPhone") : null);
+        }
         task.setTaskContent((String) params.get("taskContent"));
         task.setWorkAmount((String) params.get("workAmount"));
         task.setWorkContent((String) params.get("workContent"));

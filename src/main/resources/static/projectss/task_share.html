@@ -503,12 +503,18 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         formHtml += '<form class="layui-form" id="taskForm" lay-filter="taskForm">';
         formHtml += '<input type="hidden" id="taskId" name="id" value="' + (isEdit ? taskData.id : '') + '">';
 
-        // Row 1: 责任人 + 任务截止时间 (同一行)
+        // Row 1: 责任人(下拉搜索) + 任务截止时间 (同一行)
         formHtml += '<div class="layui-form-item layui-form-item-inline">';
         formHtml += '<div class="layui-inline">';
         formHtml += '<label class="layui-form-label">责任人</label>';
         formHtml += '<div class="layui-input-block">';
-        formHtml += '<input type="text" name="execUserName" id="execUserName" lay-verify="required" placeholder="请输入责任人" autocomplete="off" class="layui-input" value="' + (isEdit ? (taskData.execUserName || '') : '') + '">';
+        formHtml += '<div class="user-select-wrapper" id="execUserSelectWrapper">';
+        formHtml += '<input type="text" id="execUserSearchInput" placeholder="输入姓名搜索选择责任人" autocomplete="off" class="layui-input user-select-input" value="' + (isEdit ? (taskData.execUserName || '') : '') + '">';
+        formHtml += '<div class="user-select-dropdown" id="execUserSelectDropdown"></div>';
+        formHtml += '<input type="hidden" id="execUserId" name="execUserId" value="' + (isEdit ? (taskData.execUserId || '') : '') + '">';
+        formHtml += '<input type="hidden" id="execUserName" name="execUserName" value="' + (isEdit ? (taskData.execUserName || '') : '') + '">';
+        formHtml += '<input type="hidden" id="execUserPhone" name="execUserPhone" value="' + (isEdit ? (taskData.execUserPhone || '') : '') + '">';
+        formHtml += '</div>';
         formHtml += '</div>';
         formHtml += '</div>';
         formHtml += '<div class="layui-inline">';
@@ -623,6 +629,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 // Initialize user select component
                 initUserSelect(isEdit ? (taskData.relateUserIds || '') : '', isEdit ? taskData : null);
 
+                // Initialize exec user (责任人) search select component
+                initExecUserSelect(isEdit ? taskData : null);
+
                 // Cancel button
                 layero.find('#cancelTaskBtn').on('click', function(){
                     layer.close(index);
@@ -638,6 +647,92 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
 
     // Initialize user select component with fuzzy search
     var selectedUsers = []; // {id, name}
+
+    // ========== 责任人搜索选择组件（单选） ==========
+    function initExecUserSelect(taskData) {
+        var dropdown = $('#execUserSelectDropdown');
+        var searchInput = $('#execUserSearchInput');
+
+        // If editing, the input already has the name value; hidden fields already have id/name/phone
+
+        // Fuzzy search on input
+        var searchTimer = null;
+        searchInput.off('input').on('input', function(){
+            var val = $(this).val().trim();
+            // If user manually clears the input, clear hidden fields too
+            if (val === '') {
+                $('#execUserId').val('');
+                $('#execUserName').val('');
+                $('#execUserPhone').val('');
+                dropdown.hide();
+                dropdown.empty();
+                return;
+            }
+            // Check if the current value matches the selected user name — if yes, don't search
+            var currentName = $('#execUserName').val();
+            if (val === currentName) {
+                dropdown.hide();
+                return;
+            }
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(function(){
+                $.ajax({
+                    url: '/sys/user/searchByName?name=' + encodeURIComponent(val),
+                    type: 'GET',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res && res.code === 200 && res.data && res.data.length > 0) {
+                            var optionsHtml = '';
+                            for (var i = 0; i < res.data.length; i++) {
+                                var u = res.data[i];
+                                var uName = u.realName || u.name || u.userName || '-';
+                                var uId = u.id;
+                                var uPhone = u.phone || '';
+                                optionsHtml += '<div class="user-select-option" data-id="' + uId + '" data-name="' + uName + '" data-phone="' + uPhone + '">' + uName + (uPhone ? ' (' + uPhone + ')' : '') + '</div>';
+                            }
+                            dropdown.html(optionsHtml);
+                            dropdown.show();
+                        } else {
+                            dropdown.html('<div style="padding:10px;color:#999;text-align:center;">无匹配结果</div>');
+                            dropdown.show();
+                        }
+                    },
+                    error: function() {
+                        dropdown.html('<div style="padding:10px;color:#999;text-align:center;">搜索失败</div>');
+                        dropdown.show();
+                    }
+                });
+            }, 300);
+        });
+
+        // Click on dropdown option to select user
+        dropdown.off('click', '.user-select-option').on('click', '.user-select-option', function(){
+            var uid = String($(this).data('id'));
+            var uname = $(this).data('name');
+            var uphone = $(this).data('phone') || '';
+            // Set hidden fields
+            $('#execUserId').val(uid);
+            $('#execUserName').val(uname);
+            $('#execUserPhone').val(uphone);
+            // Set visible input to show name
+            searchInput.val(uname);
+            dropdown.hide();
+            dropdown.empty();
+        });
+
+        // Hide dropdown when clicking outside
+        $(document).off('click.execUserSelect').on('click.execUserSelect', function(e){
+            if (!$(e.target).closest('#execUserSelectWrapper').length) {
+                dropdown.hide();
+            }
+        });
+
+        // Focus the search input when clicking on it — clear if it was a previous selection, to allow re-search
+        searchInput.off('focus').on('focus', function(){
+            var currentName = $('#execUserName').val();
+            // If the displayed value matches a selected name, keep it; user can re-type to search again
+        });
+    }
 
     function initUserSelect(existingIds, taskData) {
         selectedUsers = [];
@@ -787,7 +882,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
 
     // Submit task form
     function submitTaskForm(layerIndex, isEdit) {
+        var execUserId = $('#execUserId').val();
         var execUserName = $('#execUserName').val();
+        var execUserPhone = $('#execUserPhone').val();
         var taskContent = $('#taskContent').val();
         var taskEndTime = $('#taskEndTime').val();
         var workAmount = $('#workAmount').val();
@@ -798,7 +895,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         var mileage = $('#mileage').val();
 
         if (!execUserName) {
-            layer.msg('请输入责任人', {icon: 5});
+            layer.msg('请选择责任人', {icon: 5});
             return;
         }
         if (!taskContent) {
@@ -812,7 +909,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
 
         var postData = {
             projectId: projectId,
+            execUserId: execUserId,
             execUserName: execUserName,
+            execUserPhone: execUserPhone,
             taskContent: taskContent,
             taskEndTime: taskEndTime,
             workAmount: workAmount,
