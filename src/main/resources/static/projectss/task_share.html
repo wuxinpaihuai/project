@@ -51,6 +51,11 @@
         .sign-yes { background-color: #86c566; }
         .sign-no { background-color: #999; }
         .deadline-warn { color: #ff5722; font-weight: bold; }
+        .deadline-overdue { color: #ff5722; font-weight: bold; }
+        .deadline-near { color: #ffb800; font-weight: bold; }
+        .deadline-tag { display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 11px; color: #fff; margin-left: 4px; vertical-align: middle; }
+        .deadline-tag-overdue { background-color: #ff5722; }
+        .deadline-tag-near { background-color: #ffb800; }
         .timeline-item {
             position: relative; padding-left: 25px; margin-bottom: 20px;
             border-left: 2px solid #1e9fff;
@@ -163,6 +168,26 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
     function formatShortDate(t) {
         if (!t) return '-';
         return t.substring(0, 10);
+    }
+
+    // 判断截止时间状态：已超期 / 即将到期(3天内) / 正常
+    // 已完成(3,4)的任务不再判断超期
+    function getDeadlineStatus(taskEndTime, taskStatus) {
+        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
+        try {
+            var endStr = taskEndTime;
+            if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+            if (endStr.length === 10) endStr += ' 00:00:00';
+            var end = new Date(endStr);
+            var now = new Date();
+            var diffMs = end.getTime() - now.getTime();
+            var diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays < 0) return 'overdue';      // 已超期
+            if (diffDays <= 3) return 'near';         // 即将到期(3天内)
+            return 'normal';
+        } catch(e) {
+            return 'normal';
+        }
     }
 
     function safeStr(v) {
@@ -430,7 +455,14 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 {field: 'execUserName', title: '责任人', width: 100},
                 {field: 'taskContent', title: '主体工作', minWidth: 150},
                 {field: 'taskEndTime', title: '截止时间', width: 120, templet: function(d){
-                    return formatShortDate(d.taskEndTime);
+                    var dlStatus = getDeadlineStatus(d.taskEndTime, d.taskStatus);
+                    var dateStr = formatShortDate(d.taskEndTime);
+                    if (dlStatus === 'overdue') {
+                        return '<span class="deadline-overdue">' + dateStr + '</span><span class="deadline-tag deadline-tag-overdue">已超期</span>';
+                    } else if (dlStatus === 'near') {
+                        return '<span class="deadline-near">' + dateStr + '</span><span class="deadline-tag deadline-tag-near">即将到期</span>';
+                    }
+                    return dateStr;
                 }},
                 {field: 'workAmount', title: '耗时(天)', width: 80},
                 {field: 'workContent', title: '工作成果', minWidth: 120},

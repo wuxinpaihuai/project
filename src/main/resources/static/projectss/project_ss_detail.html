@@ -50,6 +50,14 @@
         .sign-yes { background-color: #86c566; }
         .sign-no { background-color: #999; }
         .deadline-warn { color: #ff5722; font-weight: bold; }
+        .deadline-overdue { color: #ff5722; font-weight: bold; }
+        .deadline-near { color: #ffb800; font-weight: bold; }
+        .deadline-tag { display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 11px; color: #fff; margin-left: 4px; vertical-align: middle; }
+        .deadline-tag-overdue { background-color: #ff5722; }
+        .deadline-tag-near { background-color: #ffb800; }
+        .row-overdue { background-color: #fff1f0 !important; }
+        .row-near { background-color: #fff8e1 !important; }
+        .row-warn { background-color: #fff8e1 !important; }
         .timeline-item {
             position: relative; padding-left: 25px; margin-bottom: 20px;
             border-left: 2px solid #1e9fff;
@@ -64,7 +72,6 @@
         .timeline-time { color: #999; font-size: 12px; margin-top: 3px; }
         .timeline-content { color: #666; font-size: 13px; margin-top: 5px; white-space: pre-wrap; }
         .error-msg { color: red; text-align: center; padding: 50px; font-size: 14px; }
-        .row-warn { background-color: #fff3f3; }
     </style>
 </head>
 <body>
@@ -166,16 +173,23 @@ layui.use(['layer'], function(){
         return names.length > 0 ? names.join(', ') : '-';
     }
 
-    // 判断是否即将到期（taskEndTime距今7天内）
-    function isNearDeadline(taskEndTime, taskStatus) {
-        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return false;
+    // 判断截止时间状态：已超期 / 即将到期(3天内) / 正常
+    // 已完成(3,4)的任务不再判断超期
+    function getDeadlineStatus(taskEndTime, taskStatus) {
+        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
         try {
-            var end = new Date(taskEndTime.replace('T', ' '));
+            var endStr = taskEndTime;
+            if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+            if (endStr.length === 10) endStr += ' 00:00:00';
+            var end = new Date(endStr);
             var now = new Date();
-            var diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-            return diff <= 7 && diff >= 0;
+            var diffMs = end.getTime() - now.getTime();
+            var diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays < 0) return 'overdue';      // 已超期
+            if (diffDays <= 3) return 'near';         // 即将到期(3天内)
+            return 'normal';
         } catch(e) {
-            return false;
+            return 'normal';
         }
     }
 
@@ -314,9 +328,18 @@ layui.use(['layer'], function(){
                     for (var i = 0; i < tasks.length; i++) {
                         var t = tasks[i];
                         var statusInfo = taskStatusMap[t.taskStatus] || {name: '-', cls: ''};
-                        var nearDeadline = isNearDeadline(t.taskEndTime, t.taskStatus);
-                        var rowClass = nearDeadline ? ' class="row-warn"' : '';
-                        var endTimeClass = nearDeadline ? 'deadline-warn' : '';
+                        var dlStatus = getDeadlineStatus(t.taskEndTime, t.taskStatus);
+                        var rowClass = '';
+                        var endTimeHtml = '';
+                        if (dlStatus === 'overdue') {
+                            rowClass = ' class="row-overdue"';
+                            endTimeHtml = '<span class="deadline-overdue">' + formatTime(t.taskEndTime) + '</span><span class="deadline-tag deadline-tag-overdue">已超期</span>';
+                        } else if (dlStatus === 'near') {
+                            rowClass = ' class="row-near"';
+                            endTimeHtml = '<span class="deadline-near">' + formatTime(t.taskEndTime) + '</span><span class="deadline-tag deadline-tag-near">即将到期</span>';
+                        } else {
+                            endTimeHtml = formatTime(t.taskEndTime);
+                        }
 
                         html += '<tr' + rowClass + '>';
                         html += '<td>' + (i+1) + '</td>';
@@ -327,7 +350,7 @@ layui.use(['layer'], function(){
                         html += '<td>' + resolveRelateNames(t.relateUserIds) + '</td>';
                         html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
                         html += '<td>' + formatTime(t.execFinishTime) + '</td>';
-                        html += '<td><span class="' + endTimeClass + '">' + formatTime(t.taskEndTime) + '</span></td>';
+                        html += '<td>' + endTimeHtml + '</td>';
                         html += '<td>' + safeStr(t.taskDesc) + '</td>';
                         html += '</tr>';
                     }
