@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提交任务</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f2f2f2;
+            font-family: Microsoft YaHei, sans-serif;
+            font-size: 14px;
+            color: #333;
+            padding: 20px;
+        }
+        .main-card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #1e9fff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        /* info-grid 3列布局 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+        .info-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            border-right: 1px solid #f0f0f0;
+        }
+        .info-item:nth-child(3n) {
+            border-right: none;
+        }
+        .info-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        /* 截止时间高亮 */
+        .deadline-overdue { color: #ff5722; font-weight: bold; }
+        .deadline-near { color: #ffb800; font-weight: bold; }
+        .deadline-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            color: #fff;
+            margin-left: 4px;
+        }
+        .deadline-tag-overdue { background-color: #ff5722; }
+        .deadline-tag-near { background-color: #ffb800; }
+        /* 任务状态颜色 */
+        .task-status-0 { color: #999; }
+        .task-status-1 { color: #1e9fff; }
+        .task-status-2 { color: #ff5722; }
+        .task-status-3 { color: #5FB878; }
+        .task-status-4 { color: #ffb800; }
+        .task-status-5 { color: #ff5722; }
+        .task-status-6 { color: #ffb800; }
+        .task-status-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .task-status-tag.task-status-0 { background-color: #999; }
+        .task-status-tag.task-status-1 { background-color: #1e9fff; }
+        .task-status-tag.task-status-2 { background-color: #ff5722; }
+        .task-status-tag.task-status-3 { background-color: #5FB878; }
+        .task-status-tag.task-status-4 { background-color: #ffb800; }
+        .task-status-tag.task-status-5 { background-color: #ff5722; }
+        .task-status-tag.task-status-6 { background-color: #ffb800; }
+        /* 表单区域 */
+        .form-section {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .layui-form-label {
+            width: 110px;
+        }
+        .layui-input-block {
+            margin-left: 140px;
+        }
+        /* 附件列表 */
+        .attach-list {
+            margin-top: 10px;
+        }
+        .attach-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f8f8;
+            border-radius: 3px;
+            margin-bottom: 6px;
+        }
+        .attach-item .attach-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .attach-item .attach-name a {
+            color: #1e9fff;
+            text-decoration: none;
+        }
+        .attach-item .attach-name a:hover {
+            text-decoration: underline;
+        }
+        .attach-item .attach-del {
+            color: #ff5722;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+            line-height: 1;
+        }
+        .attach-item .attach-del:hover {
+            color: #e64a19;
+        }
+        /* 底部按钮区域 */
+        .btn-area {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+        .btn-area .layui-btn {
+            min-width: 120px;
+        }
+        /* 提示信息 */
+        .error-msg {
+            text-align: center;
+            padding: 60px 20px;
+            color: #ff5722;
+            font-size: 16px;
+        }
+        .info-card {
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        /* 全宽info项 */
+        .info-item.full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+
+<div id="pageContainer" style="display:none;">
+    <!-- 区域一：任务基本信息（只读） -->
+    <div class="main-card info-card">
+        <div class="section-title">任务基本信息</div>
+        <div class="info-grid" id="taskInfoGrid">
+            <div class="info-item full-width">
+                <div class="info-label">主体工作</div>
+                <div class="info-value" id="taskContent"></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">项目名称</div>
+                <div class="info-value" id="projectName"></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">耗时(天)</div>
+                <div class="info-value" id="workAmount"></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">截止时间</div>
+                <div class="info-value" id="taskEndTime"></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">任务状态</div>
+                <div class="info-value" id="taskStatus"></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">&nbsp;</div>
+                <div class="info-value">&nbsp;</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 区域二：任务完成信息（可编辑） -->
+    <div class="form-section">
+        <div class="section-title">任务完成信息</div>
+        <form class="layui-form" id="completeForm" lay-filter="completeForm">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span style="color:#ff5722;">*</span>任务完成时间</label>
+                <div class="layui-input-block">
+                    <input type="text" id="execFinishTime" name="execFinishTime" placeholder="请选择任务完成时间" class="layui-input" autocomplete="off">
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">工作成果</label>
+                <div class="layui-input-block">
+                    <textarea id="workContent" name="workContent" placeholder="请输入工作成果" class="layui-textarea" style="height:120px;"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">工作附件</label>
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn layui-btn-normal layui-btn-sm" id="uploadAttachBtn">
+                        <i class="layui-icon layui-icon-upload"></i> 上传附件
+                    </button>
+                    <div class="attach-list" id="attachList">
+                        <!-- 动态渲染附件 -->
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-block">
+                    <textarea id="remark" name="remark" placeholder="请输入备注" class="layui-textarea" style="height:80px;"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 底部按钮区域 -->
+    <div class="btn-area">
+        <button type="button" class="layui-btn" id="btnComplete" style="background:#1e9fff;">完成任务</button>
+        <button type="button" class="layui-btn layui-btn-warm" id="btnTempSave">暂存未完成</button>
+        <button type="button" class="layui-btn layui-btn-danger" id="btnApplyDelay" style="display:none;">申请延期</button>
+    </div>
+</div>
+
+<div id="errorMsg" class="error-msg" style="display:none;"></div>
+
+<script src="/layui/layui.js"></script>
+<script>
+layui.use(['layer', 'form', 'laydate', 'upload'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+    var $ = layui.$;
+
+    // 任务状态映射
+    var taskStatusMap = {
+        0: {name:'未开始', cls:'task-status-0'},
+        1: {name:'执行中', cls:'task-status-1'},
+        2: {name:'延时执行中', cls:'task-status-2'},
+        3: {name:'按时完成', cls:'task-status-3'},
+        4: {name:'延时完成', cls:'task-status-4'},
+        5: {name:'未完成', cls:'task-status-5'},
+        6: {name:'申请延期中', cls:'task-status-6'}
+    };
+
+    // 获取token
+    var token = localStorage.getItem('token');
+    if (!token) {
+        $('#pageContainer').hide();
+        $('#errorMsg').text('未登录或登录已过期').show();
+        return;
+    }
+
+    // 获取taskId
+    var taskId = new URLSearchParams(window.location.search).get('taskId');
+    if (!taskId) {
+        $('#pageContainer').hide();
+        $('#errorMsg').text('缺少任务ID参数').show();
+        return;
+    }
+
+    // 日期格式化
+    function formatShortDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            var str = dateStr;
+            if (str.indexOf('T') > -1) str = str.replace('T', ' ');
+            if (str.length > 10) str = str.substring(0, 10);
+            return str;
+        } catch(e) { return dateStr; }
+    }
+
+    // 截止时间状态判断
+    function getDeadlineStatus(taskEndTime, taskStatus) {
+        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
+        try {
+            var endStr = taskEndTime;
+            if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+            if (endStr.length === 10) endStr += ' 00:00:00';
+            var end = new Date(endStr);
+            var now = new Date();
+            var diffMs = end.getTime() - now.getTime();
+            var diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays < 0) return 'overdue';
+            if (diffDays <= 3) return 'near';
+            return 'normal';
+        } catch(e) { return 'normal'; }
+    }
+
+    // 渲染截止时间
+    function renderEndTime(endTime, status) {
+        var formatted = formatShortDate(endTime);
+        var dlStatus = getDeadlineStatus(endTime, status);
+        var html = '';
+        if (dlStatus === 'overdue') {
+            html = '<span class="deadline-overdue">' + formatted + '</span><span class="deadline-tag deadline-tag-overdue">已逾期</span>';
+        } else if (dlStatus === 'near') {
+            html = '<span class="deadline-near">' + formatted + '</span><span class="deadline-tag deadline-tag-near">临近截止</span>';
+        } else {
+            html = formatted;
+        }
+        return html;
+    }
+
+    // 渲染附件列表
+    function renderAttachList(attachments) {
+        var html = '';
+        if (attachments && attachments.length > 0) {
+            for (var i = 0; i < attachments.length; i++) {
+                var att = attachments[i];
+                var filePath = att.filePath || '';
+                var fileName = att.fileName || att.originalName || ('附件' + (i + 1));
+                var attachId = att.id || '';
+                html += '<div class="attach-item" data-attach-id="' + attachId + '">';
+                html += '  <div class="attach-name"><a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">' + fileName + '</a></div>';
+                html += '  <span class="attach-del" title="删除附件" data-attach-id="' + attachId + '"><i class="layui-icon layui-icon-close"></i></span>';
+                html += '</div>';
+            }
+        }
+        $('#attachList').html(html);
+    }
+
+    // 删除附件事件
+    $('#attachList').on('click', '.attach-del', function(){
+        var attachId = $(this).data('attach-id');
+        var $item = $(this).closest('.attach-item');
+        layer.confirm('确定删除该附件吗？', {icon: 3, title:'提示'}, function(confirmIndex){
+            layer.close(confirmIndex);
+            $.ajax({
+                url: '/project/task/deleteAttachment/' + attachId,
+                type: 'POST',
+                headers: {token: token},
+                success: function(res) {
+                    if (res && res.code === 200) {
+                        layer.msg('附件已删除', {icon: 1});
+                        $item.remove();
+                    } else {
+                        layer.msg(res.msg || '删除失败', {icon: 2});
+                    }
+                },
+                error: function() {
+                    layer.msg('请求失败', {icon: 2});
+                }
+            });
+        });
+    });
+
+    // 加载任务详情
+    function loadTaskDetail() {
+        $.ajax({
+            url: '/project/task/taskDetail/' + taskId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res && res.code === 200 && res.data) {
+                    var data = res.data;
+                    $('#taskContent').text(data.taskContent || '');
+                    $('#projectName').text(data.projectName || '');
+                    $('#workAmount').text(data.workAmount || '');
+
+                    // 截止时间（带高亮）
+                    $('#taskEndTime').html(renderEndTime(data.taskEndTime, data.taskStatus));
+
+                    // 任务状态
+                    var statusInfo = taskStatusMap[data.taskStatus];
+                    if (statusInfo) {
+                        $('#taskStatus').html('<span class="task-status-tag ' + statusInfo.cls + '">' + statusInfo.name + '</span>');
+                    } else {
+                        $('#taskStatus').text(data.taskStatus || '');
+                    }
+
+                    // 申请延期按钮：只有 taskStatus=0 或 1 时显示
+                    if (data.taskStatus === 0 || data.taskStatus === 1) {
+                        $('#btnApplyDelay').show();
+                    } else {
+                        $('#btnApplyDelay').hide();
+                    }
+
+                    // 回显可编辑字段
+                    var finishDate = data.execFinishTime ? formatShortDate(data.execFinishTime) : '';
+                    $('#execFinishTime').val(finishDate);
+                    $('#workContent').val(data.workContent || '');
+                    $('#remark').val(data.remark || '');
+
+                    // 渲染附件
+                    renderAttachList(data.attachments || []);
+
+                    $('#pageContainer').show();
+                    $('#errorMsg').hide();
+
+                    // 初始化日期选择器（回显已保存的任务完成时间）
+                    initLaydate(finishDate);
+                    // 初始化上传组件
+                    initUpload();
+
+                } else {
+                    $('#pageContainer').hide();
+                    $('#errorMsg').text(res.msg || '获取任务详情失败').show();
+                }
+            },
+            error: function() {
+                $('#pageContainer').hide();
+                $('#errorMsg').text('请求失败，请检查网络').show();
+            }
+        });
+    }
+
+    // 初始化日期选择器
+    function initLaydate(defaultValue) {
+        laydate.render({
+            elem: '#execFinishTime',
+            type: 'date',
+            format: 'yyyy-MM-dd',
+            value: defaultValue || formatShortDate(new Date().toISOString())
+        });
+    }
+
+    // 初始化上传组件
+    function initUpload() {
+        upload.render({
+            elem: '#uploadAttachBtn',
+            url: '/file/upload',
+            headers: {token: token},
+            accept: 'file',
+            auto: true,
+            before: function(obj) {
+                layer.msg('正在上传...', {icon: 16, shade: 0.3, time: 0});
+            },
+            done: function(res) {
+                layer.closeAll('msg');
+                if (res && res.code === 200 && res.data) {
+                    // /file/upload 返回：data=相对路径(filePath)，originalName=原始文件名(fileName)
+                    var filePath = res.data;
+                    var fileName = res.originalName || filePath.substring(filePath.lastIndexOf('/') + 1) || '附件';
+
+                    // 1. 保存附件记录到数据库
+                    $.ajax({
+                        url: '/project/task/saveAttachment',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {token: token},
+                        data: JSON.stringify({
+                            taskId: taskId,
+                            filePath: filePath,
+                            fileName: fileName
+                        }),
+                        success: function(saveRes) {
+                            if (saveRes && saveRes.code === 200) {
+                                layer.msg('附件上传成功', {icon: 1});
+
+                                // 2. 添加到附件显示列表
+                                var newId = saveRes.attachmentId || 'new_' + Date.now();
+                                var html = '<div class="attach-item" data-attach-id="' + newId + '">';
+                                html += '  <div class="attach-name"><a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">' + fileName + '</a></div>';
+                                html += '  <span class="attach-del" title="删除附件" data-attach-id="' + newId + '"><i class="layui-icon layui-icon-close"></i></span>';
+                                html += '</div>';
+                                $('#attachList').append(html);
+
+                                // 附件已通过saveAttachment保存到DB，无需再累积
+                            } else {
+                                layer.msg(saveRes.msg || '附件保存失败', {icon: 2});
+                            }
+                        },
+                        error: function() {
+                            layer.msg('附件保存请求失败', {icon: 2});
+                        }
+                    });
+                } else {
+                    layer.msg(res.msg || '文件上传失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.closeAll('msg');
+                layer.msg('文件上传出错', {icon: 2});
+            }
+        });
+    }
+
+    // 组装提交数据
+    function buildPostData() {
+        return {
+            taskId: taskId,
+            execFinishTime: $('#execFinishTime').val(),
+            workContent: $('#workContent').val(),
+            remark: $('#remark').val()
+        };
+    }
+
+    // 关闭页面
+    function closePage() {
+        var parentLayer = window.parent.layui.layer;
+        if (parentLayer) {
+            parentLayer.close(parentLayer.getFrameIndex(window.name));
+        } else {
+            window.close();
+        }
+    }
+
+    // 完成任务
+    $('#btnComplete').on('click', function(){
+        var finishTime = $('#execFinishTime').val();
+        if (!finishTime) {
+            layer.msg('请选择任务完成时间', {icon: 0});
+            return;
+        }
+        var postData = buildPostData();
+        $.ajax({
+            url: '/project/task/completeTask',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res && res.code === 200) {
+                    layer.msg('任务已完成', {icon: 1}, function(){
+                        closePage();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.msg('请求失败', {icon: 2});
+            }
+        });
+    });
+
+    // 暂存未完成
+    $('#btnTempSave').on('click', function(){
+        var postData = buildPostData();
+        $.ajax({
+            url: '/project/task/tempSave',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res && res.code === 200) {
+                    layer.msg('已暂存', {icon: 1});
+                } else {
+                    layer.msg(res.msg || '暂存失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.msg('请求失败', {icon: 2});
+            }
+        });
+    });
+
+    // 申请延期
+    $('#btnApplyDelay').on('click', function(){
+        var postData = buildPostData();
+        $.ajax({
+            url: '/project/task/applyDelay',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res && res.code === 200) {
+                    layer.msg('延期申请已提交', {icon: 1}, function(){
+                        closePage();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.msg('请求失败', {icon: 2});
+            }
+        });
+    });
+
+    // 加载页面数据
+    loadTaskDetail();
+});
+</script>
+</body>
+</html>

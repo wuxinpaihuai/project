@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的任务</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { font-family: 'Microsoft YaHei', sans-serif; font-size: 14px; }
+        body { background: #f2f2f2; margin: 0; padding: 20px; }
+        .page-container { max-width: 1200px; margin: 0 auto; }
+
+        /* 搜索区域卡片 */
+        .search-card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px 24px 10px 24px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #1e9fff;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+        .search-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .search-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .search-item label {
+            color: #666;
+            white-space: nowrap;
+        }
+        .search-item input, .search-item select {
+            height: 32px;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            padding: 0 10px;
+            font-size: 14px;
+            outline: none;
+        }
+        .search-item input { width: 200px; }
+        .search-item select { width: 160px; }
+        .search-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #1e9fff;
+            color: #fff;
+            border: none;
+            border-radius: 2px;
+            padding: 6px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-reset {
+            background: #fff;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            padding: 6px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-reset:hover { background: #f8f8f8; }
+
+        /* 表格卡片 */
+        .table-card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+        }
+
+        /* 任务状态标签 */
+        .task-status-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .task-status-0 { background-color: #999; }
+        .task-status-1 { background-color: #1e9fff; }
+        .task-status-2 { background-color: #ff5722; }
+        .task-status-3 { background-color: #5FB878; }
+        .task-status-4 { background-color: #ffb800; }
+        .task-status-5 { background-color: #ff5722; }
+        .task-status-6 { background-color: #ffb800; }
+
+        /* 截止时间高亮 */
+        .deadline-overdue { color: #ff5722; font-weight: bold; }
+        .deadline-near { color: #ffb800; font-weight: bold; }
+        .deadline-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            color: #fff;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .deadline-tag-overdue { background-color: #ff5722; }
+        .deadline-tag-near { background-color: #ffb800; }
+
+        /* 附件区域 */
+        .attachment-info {
+            color: #1e9fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .attachment-info:hover { text-decoration: underline; }
+        .attachment-list {
+            display: none;
+            margin-top: 4px;
+        }
+        .attachment-list a {
+            display: block;
+            color: #1e9fff;
+            font-size: 12px;
+            line-height: 1.8;
+            word-break: break-all;
+        }
+        .attachment-list a:hover { text-decoration: underline; }
+
+        /* 操作按钮 */
+        .op-btn {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #fff;
+            cursor: pointer;
+            border: none;
+            line-height: 1.6;
+        }
+        .op-btn-detail { background-color: #1e9fff; }
+        .op-btn-detail:hover { opacity: 0.85; }
+        .op-btn-submit { background-color: #5FB878; }
+        .op-btn-submit:hover { opacity: 0.85; }
+
+        /* layui table 微调 */
+        .layui-table-cell { line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- 搜索区域 -->
+        <div class="search-card">
+            <div class="section-title">我的任务</div>
+            <div class="search-row">
+                <div class="search-item">
+                    <label>项目名称：</label>
+                    <input type="text" id="projectName" placeholder="请输入项目名称">
+                </div>
+                <div class="search-item">
+                    <label>任务状态：</label>
+                    <select id="taskStatus">
+                        <option value="">全部</option>
+                        <option value="0">未开始</option>
+                        <option value="1">执行中</option>
+                        <option value="2">延时执行中</option>
+                        <option value="3">按时完成</option>
+                        <option value="4">延时完成</option>
+                        <option value="5">未完成</option>
+                        <option value="6">申请延期中</option>
+                    </select>
+                </div>
+                <div class="search-btns">
+                    <button class="btn-primary" id="searchBtn">查询</button>
+                    <button class="btn-reset" id="resetBtn">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 列表区域 -->
+        <div class="table-card">
+            <table id="taskTable" lay-filter="taskTable"></table>
+        </div>
+    </div>
+
+    <script src="/layui/layui.js"></script>
+    <script>
+    layui.use(['table', 'layer'], function(){
+        var table = layui.table;
+        var layer = layui.layer;
+        var $ = layui.$;
+
+        var token = localStorage.getItem('token') || '';
+
+        // 任务状态映射
+        var taskStatusMap = {
+            0: {name: '未开始', cls: 'task-status-0'},
+            1: {name: '执行中', cls: 'task-status-1'},
+            2: {name: '延时执行中', cls: 'task-status-2'},
+            3: {name: '按时完成', cls: 'task-status-3'},
+            4: {name: '延时完成', cls: 'task-status-4'},
+            5: {name: '未完成', cls: 'task-status-5'},
+            6: {name: '申请延期中', cls: 'task-status-6'}
+        };
+
+        // 截止时间状态判断
+        function getDeadlineStatus(taskEndTime, taskStatus) {
+            if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
+            try {
+                var endStr = taskEndTime;
+                if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+                if (endStr.length === 10) endStr += ' 00:00:00';
+                var end = new Date(endStr);
+                var now = new Date();
+                var diffMs = end.getTime() - now.getTime();
+                var diffDays = diffMs / (1000 * 60 * 60 * 24);
+                if (diffDays < 0) return 'overdue';
+                if (diffDays <= 3) return 'near';
+                return 'normal';
+            } catch(e) { return 'normal'; }
+        }
+
+        // 格式化短日期
+        function formatShortDate(str) {
+            if (!str) return '-';
+            try {
+                var s = str;
+                if (s.indexOf('T') > -1) s = s.replace('T', ' ');
+                if (s.length > 10) s = s.substring(0, 10);
+                return s;
+            } catch(e) { return str; }
+        }
+
+        // 渲染表格
+        table.render({
+            elem: '#taskTable',
+            url: '/project/task/myTaskList',
+            method: 'GET',
+            headers: {token: token},
+            where: {},
+            page: true,
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            response: {
+                statusName: 'code',
+                statusCode: 200,
+                countName: 'total',
+                dataName: 'records'
+            },
+            cols: [[
+                {type: 'numbers', title: '序号', width: 60},
+                {field: 'taskContent', title: '主体工作', minWidth: 150},
+                {field: 'projectName', title: '项目名称', minWidth: 150},
+                {field: 'workAmount', title: '耗时(天)', width: 80},
+                {field: 'taskEndTime', title: '截止时间', width: 120, templet: function(d){
+                    var endTime = d.taskEndTime;
+                    var status = d.taskStatus;
+                    var formatted = formatShortDate(endTime);
+                    if (formatted === '-') return '-';
+                    var dlStatus = getDeadlineStatus(endTime, status);
+                    if (dlStatus === 'overdue') {
+                        return '<span class="deadline-overdue">' + formatted + '</span><span class="deadline-tag deadline-tag-overdue">已逾期</span>';
+                    } else if (dlStatus === 'near') {
+                        return '<span class="deadline-near">' + formatted + '</span><span class="deadline-tag deadline-tag-near">即将到期</span>';
+                    }
+                    return formatted;
+                }},
+                {field: 'taskStatus', title: '任务状态', width: 100, templet: function(d){
+                    var status = d.taskStatus;
+                    var map = taskStatusMap[status];
+                    if (map) {
+                        return '<span class="task-status-tag ' + map.cls + '">' + map.name + '</span>';
+                    }
+                    return status || '-';
+                }},
+                {field: 'execFinishTime', title: '任务完成时间', width: 140, templet: function(d){
+                    return formatShortDate(d.execFinishTime);
+                }},
+                {field: 'workContent', title: '工作成果', minWidth: 120},
+                {field: 'attachments', title: '工作附件', width: 120, templet: function(d){
+                    var atts = d.attachments;
+                    if (!atts || !atts.length) return '-';
+                    var html = '<span class="attachment-info" onclick="toggleAttList(this)">' + atts.length + '个附件</span>';
+                    html += '<div class="attachment-list">';
+                    for (var i = 0; i < atts.length; i++) {
+                        var att = atts[i];
+                        var filePath = att.filePath || '';
+                        var fileName = att.fileName || '附件' + (i+1);
+                        html += '<a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">' + fileName + '</a>';
+                    }
+                    html += '</div>';
+                    return html;
+                }},
+                {field: 'remark', title: '备注', minWidth: 100},
+                {title: '操作', width: 140, align: 'center', templet: function(d){
+                    var status = d.taskStatus;
+                    var taskId = d.id || d.taskId || '';
+                    if (status === 0 || status === 3 || status === 4 || status === 5 || status === 6) {
+                        return '<a class="op-btn op-btn-detail" data-task-id="' + taskId + '" data-action="detail">任务详情</a>';
+                    }
+                    if (status === 1 || status === 2) {
+                        return '<a class="op-btn op-btn-submit" data-task-id="' + taskId + '" data-action="complete">提交任务</a>';
+                    }
+                    return '-';
+                }}
+            ]]
+        });
+
+        // 搜索
+        $('#searchBtn').on('click', function(){
+            var projectName = $('#projectName').val();
+            var taskStatus = $('#taskStatus').val();
+            var where = {projectName: projectName};
+            if (taskStatus !== '') {
+                where.taskStatus = taskStatus;
+            }
+            table.reload('taskTable', {
+                where: where,
+                page: {curr: 1}
+            });
+        });
+
+        // 重置
+        $('#resetBtn').on('click', function(){
+            $('#projectName').val('');
+            $('#taskStatus').val('');
+            table.reload('taskTable', {
+                where: {projectName: ''},
+                page: {curr: 1}
+            });
+        });
+
+        // 操作按钮点击事件（layer.open弹窗方式）
+        $(document).on('click', '.op-btn', function(){
+            var taskId = $(this).data('task-id');
+            var action = $(this).data('action');
+            var title = action === 'detail' ? '任务详情' : '提交任务';
+            var url = action === 'detail' ? 'project_task_detail.html?taskId=' + taskId : 'project_task_complete.html?taskId=' + taskId;
+            layer.open({
+                type: 2,
+                title: title,
+                area: ['800px', '600px'],
+                content: url,
+                end: function(){
+                    // 弹窗关闭后刷新列表
+                    table.reload('taskTable');
+                }
+            });
+        });
+    });
+
+    // 附件列表展开/收起（全局函数，供templet中onclick调用）
+    function toggleAttList(el) {
+        var listDiv = el.nextElementSibling;
+        if (listDiv) {
+            if (listDiv.style.display === 'block') {
+                listDiv.style.display = 'none';
+            } else {
+                listDiv.style.display = 'block';
+            }
+        }
+    }
+    </script>
+</body>
+</html>

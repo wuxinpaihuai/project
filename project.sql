@@ -148,7 +148,7 @@ CREATE TABLE `project_task` (
   `work_content` varchar(1000) DEFAULT NULL COMMENT '工作成果',
   `relate_user_ids` varchar(500) DEFAULT NULL COMMENT '关联提醒用户id以,号隔开',
   `work_amount` varchar(50) DEFAULT NULL COMMENT '耗时（天）',
-  `task_status` tinyint DEFAULT '0' COMMENT '任务状态 0=未开始,1=执行中,2=延时执行中,3=按时完成,4=延时完成,5=未完成',
+  `task_status` tinyint DEFAULT '0' COMMENT '任务状态 0=未开始,1=执行中,2=延时执行中,3=按时完成,4=延时完成,5=未完成,6=申请延期中',
   `exec_start_time` datetime DEFAULT NULL COMMENT '任务执行开始时间',
   `exec_finish_time` datetime DEFAULT NULL COMMENT '任务完成时间',
   `task_desc` varchar(1000) DEFAULT NULL COMMENT '任务说明',
@@ -261,3 +261,32 @@ CREATE TABLE `sign_payment` (
   PRIMARY KEY (`id`),
   KEY `idx_project_id` (`project_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目收款节点表';
+
+-- 工作日志主表
+CREATE TABLE `project_task_log` (
+    `id`          bigint NOT NULL AUTO_INCREMENT  COMMENT '主键',
+    `project_id`  bigint NOT NULL                 COMMENT '关联项目ID',
+    `task_id`     bigint NOT NULL                 COMMENT '关联任务ID',
+    `log_date`    date NOT NULL                   COMMENT '日志日期',
+    `work_content` varchar(2000) DEFAULT NULL     COMMENT '工作内容',
+    `recorder_id`  bigint NOT NULL                COMMENT '记录人ID',
+    `recorder_name` varchar(50) DEFAULT NULL      COMMENT '记录人姓名',
+    `remark`      varchar(500) DEFAULT NULL       COMMENT '备注',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_project_id` (`project_id`),
+    KEY `idx_task_id` (`task_id`),
+    KEY `idx_recorder_id` (`recorder_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作日志表';
+
+-- 工作日志附件表
+CREATE TABLE `project_task_log_attachment` (
+    `id`          bigint NOT NULL AUTO_INCREMENT  COMMENT '主键',
+    `log_id`      bigint NOT NULL                 COMMENT '关联日志ID',
+    `file_path`   varchar(500) DEFAULT NULL       COMMENT '文件路径',
+    `file_name`   varchar(255) DEFAULT NULL       COMMENT '文件名',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_log_id` (`log_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作日志附件表';
