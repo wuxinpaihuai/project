@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作日志</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { font-family: 'Microsoft YaHei', sans-serif; font-size: 14px; }
+        body { background: #f2f2f2; margin: 0; padding: 20px; }
+        .page-container { max-width: 1200px; margin: 0 auto; }
+
+        .card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #1e9fff;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+
+        /* 时间线 */
+        .task-group {
+            margin-bottom: 24px;
+        }
+        .task-group-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #1e9fff;
+            padding: 8px 12px;
+            background: #f0f8ff;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .timeline-container {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 12px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -22px;
+            top: 12px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1e9fff;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #1e9fff;
+            z-index: 1;
+        }
+        .timeline-date {
+            font-size: 14px;
+            color: #1e9fff;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .timeline-card {
+            background: #f8f8f8;
+            border-radius: 4px;
+            padding: 12px 16px;
+            border: 1px solid #eee;
+        }
+        .timeline-content {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        .timeline-remark {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        /* 附件 */
+        .att-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: flex-start;
+        }
+        .att-img-wrap {
+            text-align: center;
+        }
+        .att-img {
+            display: inline-block;
+            width: 70px;
+            height: 70px;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+        .att-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .att-img:hover { border-color: #1e9fff; }
+        .att-file {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 8px;
+            background: #e8f4ff;
+            border-radius: 2px;
+            color: #1e9fff;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .att-file:hover { background: #d0eaff; }
+
+        .loading-tip {
+            text-align: center;
+            padding: 60px 0;
+            color: #999;
+        }
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            padding: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="card">
+            <div class="section-title" id="pageTitle">项目工作日志</div>
+            <div id="logContainer">
+                <div class="loading-tip"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size:24px;color:#1e9fff;"></i><p style="margin-top:6px;">加载中...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/layui/layui.js"></script>
+    <script>
+    layui.use(['layer'], function(){
+        var layer = layui.layer;
+        var $ = layui.$;
+
+        var token = localStorage.getItem('token') || '';
+        var projectId = getQueryParam('projectId');
+        var projectName = getQueryParam('projectName') || '';
+
+        var imageExts = ['jpg','jpeg','png','gif','bmp','webp','svg'];
+
+        function getQueryParam(name) {
+            var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return decodeURIComponent(r[2]);
+            return '';
+        }
+
+        function formatShortDate(str) {
+            if (!str) return '-';
+            try {
+                var s = str;
+                if (s.indexOf('T') > -1) s = s.replace('T', ' ');
+                if (s.length > 10) s = s.substring(0, 10);
+                return s;
+            } catch(e) { return str; }
+        }
+
+        function isImageFile(fileName) {
+            if (!fileName) return false;
+            var ext = fileName.split('.').pop().toLowerCase();
+            return imageExts.indexOf(ext) > -1;
+        }
+
+        function previewImage(filePath) {
+            layer.open({
+                type: 1,
+                title: '图片预览',
+                area: ['600px', '450px'],
+                content: '<div style="text-align:center;padding:10px;"><img src="/file/download?filePath=' + encodeURIComponent(filePath) + '" style="max-width:100%;max-height:420px;"></div>'
+            });
+        }
+
+        if (!projectId) {
+            $('#logContainer').html('<div class="empty-tip">缺少项目ID参数</div>');
+            return;
+        }
+
+        // 设置标题
+        if (projectName) {
+            $('#pageTitle').text(projectName + ' - 工作日志');
+            $('#projectInfo').text('项目ID：' + projectId);
+        }
+
+        // ========== 加载项目所有任务及工作日志 ==========
+
+        $.ajax({
+            url: '/project/task/list/' + projectId,
+            type: 'GET',
+            headers: {token: token},
+            dataType: 'json',
+            success: function(res) {
+                if (res.code !== 200) {
+                    $('#logContainer').html('<div class="empty-tip">' + (res.msg || '加载失败') + '</div>');
+                    return;
+                }
+                var project = res.project || {};
+                var tasks = res.data || [];
+                if (!projectName) {
+                    $('#pageTitle').text('项目工作日志');
+                }
+                if (tasks.length === 0) {
+                    $('#logContainer').html('<div class="empty-tip">该项目暂无任务</div>');
+                    return;
+                }
+                // 逐个加载每个任务的工作日志
+                loadAllTaskLogs(tasks);
+            },
+            error: function() {
+                $('#logContainer').html('<div class="empty-tip">网络异常，加载失败</div>');
+            }
+        });
+
+        function loadAllTaskLogs(tasks) {
+            var container = $('#logContainer');
+            container.html('<div class="loading-tip"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size:24px;color:#1e9fff;"></i><p style="margin-top:6px;">加载日志数据...</p></div>');
+
+            var allHtml = '';
+            var loadedCount = 0;
+            var totalTasks = tasks.length;
+
+            for (var i = 0; i < tasks.length; i++) {
+                (function(task) {
+                    $.ajax({
+                        url: '/project/log/list?taskId=' + (task.id || task.taskId || ''),
+                        type: 'GET',
+                        headers: {token: token},
+                        dataType: 'json',
+                        success: function(res) {
+                            var logs = (res.code === 200) ? (res.data || []) : [];
+                            if (logs.length > 0) {
+                                allHtml += renderTaskGroup(task, logs);
+                            } else {
+                                allHtml += renderTaskEmpty(task);
+                            }
+                            loadedCount++;
+                            if (loadedCount >= totalTasks) {
+                                finishLoad(container, allHtml);
+                            }
+                        },
+                        error: function() {
+                            loadedCount++;
+                            if (loadedCount >= totalTasks) {
+                                finishLoad(container, allHtml);
+                            }
+                        }
+                    });
+                })(tasks[i]);
+            }
+        }
+
+        function renderTaskGroup(task, logs) {
+            var taskContent = task.taskContent || task.content || '未命名任务';
+            var execUserName = task.execUserName || task.assignUserName || '';
+            var deadline = formatShortDate(task.taskEndTime) || '';
+
+            // 按日期倒序
+            logs.sort(function(a, b) {
+                var da = (a.logDate || a.createTime || '');
+                var db = (b.logDate || b.createTime || '');
+                if (da > db) return -1;
+                if (da < db) return 1;
+                return 0;
+            });
+
+            var html = '<div class="task-group">';
+            html += '<div class="task-group-title">【' + taskContent + '】';
+            if (execUserName) {
+                html += '　负责人：' + execUserName;
+            }
+            if (deadline) {
+                html += '　截止日期：' + deadline;
+            }
+            html += '</div>';
+            html += '<div class="timeline-container">';
+            html += '<div class="timeline-line"></div>';
+
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                var attachments = log.attachments || [];
+                var dateStr = formatShortDate(log.logDate) || formatShortDate(log.createTime);
+                var recorderName = log.recorderName || log.recorder_name || '';
+
+                html += '<div class="timeline-item">';
+                html += '<div class="timeline-dot"></div>';
+                html += '<div class="timeline-date">';
+                if (recorderName) {
+                    html += recorderName + '　';
+                }
+                html += dateStr;
+                html += '</div>';
+                html += '<div class="timeline-card">';
+
+                html += '<div class="timeline-content">' + (log.workContent || '') + '</div>';
+
+                if (log.remark) {
+                    html += '<div class="timeline-remark">备注：' + log.remark + '</div>';
+                }
+
+                if (attachments.length > 0) {
+                    html += '<div style="margin-top:8px;"><div class="att-list">';
+                    for (var j = 0; j < attachments.length; j++) {
+                        var att = attachments[j];
+                        var filePath = att.filePath || att.file_path || att.url || '';
+                        var fileName = att.fileName || att.file_name || att.originalFilename || filePath.split('/').pop() || '附件' + (j+1);
+                        if (isImageFile(fileName)) {
+                            html += '<div class="att-img-wrap">';
+                            html += '<div class="att-img" onclick="previewImage(\'' + (filePath || '').replace(/'/g, "\\'") + '\')">';
+                            html += '<img src="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" alt="' + fileName + '">';
+                            html += '</div>';
+                            html += '<div style="font-size:11px;color:#666;margin-top:2px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + fileName + '</div>';
+                            html += '</div>';
+                        } else {
+                            html += '<a class="att-file" href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">';
+                            html += '<i class="layui-icon layui-icon-file" style="font-size:13px;"></i> ' + fileName;
+                            html += '</a>';
+                        }
+                    }
+                    html += '</div></div>';
+                }
+
+                html += '</div>'; 
+                html += '</div>'; 
+            }
+
+            html += '</div>'; 
+            html += '</div>'; 
+            return html;
+        }
+
+        function renderTaskEmpty(task) {
+            var taskContent = task.taskContent || task.content || '未命名任务';
+            var execUserName = task.execUserName || task.assignUserName || '';
+            var deadline = formatShortDate(task.taskEndTime) || '';
+
+            var html = '<div class="task-group">';
+            html += '<div class="task-group-title">【' + taskContent + '】';
+            if (execUserName) {
+                html += '　负责人：' + execUserName;
+            }
+            if (deadline) {
+                html += '　截止日期：' + deadline;
+            }
+            html += '</div>';
+            html += '<div class="empty-tip" style="padding:20px 0;">暂无工作日志</div>';
+            html += '</div>';
+            return html;
+        }
+
+        function finishLoad(container, allHtml) {
+            if (!allHtml) {
+                container.html('<div class="empty-tip">暂无工作日志</div>');
+            } else {
+                container.html(allHtml);
+            }
+        }
+    });
+    </script>
+</body>
+</html>

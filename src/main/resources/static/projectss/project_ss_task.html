@@ -76,6 +76,24 @@
             font-size: 14px;
         }
         .btn-reset:hover { background: #f8f8f8; }
+        .btn-action {
+            background: #ffb800;
+            color: #fff;
+            border: none;
+            border-radius: 2px;
+            padding: 6px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-action:hover { opacity: 0.85; }
+
+        /* 工具栏 */
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
 
         /* 表格卡片 */
         .table-card {
@@ -177,13 +195,21 @@
                         <option value="3">按时完成</option>
                         <option value="4">延时完成</option>
                         <option value="5">未完成</option>
-                        <option value="6">申请延期中</option>
                     </select>
                 </div>
                 <div class="search-btns">
                     <button class="btn-primary" id="searchBtn">查询</button>
                     <button class="btn-reset" id="resetBtn">重置</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="table-card" style="padding: 10px 24px; margin-bottom: 10px;">
+            <div class="toolbar-btns" style="margin-bottom: 0;">
+                <button type="button" class="layui-btn layui-btn-sm btn-orange" id="workLogBtn">
+                    <i class="layui-icon">&#xe705;</i> 工作日志
+                </button>
             </div>
         </div>
 
@@ -258,6 +284,7 @@
                 dataName: 'records'
             },
             cols: [[
+                {type: 'checkbox', title: '选择', width: 50},
                 {type: 'numbers', title: '序号', width: 60},
                 {field: 'taskContent', title: '主体工作', minWidth: 150},
                 {field: 'projectName', title: '项目名称', minWidth: 150},
@@ -305,10 +332,10 @@
                 {title: '操作', width: 140, align: 'center', templet: function(d){
                     var status = d.taskStatus;
                     var taskId = d.id || d.taskId || '';
-                    if (status === 0 || status === 3 || status === 4 || status === 5 || status === 6) {
+                    if (status === 3 || status === 4 || status === 5 || status === 6) {
                         return '<a class="op-btn op-btn-detail" data-task-id="' + taskId + '" data-action="detail">任务详情</a>';
                     }
-                    if (status === 1 || status === 2) {
+                    if (status === 0 || status === 1 || status === 2) {
                         return '<a class="op-btn op-btn-submit" data-task-id="' + taskId + '" data-action="complete">提交任务</a>';
                     }
                     return '-';
@@ -320,12 +347,11 @@
         $('#searchBtn').on('click', function(){
             var projectName = $('#projectName').val();
             var taskStatus = $('#taskStatus').val();
-            var where = {projectName: projectName};
-            if (taskStatus !== '') {
-                where.taskStatus = taskStatus;
-            }
             table.reload('taskTable', {
-                where: where,
+                where: {
+                    projectName: projectName,
+                    taskStatus: taskStatus
+                },
                 page: {curr: 1}
             });
         });
@@ -335,8 +361,53 @@
             $('#projectName').val('');
             $('#taskStatus').val('');
             table.reload('taskTable', {
-                where: {projectName: ''},
+                where: {
+                    projectName: '',
+                    taskStatus: ''
+                },
                 page: {curr: 1}
+            });
+        });
+
+        // 工作日志按钮
+        $('#workLogBtn').on('click', function(){
+            var checkStatus = table.checkStatus('taskTable');
+            var data = checkStatus.data;
+            if (!data || data.length === 0) {
+                layer.msg('请选择一条任务', {icon: 5});
+                return;
+            }
+            if (data.length > 1) {
+                layer.msg('只能选择一条任务', {icon: 5});
+                return;
+            }
+            var row = data[0];
+            var taskId = row.id || row.taskId || '';
+            var projectId = row.projectId || '';
+            var taskStatus = row.taskStatus;
+
+            // 状态校验：只有1(执行中)和2(延时执行中)才能记录工作日志
+            var statusMsg = {
+                0: '当前任务状态为【未开始】，不可记录工作日志',
+                3: '当前任务状态为【按时完成】，不可记录工作日志',
+                4: '当前任务状态为【延时完成】，不可记录工作日志',
+                5: '当前任务状态为【未完成】，不可记录工作日志',
+                6: '当前任务状态为【申请延期中】，不可记录工作日志'
+            };
+            if (statusMsg[taskStatus]) {
+                layer.msg(statusMsg[taskStatus], {icon: 5});
+                return;
+            }
+
+            layer.open({
+                type: 2,
+                title: '工作日志',
+                area: ['100%', '100%'],
+                maxmin: true,
+                content: 'task_work_log.html?taskId=' + taskId + '&projectId=' + projectId,
+                end: function(){
+                    table.reload('taskTable');
+                }
             });
         });
 

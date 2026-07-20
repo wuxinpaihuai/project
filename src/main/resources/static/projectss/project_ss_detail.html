@@ -127,7 +127,6 @@ layui.use(['layer'], function(){
         return (v != null && v !== '') ? String(v) : '-';
     }
 
-    // Cache user names for resolving relateUserIds
     var userMap = {};
     function loadUserMapForDetail(tasks) {
         var allIds = [];
@@ -212,7 +211,6 @@ layui.use(['layer'], function(){
                 var milestones = res.milestones || [];
                 var tasks = res.tasks || [];
 
-                // Load user name map for relateUserIds
                 loadUserMapForDetail(tasks);
 
                 var html = '';

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作日志</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { font-family: 'Microsoft YaHei', sans-serif; font-size: 14px; }
+        body { background: #f2f2f2; margin: 0; padding: 20px; }
+        .page-container { max-width: 1200px; margin: 0 auto; }
+
+        /* 卡片通用 */
+        .card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #1e9fff;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+
+        /* 信息网格 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px 24px;
+        }
+        .info-item {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .info-label {
+            color: #666;
+            white-space: nowrap;
+            min-width: 70px;
+        }
+        .info-value {
+            color: #333;
+            word-break: break-all;
+        }
+        .info-divider {
+            font-size: 14px;
+            color: #1e9fff;
+            font-weight: bold;
+            padding: 8px 0 4px 0;
+            border-bottom: 1px dashed #e0e0e0;
+            margin-bottom: 8px;
+            grid-column: 1 / -1;
+        }
+
+        /* 时间线 */
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1e9fff;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+        .log-header-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        .btn-add-log {
+            background: #5FB878;
+            color: #fff;
+            border: none;
+            border-radius: 2px;
+            padding: 6px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-add-log:hover { opacity: 0.85; }
+
+        .timeline-container {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 12px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 24px;
+            padding-left: 20px;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -22px;
+            top: 12px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1e9fff;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #1e9fff;
+            z-index: 1;
+        }
+        .timeline-date {
+            font-size: 14px;
+            color: #1e9fff;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .timeline-card {
+            background: #f8f8f8;
+            border-radius: 4px;
+            padding: 14px 18px;
+            border: 1px solid #eee;
+        }
+        .log-recorder {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+        .log-content {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+        .log-remark {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .log-remark-label {
+            color: #999;
+        }
+        .log-attachments {
+            margin-bottom: 10px;
+        }
+        .log-att-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+        .log-att-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .log-att-img {
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            position: relative;
+        }
+        .log-att-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .log-att-img:hover { border-color: #1e9fff; }
+        .log-att-file {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: #e8f4ff;
+            border-radius: 2px;
+            color: #1e9fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .log-att-file:hover { background: #d0eaff; }
+        .log-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .log-btn-edit, .log-btn-delete {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #fff;
+            cursor: pointer;
+            border: none;
+        }
+        .log-btn-edit { background-color: #1e9fff; }
+        .log-btn-edit:hover { opacity: 0.85; }
+        .log-btn-delete { background-color: #ff5722; }
+        .log-btn-delete:hover { opacity: 0.85; }
+
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            padding: 40px 0;
+        }
+
+        /* 任务状态标签 */
+        .task-status-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #fff;
+        }
+        .task-status-0 { background-color: #999; }
+        .task-status-1 { background-color: #1e9fff; }
+        .task-status-2 { background-color: #ff5722; }
+        .task-status-3 { background-color: #5FB878; }
+        .task-status-4 { background-color: #ffb800; }
+        .task-status-5 { background-color: #ff5722; }
+        .task-status-6 { background-color: #ffb800; }
+
+        /* 表单弹窗内样式 */
+        .log-form-wrap {
+            padding: 20px 30px 10px 30px;
+        }
+        .upload-file-list {
+            margin-top: 8px;
+        }
+        .upload-file-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        .upload-file-item .file-name {
+            color: #333;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .upload-file-item .file-del {
+            color: #ff5722;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .upload-file-item .file-del:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- 第一部分：项目/任务基本信息 -->
+        <div class="card">
+            <div class="section-title">项目/任务信息</div>
+            <div class="info-grid" id="taskInfoArea">
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+
+        <!-- 第二部分：工作日志时间线 -->
+        <div class="card">
+            <div class="log-header">
+                <span class="log-header-title">工作日志</span>
+                <button class="btn-add-log" id="addLogBtn">新增日志</button>
+            </div>
+            <div id="logTimeline" class="timeline-container">
+                <div class="timeline-line"></div>
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/layui/layui.js"></script>
+    <script>
+    layui.use(['layer', 'laydate', 'upload'], function(){
+        var layer = layui.layer;
+        var laydate = layui.laydate;
+        var upload = layui.upload;
+        var $ = layui.$;
+
+        var token = localStorage.getItem('token') || '';
+
+        // 从URL获取参数
+        var taskId = getQueryParam('taskId');
+        var projectId = getQueryParam('projectId');
+
+        // 工作内容提示文字
+        var contentHint = '请填写 时间、人物、地点 完成什么工作';
+
+        // 图片扩展名
+        var imageExts = ['jpg','jpeg','png','gif','bmp','webp','svg'];
+
+        // 任务状态映射
+        var taskStatusMap = {
+            0: {name:'未开始', cls:'task-status-0'},
+            1: {name:'执行中', cls:'task-status-1'},
+            2: {name:'延时执行中', cls:'task-status-2'},
+            3: {name:'按时完成', cls:'task-status-3'},
+            4: {name:'延时完成', cls:'task-status-4'},
+            5: {name:'未完成', cls:'task-status-5'},
+            6: {name:'申请延期中', cls:'task-status-6'}
+        };
+
+        // 项目类型映射
+        var projectTypeMap = {1:'工程类', 2:'环评报告类', 3:'场地调查类', 4:'其他'};
+
+        // 上传附件暂存
+        var uploadedFiles = [];
+
+        // ========== 工具函数 ==========
+
+        function getQueryParam(name) {
+            var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return decodeURIComponent(r[2]);
+            return '';
+        }
+
+        function formatShortDate(str) {
+            if (!str) return '-';
+            try {
+                var s = str;
+                if (s.indexOf('T') > -1) s = s.replace('T', ' ');
+                if (s.length > 10) s = s.substring(0, 10);
+                return s;
+            } catch(e) { return str; }
+        }
+
+        function isImageFile(fileName) {
+            if (!fileName) return false;
+            var ext = fileName.split('.').pop().toLowerCase();
+            return imageExts.indexOf(ext) > -1;
+        }
+
+        function ajaxGet(url, callback) {
+            $.ajax({
+                url: url,
+                type: 'GET',
+                headers: {token: token},
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 200) {
+                        callback(res);
+                    } else {
+                        layer.msg(res.msg || '请求失败', {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('网络异常', {icon: 5});
+                }
+            });
+        }
+
+        function ajaxPost(url, data, callback) {
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {token: token},
+                data: data,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 200) {
+                        callback(res);
+                    } else {
+                        layer.msg(res.msg || '操作失败', {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('网络异常', {icon: 5});
+                }
+            });
+        }
+
+        // ========== 加载项目/任务信息 ==========
+
+        function loadTaskInfo() {
+            if (!taskId) return;
+            ajaxGet('/project/log/taskInfo?taskId=' + taskId, function(res) {
+                var task = res.data.task || {};
+                var project = res.data.project || {};
+                var html = '';
+
+                // 项目信息
+                html += '<div class="info-divider">项目信息</div>';
+                html += infoItem('项目名称', project.projectName);
+                html += infoItem('项目编号', project.projectNo);
+                html += infoItem('项目类型', projectTypeMap[project.projectType] || '-');
+                html += infoItem('区域', project.area);
+                html += infoItem('业主单位', project.ownerCompany);
+                html += infoItem('业主联系人', (project.ownerContact || '') + (project.ownerPhone ? ' (' + project.ownerPhone + ')' : ''));
+
+                // 任务信息
+                html += '<div class="info-divider">任务信息</div>';
+                html += infoItem('主体工作', task.taskContent);
+                html += infoItem('任务状态', renderStatusTag(task.taskStatus));
+                html += infoItem('任务负责人', task.execUserName || '-');
+                html += infoItem('耗时(天)', task.workAmount || '-');
+                html += infoItem('截止时间', formatShortDate(task.taskEndTime));
+                html += infoItem('分工领导', task.assignUserName || '-');
+                html += infoItem('备注', task.remark || '-');
+
+                $('#taskInfoArea').html(html);
+            });
+        }
+
+        function infoItem(label, value) {
+            return '<div class="info-item"><span class="info-label">' + label + '：</span><span class="info-value">' + (value || '-') + '</span></div>';
+        }
+
+        function renderStatusTag(status) {
+            var map = taskStatusMap[status];
+            if (map) {
+                return '<span class="task-status-tag ' + map.cls + '">' + map.name + '</span>';
+            }
+            return status || '-';
+        }
+
+        // ========== 加载日志列表 ==========
+
+        function loadLogList() {
+            if (!taskId) return;
+            ajaxGet('/project/log/list?taskId=' + taskId, function(res) {
+                var logs = res.data || [];
+                renderTimeline(logs);
+            });
+        }
+
+        function renderTimeline(logs) {
+            var container = $('#logTimeline');
+            // 保留 timeline-line，移除其他内容
+            container.find('.timeline-item').remove();
+            container.find('.empty-tip').remove();
+
+            if (!logs || logs.length === 0) {
+                container.append('<div class="empty-tip">暂无工作日志，点击"新增日志"开始记录</div>');
+                return;
+            }
+
+            // 按日期倒序排列
+            logs.sort(function(a, b) {
+                var da = (a.logDate || a.createTime || '');
+                var db = (b.logDate || b.createTime || '');
+                if (da > db) return -1;
+                if (da < db) return 1;
+                return 0;
+            });
+
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                var attachments = log.attachments || [];
+                var dateStr = formatShortDate(log.logDate) || formatShortDate(log.createTime);
+                var recorderName = log.recorderName || log.recorder_name || '';
+
+                var html = '<div class="timeline-item" data-log-id="' + log.id + '">';
+                html += '<div class="timeline-dot"></div>';
+                // 格式：姓名  日期
+                html += '<div class="timeline-date">';
+                if (recorderName) {
+                    html += recorderName + '　';
+                }
+                html += dateStr;
+                html += '</div>';
+                html += '<div class="timeline-card">';
+
+                // 工作内容
+                html += '<div class="log-content">' + (log.workContent || '') + '</div>';
+
+                // 备注
+                if (log.remark) {
+                    html += '<div class="log-remark"><span class="log-remark-label">备注：</span>' + log.remark + '</div>';
+                }
+
+                // 附件
+                if (attachments.length > 0) {
+                    html += '<div class="log-attachments">';
+                    html += '<div class="log-att-label">附件：</div>';
+                    html += '<div class="log-att-list">';
+                    for (var j = 0; j < attachments.length; j++) {
+                        var att = attachments[j];
+                        // 附件字段容错
+                        var filePath = att.filePath || att.file_path || att.url || '';
+                        var fileName = att.fileName || att.file_name || att.originalFilename || filePath.split('/').pop() || '附件' + (j+1);
+                        if (isImageFile(fileName)) {
+                            html += '<div style="text-align:center;">';
+                            html += '<div class="log-att-img" onclick="previewImage(\'' + filePath.replace(/'/g, "\\'") + '\')">';
+                            html += '<img src="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" alt="' + fileName + '">';
+                            html += '</div>';
+                            html += '<div style="font-size:11px;color:#666;margin-top:2px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + fileName + '</div>';
+                            html += '</div>';
+                        } else {
+                            html += '<a class="log-att-file" href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">';
+                            html += '<i class="layui-icon layui-icon-file" style="font-size:14px;"></i> ' + fileName;
+                            html += '</a>';
+                        }
+                    }
+                    html += '</div></div>';
+                }
+
+                // 操作按钮
+                html += '<div class="log-actions">';
+                html += '<span class="log-btn-edit" data-log-id="' + log.id + '">编辑</span>';
+                html += '<span class="log-btn-delete" data-log-id="' + log.id + '">删除</span>';
+                html += '</div>';
+
+                html += '</div>'; // timeline-card
+                html += '</div>'; // timeline-item
+
+                container.append(html);
+            }
+        }
+
+        // ========== 图片预览 ==========
+
+        window.previewImage = function(filePath) {
+            layer.open({
+                type: 1,
+                title: '图片预览',
+                area: ['600px', '450px'],
+                content: '<div style="text-align:center;padding:10px;"><img src="/file/download?filePath=' + encodeURIComponent(filePath) + '" style="max-width:100%;max-height:420px;"></div>'
+            });
+        };
+
+        // ========== 新增日志 ==========
+
+        $('#addLogBtn').on('click', function(){
+            openLogForm(null);
+        });
+
+        // ========== 编辑日志 ==========
+
+        $(document).on('click', '.log-btn-edit', function(){
+            var logId = $(this).data('log-id');
+            // 获取日志详情
+            ajaxGet('/project/log/detail?logId=' + logId, function(res) {
+                openLogForm(res.data);
+            });
+        });
+
+        // ========== 删除日志 ==========
+
+        $(document).on('click', '.log-btn-delete', function(){
+            var logId = $(this).data('log-id');
+            layer.confirm('确定要删除这条工作日志吗？删除后不可恢复。', {icon: 3, title: '删除确认'}, function(idx){
+                ajaxPost('/project/log/delete', {id: logId}, function(res) {
+                    layer.msg('删除成功', {icon: 1});
+                    layer.close(idx);
+                    loadLogList();
+                });
+            });
+        });
+
+        // ========== 打开日志表单弹窗 ==========
+
+        var currentEditLogId = null; // null=新增, 有值=编辑
+
+        function openLogForm(logData) {
+            currentEditLogId = logData ? logData.id : null;
+            uploadedFiles = [];
+
+            // 如果是编辑，初始化已有附件
+            if (logData && logData.attachments) {
+                for (var i = 0; i < logData.attachments.length; i++) {
+                    var att = logData.attachments[i];
+                    uploadedFiles.push({
+                        id: att.id,
+                        filePath: att.filePath,
+                        fileName: att.fileName,
+                        isNew: false
+                    });
+                }
+            }
+
+            var title = logData ? '编辑工作日志' : '新增工作日志';
+
+            // 动态生成表单HTML（不用隐藏div，避免ID冲突）
+            var formHtml = '<div class="log-form-wrap">' +
+                '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">日志日期</label>' +
+                    '<div class="layui-input-block">' +
+                        '<input type="text" id="logDateInput" class="layui-input" placeholder="选择日期" readonly>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="layui-form-item layui-form-text">' +
+                    '<label class="layui-form-label">工作内容</label>' +
+                    '<div class="layui-input-block">' +
+                        '<textarea id="workContentInput" class="layui-textarea" style="height:120px;"></textarea>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="layui-form-item layui-form-text">' +
+                    '<label class="layui-form-label">备注</label>' +
+                    '<div class="layui-input-block">' +
+                        '<textarea id="remarkInput" class="layui-textarea" placeholder="备注信息" style="height:60px;"></textarea>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">上传附件</label>' +
+                    '<div class="layui-input-block">' +
+                        '<button type="button" class="layui-btn layui-btn-normal" id="uploadBtn"><i class="layui-icon layui-icon-upload"></i>选择文件</button>' +
+                        '<div id="uploadFileList" class="upload-file-list"></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="text-align:center;padding:15px 0;">' +
+                    '<button class="layui-btn" id="saveLogBtn">保存</button>' +
+                    '<button class="layui-btn layui-btn-primary" id="cancelLogBtn">取消</button>' +
+                '</div>' +
+            '</div>';
+
+            var layerIdx = layer.open({
+                type: 1,
+                title: title,
+                area: ['650px', '500px'],
+                content: formHtml,
+                success: function(layero, index) {
+
+                    // 用 layero 作用域查找表单元素，避免ID冲突
+                    var $logDate = layero.find('#logDateInput');
+                    var $workContent = layero.find('#workContentInput');
+                    var $remark = layero.find('#remarkInput');
+                    var $uploadBtn = layero.find('#uploadBtn');
+                    var $saveBtn = layero.find('#saveLogBtn');
+                    var $cancelBtn = layero.find('#cancelLogBtn');
+                    var $fileList = layero.find('#uploadFileList');
+
+                    // 初始化日期选择器（传递DOM元素，避免CSS选择器在多实例时的歧义）
+                    laydate.render({
+                        elem: $logDate[0],
+                        type: 'date',
+                        value: logData ? (formatShortDate(logData.logDate) || '') : '',
+                        done: function(value) {
+                            $logDate.val(value);
+                        }
+                    });
+
+                    // 设置表单值
+                    if (logData) {
+                        $workContent.val(logData.workContent || '');
+                        $remark.val(logData.remark || '');
+                        $logDate.val(formatShortDate(logData.logDate) || '');
+                    } else {
+                        // 新增：工作内容设置提示文字
+                        $workContent.val(contentHint);
+                        $remark.val('');
+                        $logDate.val('');
+                    }
+
+                    // 工作内容：点击时清空提示文字
+                    $workContent.off('focus').on('focus', function(){
+                        if ($(this).val() === contentHint) {
+                            $(this).val('');
+                        }
+                    });
+                    // 失焦时如果为空，恢复提示文字
+                    $workContent.off('blur').on('blur', function(){
+                        if (!$(this).val().trim()) {
+                            $(this).val(contentHint);
+                        }
+                    });
+
+                    // 渲染已有附件列表
+                    renderUploadFileList($fileList);
+
+                    // 初始化上传组件（传递DOM元素替代CSS选择器）
+                    upload.render({
+                        elem: $uploadBtn[0],
+                        url: '/file/upload',
+                        headers: {token: token},
+                        multiple: true,
+                        accept: 'file',
+                        auto: true,
+                        done: function(res) {
+                            if (res.code === 200) {
+                                var filePath = res.data || '';
+                                var fileName = res.originalName || filePath.split('/').pop() || '附件';
+                                uploadedFiles.push({
+                                    filePath: filePath,
+                                    fileName: fileName,
+                                    isNew: true
+                                });
+                                renderUploadFileList($fileList);
+                            } else {
+                                layer.msg(res.msg || '上传失败', {icon: 5});
+                            }
+                        },
+                        error: function() {
+                            layer.msg('上传异常', {icon: 5});
+                        }
+                    });
+
+                    // 保存按钮
+                    $saveBtn.on('click', function(){
+                        var logDate = $logDate.val();
+                        var workContent = $workContent.val();
+                        var remark = $remark.val();
+
+                        // 校验
+                        if (!logDate) {
+                            layer.msg('请选择日志日期', {icon: 5});
+                            return;
+                        }
+                        if (!workContent || workContent === contentHint) {
+                            layer.msg('请填写工作内容', {icon: 5});
+                            return;
+                        }
+
+                        var postData = {
+                            taskId: taskId,
+                            projectId: projectId,
+                            logDate: logDate,
+                            workContent: workContent,
+                            remark: remark
+                        };
+
+                        if (currentEditLogId) {
+                            postData.id = currentEditLogId;
+                        }
+
+                        var url = currentEditLogId ? '/project/log/edit' : '/project/log/add';
+
+                        ajaxPost(url, postData, function(res) {
+                            var savedLogId = res.data && res.data.id ? res.data.id : currentEditLogId;
+
+                            // 保存附件
+                            var newFiles = uploadedFiles.filter(function(f){ return f.isNew; });
+                            if (newFiles.length > 0 && savedLogId) {
+                                saveAttachments(savedLogId, newFiles, function() {
+                                    layer.msg('保存成功', {icon: 1});
+                                    layer.close(layerIdx);
+                                    loadLogList();
+                                });
+                            } else {
+                                layer.msg('保存成功', {icon: 1});
+                                layer.close(layerIdx);
+                                loadLogList();
+                            }
+                        });
+                    });
+
+                    $cancelBtn.on('click', function(){
+                        layer.close(layerIdx);
+                    });
+                }
+            });
+        }
+
+        // ========== 渲染上传附件列表 ==========
+
+        function renderUploadFileList($container) {
+            if (!$container || !$container.length) {
+                $container = $('#uploadFileList');
+            }
+            var html = '';
+            for (var i = 0; i < uploadedFiles.length; i++) {
+                var f = uploadedFiles[i];
+                html += '<div class="upload-file-item">';
+                html += '<span class="file-name">' + f.fileName + '</span>';
+                html += '<span class="file-del" data-index="' + i + '">删除</span>';
+                html += '</div>';
+            }
+            $container.html(html);
+
+            // 删除按钮事件
+            $container.find('.file-del').off('click').on('click', function(){
+                var idx = $(this).data('index');
+                var file = uploadedFiles[idx];
+                if (!file.isNew && file.id) {
+                    // 已有附件，需要调用后端删除
+                    ajaxPost('/project/log/deleteAttachment', {id: file.id}, function(res) {
+                        uploadedFiles.splice(idx, 1);
+                        renderUploadFileList($container);
+                    });
+                } else {
+                    // 新上传的，直接从列表移除
+                    uploadedFiles.splice(idx, 1);
+                    renderUploadFileList($container);
+                }
+            });
+        }
+
+        // ========== 批量保存附件 ==========
+
+        function saveAttachments(logId, files, callback) {
+            var savedCount = 0;
+            var total = files.length;
+            if (total === 0) { callback(); return; }
+
+            for (var i = 0; i < files.length; i++) {
+                ajaxPost('/project/log/saveAttachment', {
+                    logId: logId,
+                    filePath: files[i].filePath,
+                    fileName: files[i].fileName
+                }, function() {
+                    savedCount++;
+                    if (savedCount >= total) {
+                        callback();
+                    }
+                });
+            }
+        }
+
+        // ========== 初始化 ==========
+
+        loadTaskInfo();
+        loadLogList();
+    });
+    </script>
+</body>
+</html>

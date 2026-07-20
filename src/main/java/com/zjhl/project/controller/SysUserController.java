@@ -287,6 +287,36 @@ public class SysUserController {
     }
 
     /**
+     * 获取当前登录用户信息
+     */
+    @GetMapping("/current")
+    public Map<String, Object> getCurrentUser() {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+        Long userId = StpUtil.getLoginIdAsLong();
+        SysUser user = sysUserService.getById(userId);
+        if (user == null) {
+            result.put("code", 404);
+            result.put("msg", "用户不存在");
+            return result;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", user.getId());
+        data.put("username", user.getUsername());
+        data.put("realName", user.getRealName());
+        data.put("phone", user.getPhone());
+        data.put("sysPosition", user.getSysPosition());
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", data);
+        return result;
+    }
+
+    /**
      * 根据ID获取用户详情
      */
     @GetMapping("/get/{id}")

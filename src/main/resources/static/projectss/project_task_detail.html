@@ -12,53 +12,80 @@
             font-family: Microsoft YaHei, sans-serif;
             font-size: 14px;
             color: #333;
-            padding: 20px;
         }
-        .main-card {
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            padding: 24px;
-            margin-bottom: 20px;
+        .page-container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px 16px;
         }
-        .section-title {
-            font-size: 16px;
+        .page-title {
+            font-size: 18px;
             font-weight: bold;
             color: #333;
-            border-bottom: 2px solid #1e9fff;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
-        /* info-grid 3列布局 */
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-card {
+            background: #fff;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
         .info-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 0;
+            gap: 12px 24px;
         }
         .info-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid #f0f0f0;
-            border-right: 1px solid #f0f0f0;
-        }
-        .info-item:nth-child(3n) {
-            border-right: none;
-        }
-        .info-item.full-width {
-            grid-column: 1 / -1;
-            border-right: none;
+            display: flex;
+            align-items: flex-start;
+            min-height: 28px;
+            line-height: 28px;
         }
         .info-label {
-            color: #888;
-            font-size: 12px;
-            margin-bottom: 4px;
+            color: #666;
+            min-width: 90px;
+            font-size: 14px;
+            flex-shrink: 0;
         }
         .info-value {
             color: #333;
             font-size: 14px;
+            flex: 1;
             word-break: break-all;
-            line-height: 1.6;
         }
-        /* 截止时间高亮 */
+        .info-item.span-full {
+            grid-column: 1 / -1;
+        }
+        .task-status-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            line-height: 20px;
+        }
+        .task-status-0 { color: #999; }
+        .task-status-1 { color: #ff5722; }
+        .task-status-2 { color: #ff5722; }
+        .task-status-3 { color: #86c566; }
+        .task-status-4 { color: #ffb800; }
+        .task-status-5 { color: #ff5722; }
+        .task-status-6 { color: #ffb800; }
+        .task-status-tag-0 { background-color: #e0e0e0; color: #999; }
+        .task-status-tag-1 { background-color: #fff0e6; color: #ff5722; }
+        .task-status-tag-2 { background-color: #fff0e6; color: #ff5722; }
+        .task-status-tag-3 { background-color: #eaf5d8; color: #86c566; }
+        .task-status-tag-4 { background-color: #fff8e1; color: #ffb800; }
+        .task-status-tag-5 { background-color: #fff0e6; color: #ff5722; }
+        .task-status-tag-6 { background-color: #fff8e1; color: #ffb800; }
         .deadline-overdue { color: #ff5722; font-weight: bold; }
         .deadline-near { color: #ffb800; font-weight: bold; }
         .deadline-tag {
@@ -68,287 +95,490 @@
             font-size: 11px;
             color: #fff;
             margin-left: 4px;
-            vertical-align: middle;
         }
         .deadline-tag-overdue { background-color: #ff5722; }
         .deadline-tag-near { background-color: #ffb800; }
-        /* 任务状态颜色 */
-        .task-status-0 { color: #999; }
-        .task-status-1 { color: #1e9fff; }
-        .task-status-2 { color: #ff5722; }
-        .task-status-3 { color: #5FB878; }
-        .task-status-4 { color: #ffb800; }
-        .task-status-5 { color: #ff5722; }
-        .task-status-6 { color: #ffb800; }
-        .task-status-tag {
+        .attachment-item {
             display: inline-block;
-            padding: 2px 10px;
-            border-radius: 3px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #fff;
+            margin-right: 16px;
+            margin-bottom: 8px;
+            line-height: 22px;
         }
-        .task-status-tag.task-status-0 { background-color: #999; }
-        .task-status-tag.task-status-1 { background-color: #1e9fff; }
-        .task-status-tag.task-status-2 { background-color: #ff5722; }
-        .task-status-tag.task-status-3 { background-color: #5FB878; }
-        .task-status-tag.task-status-4 { background-color: #ffb800; }
-        .task-status-tag.task-status-5 { background-color: #ff5722; }
-        .task-status-tag.task-status-6 { background-color: #ffb800; }
-        /* 附件列表 */
-        .attach-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 4px;
-        }
-        .attach-item {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            background: #f0f9ff;
-            border: 1px solid #d9f0ff;
-            border-radius: 3px;
-        }
-        .attach-item a {
+        .attachment-item a {
             color: #1e9fff;
             text-decoration: none;
+            font-size: 14px;
         }
-        .attach-item a:hover {
+        .attachment-item a:hover {
             text-decoration: underline;
         }
-        .attach-item i {
-            margin-right: 5px;
-            color: #1e9fff;
-        }
-        .no-data {
+        .no-attachment {
             color: #999;
-            font-size: 13px;
+            font-size: 14px;
         }
-        /* 提示信息 */
         .error-msg {
             text-align: center;
-            padding: 60px 20px;
-            color: #ff5722;
-            font-size: 16px;
+            padding: 40px 0;
+            color: #999;
+            font-size: 14px;
+        }
+        .error-msg i {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .btn-close-wrap {
+            text-align: center;
+            margin-top: 24px;
+            padding-bottom: 10px;
+        }
+        .layui-btn-close {
+            background: #1e9fff;
+            color: #fff;
+            border: none;
+            padding: 8px 32px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .layui-btn-close:hover {
+            opacity: 0.85;
+        }
+        .loading-wrap {
+            text-align: center;
+            padding: 60px 0;
+            color: #999;
+        }
+
+        /* 工作日志时间线 */
+        .log-section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .timeline-container {
+            position: relative;
+            padding-left: 24px;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 16px;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -18px;
+            top: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1e9fff;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #1e9fff;
+            z-index: 1;
+        }
+        .timeline-date {
+            font-size: 13px;
+            color: #1e9fff;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .timeline-card {
+            background: #f8f8f8;
+            border-radius: 4px;
+            padding: 12px 16px;
+            border: 1px solid #eee;
+        }
+        .timeline-content {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        .timeline-remark {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .timeline-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: flex-start;
+        }
+        .timeline-att-img {
+            display: inline-block;
+            width: 70px;
+            height: 70px;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+        .timeline-att-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .timeline-att-img:hover { border-color: #1e9fff; }
+        .timeline-att-file {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 8px;
+            background: #e8f4ff;
+            border-radius: 2px;
+            color: #1e9fff;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .timeline-att-file:hover { background: #d0eaff; }
+        .timeline-empty {
+            color: #999;
+            text-align: center;
+            padding: 30px 0;
+        }
+        .timeline-recorder {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
         }
     </style>
 </head>
 <body>
-
-<div id="pageContainer" style="display:none;">
-    <!-- 任务基本信息 -->
-    <div class="main-card">
-        <div class="section-title">任务详情</div>
-        <div class="info-grid" id="taskInfoGrid">
-            <div class="info-item full-width">
-                <div class="info-label">主体工作</div>
-                <div class="info-value" id="taskContent"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">分工领导</div>
-                <div class="info-value" id="assignUserName"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">手机号</div>
-                <div class="info-value" id="assignUserPhone"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">项目名称</div>
-                <div class="info-value" id="projectName"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">耗时(天)</div>
-                <div class="info-value" id="workAmount"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">截止时间</div>
-                <div class="info-value" id="taskEndTime"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">任务状态</div>
-                <div class="info-value" id="taskStatus"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">任务完成时间</div>
-                <div class="info-value" id="execFinishTime"></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">&nbsp;</div>
-                <div class="info-value">&nbsp;</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">&nbsp;</div>
-                <div class="info-value">&nbsp;</div>
+    <div class="page-container">
+        <div id="detailContent">
+            <div class="loading-wrap">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size:30px;color:#1e9fff;"></i>
+                <p style="margin-top:8px;">加载中...</p>
             </div>
         </div>
     </div>
 
-    <!-- 工作成果 -->
-    <div class="main-card">
-        <div class="section-title">工作成果</div>
-        <div class="info-value" id="workContent" style="line-height:1.8;min-height:60px;padding:4px 0;"></div>
-    </div>
+    <script src="/layui/layui.js"></script>
+    <script>
+    layui.use(['jquery'], function() {
+        var $ = layui.$;
 
-    <!-- 工作附件 -->
-    <div class="main-card">
-        <div class="section-title">工作附件</div>
-        <div id="attachments" class="attach-list"></div>
-    </div>
+        var taskStatusMap = {
+            0: {name:'未开始', cls:'task-status-0', tagCls:'task-status-tag-0'},
+            1: {name:'执行中', cls:'task-status-1', tagCls:'task-status-tag-1'},
+            2: {name:'延时执行中', cls:'task-status-2', tagCls:'task-status-tag-2'},
+            3: {name:'按时完成', cls:'task-status-3', tagCls:'task-status-tag-3'},
+            4: {name:'延时完成', cls:'task-status-4', tagCls:'task-status-tag-4'},
+            5: {name:'未完成', cls:'task-status-5', tagCls:'task-status-tag-5'},
+            6: {name:'申请延期中', cls:'task-status-6', tagCls:'task-status-tag-6'}
+        };
 
-    <!-- 备注 -->
-    <div class="main-card">
-        <div class="section-title">备注</div>
-        <div class="info-value" id="remark" style="line-height:1.8;min-height:40px;padding:4px 0;"></div>
-    </div>
-</div>
-
-<div id="errorMsg" class="error-msg" style="display:none;"></div>
-
-<script src="/layui/layui.js"></script>
-<script>
-layui.use(['layer'], function(){
-    var layer = layui.layer;
-    var $ = layui.$;
-
-    // 任务状态映射
-    var taskStatusMap = {
-        0: {name:'未开始', cls:'task-status-0'},
-        1: {name:'执行中', cls:'task-status-1'},
-        2: {name:'延时执行中', cls:'task-status-2'},
-        3: {name:'按时完成', cls:'task-status-3'},
-        4: {name:'延时完成', cls:'task-status-4'},
-        5: {name:'未完成', cls:'task-status-5'},
-        6: {name:'申请延期中', cls:'task-status-6'}
-    };
-
-    // 获取token
-    var token = localStorage.getItem('token');
-    if (!token) {
-        $('#pageContainer').hide();
-        $('#errorMsg').text('未登录或登录已过期').show();
-        return;
-    }
-
-    // 获取taskId
-    var taskId = new URLSearchParams(window.location.search).get('taskId');
-    if (!taskId) {
-        $('#pageContainer').hide();
-        $('#errorMsg').text('缺少任务ID参数').show();
-        return;
-    }
-
-    // 日期格式化
-    function formatShortDate(dateStr) {
-        if (!dateStr) return '-';
-        try {
-            var str = dateStr;
-            if (str.indexOf('T') > -1) str = str.replace('T', ' ');
-            if (str.length > 10) str = str.substring(0, 10);
-            return str;
-        } catch(e) { return dateStr; }
-    }
-
-    // 截止时间状态判断
-    function getDeadlineStatus(taskEndTime, taskStatus) {
-        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
-        try {
-            var endStr = taskEndTime;
-            if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
-            if (endStr.length === 10) endStr += ' 00:00:00';
-            var end = new Date(endStr);
-            var now = new Date();
-            var diffMs = end.getTime() - now.getTime();
-            var diffDays = diffMs / (1000 * 60 * 60 * 24);
-            if (diffDays < 0) return 'overdue';
-            if (diffDays <= 3) return 'near';
-            return 'normal';
-        } catch(e) { return 'normal'; }
-    }
-
-    // 渲染截止时间
-    function renderEndTime(endTime, status) {
-        var formatted = formatShortDate(endTime);
-        if (formatted === '-') return '-';
-        var dlStatus = getDeadlineStatus(endTime, status);
-        var html = '';
-        if (dlStatus === 'overdue') {
-            html = '<span class="deadline-overdue">' + formatted + '</span><span class="deadline-tag deadline-tag-overdue">已逾期</span>';
-        } else if (dlStatus === 'near') {
-            html = '<span class="deadline-near">' + formatted + '</span><span class="deadline-tag deadline-tag-near">临近截止</span>';
-        } else {
-            html = formatted;
+        function formatShortDate(str) {
+            if (!str) return '-';
+            try {
+                var s = str;
+                if (s.indexOf('T') > -1) s = s.replace('T', ' ');
+                if (s.length >= 10) return s.substring(0, 10);
+                return s;
+            } catch(e) { return str; }
         }
-        return html;
-    }
 
-    // 渲染附件列表
-    function renderAttachments(attachments) {
-        var html = '';
-        if (attachments && attachments.length > 0) {
+        function getDeadlineStatus(taskEndTime, taskStatus) {
+            if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
+            try {
+                var endStr = taskEndTime;
+                if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+                if (endStr.length === 10) endStr += ' 00:00:00';
+                var end = new Date(endStr);
+                var now = new Date();
+                var diffMs = end.getTime() - now.getTime();
+                var diffDays = diffMs / (1000 * 60 * 60 * 24);
+                if (diffDays < 0) return 'overdue';
+                if (diffDays <= 3) return 'near';
+                return 'normal';
+            } catch(e) { return 'normal'; }
+        }
+
+        function renderDeadline(taskEndTime, taskStatus) {
+            var dateStr = formatShortDate(taskEndTime);
+            if (!taskEndTime) return '<span class="info-value">-</span>';
+            var status = getDeadlineStatus(taskEndTime, taskStatus);
+            var cls = '';
+            var tag = '';
+            if (status === 'overdue') {
+                cls = 'deadline-overdue';
+                tag = '<span class="deadline-tag deadline-tag-overdue">已逾期</span>';
+            } else if (status === 'near') {
+                cls = 'deadline-near';
+                tag = '<span class="deadline-tag deadline-tag-near">即将到期</span>';
+            }
+            return '<span class="info-value ' + cls + '">' + dateStr + tag + '</span>';
+        }
+
+        function renderTaskStatus(status) {
+            var map = taskStatusMap[status];
+            if (!map) return '<span class="info-value">未知状态(' + status + ')</span>';
+            return '<span class="info-value"><span class="task-status-tag ' + map.tagCls + '">' + map.name + '</span></span>';
+        }
+
+        function renderAttachments(attachments) {
+            if (!attachments || attachments.length === 0) {
+                return '<span class="no-attachment">暂无附件</span>';
+            }
+            var html = '';
             for (var i = 0; i < attachments.length; i++) {
                 var att = attachments[i];
                 var filePath = att.filePath || '';
-                var fileName = att.fileName || att.originalName || ('附件' + (i + 1));
-                html += '<div class="attach-item">';
-                html += '<i class="layui-icon layui-icon-file"></i>';
-                html += '<a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">' + fileName + '</a>';
+                var fileName = att.fileName || '未知文件';
+                html += '<div class="attachment-item">';
+                html += '<i class="layui-icon layui-icon-file" style="font-size:16px;color:#1e9fff;margin-right:4px;"></i>';
+                html += '<a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank" style="color:#1e9fff;">' + fileName + '</a>';
                 html += '</div>';
             }
-        } else {
-            html = '<span class="no-data">暂无附件</span>';
+            return html;
         }
-        $('#attachments').html(html);
-    }
 
-    // 加载任务详情
-    function loadTaskDetail() {
+        function showError(msg) {
+            $('#detailContent').html(
+                '<div class="error-msg">' +
+                '<i class="layui-icon layui-icon-close-fill"></i>' +
+                '<p>' + msg + '</p>' +
+                '</div>' +
+                '<div class="btn-close-wrap"><button class="layui-btn-close" onclick="closePage()">关闭</button></div>'
+            );
+        }
+
+        function closePage() {
+            // 如果在layer弹窗中，关闭当前弹窗
+            if (parent && parent.layui) {
+                parent.layui.use(['layer'], function() {
+                    var layer = parent.layui.layer;
+                    var index = layer.getFrameIndex(window.name);
+                    if (index) {
+                        layer.close(index);
+                    } else {
+                        window.close();
+                    }
+                });
+            } else {
+                window.close();
+            }
+        }
+        window.closePage = closePage;
+
+        // 获取taskId参数
+        var taskId = new URLSearchParams(window.location.search).get('taskId');
+        if (!taskId) {
+            showError('缺少任务ID参数');
+            return;
+        }
+
+        // 获取token
+        var token = localStorage.getItem('token');
+        if (!token) {
+            showError('未登录或登录已过期');
+            return;
+        }
+
+        // AJAX请求详情
         $.ajax({
             url: '/project/task/taskDetail/' + taskId,
             type: 'GET',
-            headers: {token: token},
+            headers: { token: token },
+            dataType: 'json',
             success: function(res) {
-                if (res && res.code === 200 && res.data) {
-                    var data = res.data;
-                    $('#taskContent').text(data.taskContent || '-');
-                    $('#assignUserName').text(data.assignUserName || '-');
-                    $('#assignUserPhone').text(data.assignUserPhone || '-');
-                    $('#projectName').text(data.projectName || '-');
-                    $('#workAmount').text(data.workAmount || '-');
-                    $('#taskEndTime').html(renderEndTime(data.taskEndTime, data.taskStatus));
-
-                    // 任务状态
-                    var statusInfo = taskStatusMap[data.taskStatus];
-                    if (statusInfo) {
-                        $('#taskStatus').html('<span class="task-status-tag ' + statusInfo.cls + '">' + statusInfo.name + '</span>');
-                    } else {
-                        $('#taskStatus').text(data.taskStatus || '-');
-                    }
-
-                    $('#execFinishTime').text(formatShortDate(data.execFinishTime));
-                    $('#workContent').text(data.workContent || '暂无工作成果');
-                    $('#remark').text(data.remark || '暂无备注');
-
-                    // 渲染附件
-                    renderAttachments(data.attachments || []);
-
-                    $('#pageContainer').show();
-                    $('#errorMsg').hide();
-                } else {
-                    $('#pageContainer').hide();
-                    $('#errorMsg').text(res.msg || '获取任务详情失败').show();
+                if (res.code !== 200) {
+                    showError(res.msg || '查询失败');
+                    return;
                 }
-            },
-            error: function() {
-                $('#pageContainer').hide();
-                $('#errorMsg').text('请求失败，请检查网络').show();
-            }
-        });
-    }
+                var data = res.data;
+                if (!data) {
+                    showError('未获取到任务数据');
+                    return;
+                }
 
-    // 加载页面数据
-    loadTaskDetail();
-});
-</script>
+                var html = '';
+
+                // 页面标题
+                html += '<div class="page-title">任务详情</div>';
+
+                // 基本信息卡片
+                html += '<div class="info-card">';
+                html += '<div class="section-title">基本信息</div>';
+                html += '<div class="info-grid">';
+
+                // 分工领导
+                html += '<div class="info-item"><span class="info-label">分工领导</span><span class="info-value">' + (data.assignUserName || '-') + '</span></div>';
+                // 手机号
+                html += '<div class="info-item"><span class="info-label">手机号</span><span class="info-value">' + (data.assignUserPhone || '-') + '</span></div>';
+                // 任务负责人
+                html += '<div class="info-item"><span class="info-label">任务负责人</span><span class="info-value">' + (data.execUserName || '-') + '</span></div>';
+                // 项目名称
+                html += '<div class="info-item"><span class="info-label">项目名称</span><span class="info-value">' + (data.projectName || '-') + '</span></div>';
+                // 耗时(天)
+                html += '<div class="info-item"><span class="info-label">耗时(天)</span><span class="info-value">' + (data.workAmount != null ? data.workAmount : '-') + '</span></div>';
+                // 截止时间
+                html += '<div class="info-item"><span class="info-label">截止时间</span>' + renderDeadline(data.taskEndTime, data.taskStatus) + '</div>';
+                // 任务状态
+                html += '<div class="info-item"><span class="info-label">任务状态</span>' + renderTaskStatus(data.taskStatus) + '</div>';
+                // 任务完成时间
+                html += '<div class="info-item"><span class="info-label">任务完成时间</span><span class="info-value">' + formatShortDate(data.execFinishTime) + '</span></div>';
+                // 主体工作 (跨列，内容可能较长)
+                html += '<div class="info-item span-full"><span class="info-label">主体工作</span><span class="info-value">' + (data.taskContent || '-') + '</span></div>';
+                // 工作成果
+                html += '<div class="info-item span-full"><span class="info-label">工作成果</span><span class="info-value">' + (data.workContent || '-') + '</span></div>';
+                // 备注 (跨列)
+                html += '<div class="info-item span-full"><span class="info-label">备注</span><span class="info-value">' + (data.remark || '-') + '</span></div>';
+
+                html += '</div>'; 
+                html += '</div>'; 
+
+                // 附件区域
+                html += '<div class="info-card">';
+                html += '<div class="section-title">工作附件</div>';
+                html += '<div>' + renderAttachments(data.attachments) + '</div>';
+                html += '</div>';
+
+                // 工作日志区域（占位，后续通过AJAX加载）
+                html += '<div class="info-card" id="workLogSection">';
+                html += '<div class="log-section-title">工作日志</div>';
+                html += '<div id="workLogTimeline"><div class="timeline-empty">加载中...</div></div>';
+                html += '</div>';
+
+                // 关闭按钮
+                html += '<div class="btn-close-wrap"><button class="layui-btn-close" onclick="closePage()">关闭</button></div>';
+
+                $('#detailContent').html(html);
+
+                // 异步加载工作日志
+                loadWorkLogs(taskId);
+            },
+            error: function(xhr, status, err) {
+                if (xhr.status === 401 || xhr.status === 403) {
+                    showError('未登录或登录已过期');
+                } else {
+                    showError('请求失败，请稍后重试');
+                }
+            }
+        }); 
+
+        // ========== 加载工作日志 ==========
+
+        function loadWorkLogs(taskId) {
+            var t = localStorage.getItem('token');
+            $.ajax({
+                url: '/project/log/list?taskId=' + taskId,
+                type: 'GET',
+                headers: { token: t },
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code !== 200) {
+                        $('#workLogTimeline').html('<div class="timeline-empty">' + (res.msg || '加载失败') + '</div>');
+                        return;
+                    }
+                    renderWorkLogs(res.data || []);
+                },
+                error: function() {
+                    $('#workLogTimeline').html('<div class="timeline-empty">加载失败</div>');
+                }
+            });
+        }
+
+        function renderWorkLogs(logs) {
+            var container = $('#workLogTimeline');
+            if (!logs || logs.length === 0) {
+                container.html('<div class="timeline-empty">暂无工作日志</div>');
+                return;
+            }
+
+            logs.sort(function(a, b) {
+                var da = (a.logDate || a.createTime || '');
+                var db = (b.logDate || b.createTime || '');
+                if (da > db) return -1;
+                if (da < db) return 1;
+                return 0;
+            });
+
+            var html = '<div class="timeline-container">';
+            html += '<div class="timeline-line"></div>';
+
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                var attachments = log.attachments || [];
+                var dateStr = formatShortDate(log.logDate) || formatShortDate(log.createTime);
+                var recorderName = log.recorderName || log.recorder_name || '';
+
+                html += '<div class="timeline-item">';
+                html += '<div class="timeline-dot"></div>';
+                // 格式：姓名  日期
+                html += '<div class="timeline-date">';
+                if (recorderName) {
+                    html += recorderName + '　';
+                }
+                html += dateStr;
+                html += '</div>';
+                html += '<div class="timeline-card">';
+
+                html += '<div class="timeline-content">' + (log.workContent || '') + '</div>';
+
+                if (log.remark) {
+                    html += '<div class="timeline-remark">备注：' + log.remark + '</div>';
+                }
+
+                if (attachments.length > 0) {
+                    html += '<div class="timeline-attachments">';
+                    for (var j = 0; j < attachments.length; j++) {
+                        var att = attachments[j];
+                        // 附件字段容错
+                        var filePath = att.filePath || att.file_path || att.url || '';
+                        var fileName = att.fileName || att.file_name || att.originalFilename || filePath.split('/').pop() || '附件' + (j+1);
+                        var ext = fileName.split('.').pop().toLowerCase();
+                        var isImg = ['jpg','jpeg','png','gif','bmp','webp','svg'].indexOf(ext) > -1;
+                        if (isImg) {
+                            html += '<div style="text-align:center;display:inline-block;margin-right:8px;margin-bottom:4px;">';
+                            html += '<div class="timeline-att-img" onclick="previewLogImage(\'' + (filePath || '').replace(/'/g, "\\'") + '\')">';
+                            html += '<img src="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" alt="' + fileName + '">';
+                            html += '</div>';
+                            html += '<div style="font-size:11px;color:#666;margin-top:2px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + fileName + '</div>';
+                            html += '</div>';
+                        } else {
+                            html += '<a class="timeline-att-file" href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank">';
+                            html += '<i class="layui-icon layui-icon-file" style="font-size:13px;"></i> ' + fileName;
+                            html += '</a>';
+                        }
+                    }
+                    html += '</div>';
+                }
+
+                html += '</div>'; 
+                html += '</div>'; 
+            }
+
+            html += '</div>'; 
+            container.html(html);
+        }
+
+        window.previewLogImage = function(filePath) {
+            var layer = parent && parent.layui ? parent.layui.layer : layui.layer;
+            if (!layer) layer = layui.layer;
+            layer.open({
+                type: 1,
+                title: '图片预览',
+                area: ['600px', '450px'],
+                content: '<div style="text-align:center;padding:10px;"><img src="/file/download?filePath=' + encodeURIComponent(filePath) + '" style="max-width:100%;max-height:420px;"></div>'
+            });
+        };
+    });
+    </script>
 </body>
 </html>
