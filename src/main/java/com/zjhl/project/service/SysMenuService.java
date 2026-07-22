@@ -8,4 +8,5 @@ import com.zjhl.project.entity.SysMenu;
 //这里必须继承 IService<SysMenu>
 public interface SysMenuService extends IService<SysMenu> {
  List<SysMenu> getMenuTree();
+ List<SysMenu> getMenuTreeByUserId(Long userId);
 }

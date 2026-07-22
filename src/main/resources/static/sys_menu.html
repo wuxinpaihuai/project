@@ -135,7 +135,7 @@ function loadMenu() {
         var $ = layui.jquery;
         
         $.ajax({
-            url: '/getMenuTree',
+            url: '/getUserMenuTree',
             type: 'GET',
             headers: {token: token},
             dataType: 'json',

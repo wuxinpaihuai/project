@@ -110,7 +110,7 @@
         </form>
     </div>
 
-    <!-- 第二部分：里程碑节点 -->
+    <!-- 第二部分：关键节点 -->
     <div class="section-card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div class="section-title" style="border-bottom:none;margin-bottom:0;padding-bottom:0;">项目里程碑节点</div>
@@ -121,14 +121,14 @@
                 <thead>
                     <tr>
                         <th style="width:50px;">序号</th>
-                        <th style="width:200px;">里程碑节点</th>
+                        <th style="width:200px;">关键节点</th>
                         <th style="width:120px;">预计完成日期</th>
                         <th>节点说明</th>
                         <th style="width:120px;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="milestoneTbody">
-                    <tr><td colspan="5" style="color:#999;">暂无里程碑节点</td></tr>
+                    <tr><td colspan="5" style="color:#999;">暂无关键节点</td></tr>
                 </tbody>
             </table>
         </div>
@@ -233,7 +233,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
                 }
                 renderContractFiles();
 
-                // 里程碑节点
+                // 关键节点
                 milestones = res.milestones || [];
                 renderMilestones();
 
@@ -341,7 +341,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
         });
     }
 
-    // ========== 里程碑节点操作 ==========
+    // ========== 关键节点操作 ==========
     $('#addMilestoneBtn').on('click', function(){
         showMilestoneForm(null);
     });
@@ -352,7 +352,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
 
     window.deleteMilestone = function(idx) {
         var m = milestones[idx];
-        layer.confirm('确认删除里程碑节点"' + (m.milestoneName || '') + '"？', {icon: 3}, function(confirmIndex){
+        layer.confirm('确认删除关键节点"' + (m.milestoneName || '') + '"？', {icon: 3}, function(confirmIndex){
             if (m.id) {
                 $.ajax({
                     url: '/project/sign/deleteMilestone/' + m.id,
@@ -383,14 +383,14 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
 
     function showMilestoneForm(mData) {
         var isEdit = mData !== null;
-        var title = isEdit ? '编辑里程碑节点' : '新增里程碑节点';
+        var title = isEdit ? '编辑关键节点' : '新增关键节点';
 
         var formHtml = '<div class="form-popup" style="padding:15px;">';
         formHtml += '<form class="layui-form" lay-filter="milestoneForm">';
         formHtml += '<div class="layui-form-item">';
-        formHtml += '<label class="layui-form-label">里程碑节点</label>';
+        formHtml += '<label class="layui-form-label">关键节点</label>';
         formHtml += '<div class="layui-input-block">';
-        formHtml += '<input type="text" name="milestoneName" id="mMilestoneName" placeholder="请输入里程碑节点名称" class="layui-input" style="width:350px;">';
+        formHtml += '<input type="text" name="milestoneName" id="mMilestoneName" placeholder="请输入关键节点名称" class="layui-input" style="width:350px;">';
         formHtml += '</div></div>';
         formHtml += '<div class="layui-form-item">';
         formHtml += '<label class="layui-form-label">预计完成日期</label>';
@@ -422,7 +422,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
                 $('#mSaveBtn').on('click', function(){
                     var milestoneName = $('#mMilestoneName').val();
                     if (!milestoneName) {
-                        layer.msg('请输入里程碑节点名称', {icon: 5});
+                        layer.msg('请输入关键节点名称', {icon: 5});
                         return;
                     }
 
@@ -492,7 +492,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
     function renderMilestones() {
         var tbody = $('#milestoneTbody');
         if (milestones.length === 0) {
-            tbody.html('<tr><td colspan="5" style="color:#999;">暂无里程碑节点</td></tr>');
+            tbody.html('<tr><td colspan="5" style="color:#999;">暂无关键节点</td></tr>');
             return;
         }
         var html = '';

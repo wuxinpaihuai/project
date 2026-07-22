@@ -89,6 +89,75 @@
         .logout-btn:hover {
             color: #86c566;
         }
+        .change-pwd-btn {
+            color: #86c566;
+            text-decoration: none;
+            font-size: 13px;
+            cursor: pointer;
+            margin-left: 4px;
+            padding: 2px 8px;
+            border: 1px solid #86c566;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .change-pwd-btn:hover {
+            color: #fff;
+            background-color: #86c566;
+        }
+        .change-pwd-btn i {
+            font-size: 12px;
+            margin-right: 2px;
+        }
+        /* 个人信息弹窗样式 */
+        .profile-box {
+            padding: 16px 20px;
+        }
+        .profile-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .profile-item:last-child {
+            border-bottom: none;
+        }
+        .profile-label {
+            width: 90px;
+            color: #666;
+            flex-shrink: 0;
+        }
+        .profile-value {
+            flex: 1;
+            color: #333;
+            word-break: break-all;
+        }
+        .profile-avatar {
+            width: 64px;
+            height: 64px;
+            background-color: #86c566;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+            margin: 0 auto 16px;
+        }
+        .profile-name {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .profile-role {
+            text-align: center;
+            font-size: 13px;
+            color: #86c566;
+            margin-bottom: 12px;
+        }
         /* 主内容区 */
         .main-container {
             display: flex;
@@ -153,10 +222,13 @@
             <div class="header-title">浙江环龙项目全流程管控系统</div>
         </div>
         <div class="header-right">
-            <div class="user-info">
+            <div class="user-info" id="userInfo" onclick="openProfile()">
                 <div class="user-avatar" id="userAvatar">用</div>
                 <span class="user-name" id="userName">加载中...</span>
             </div>
+            <a class="change-pwd-btn" href="javascript:openChangePwd();" title="修改密码">
+                <i class="layui-icon layui-icon-password"></i> 修改密码
+            </a>
             <a class="logout-btn" href="javascript:logout();">
                 <i class="layui-icon layui-icon-logout" style="font-size: 18px; vertical-align: middle;"></i> 退出
             </a>
@@ -184,6 +256,35 @@
         window.location.href = '/login.html';
     }
 
+    // 当前登录用户信息
+    var currentUser = {};
+
+    var positionMap = {
+        '0': '董事长',
+        '1': '总裁',
+        '2': '副总裁',
+        '3': '处长',
+        '4': '副处长',
+        '5': '技术学术委员会主任',
+        '6': '副主任',
+        '7': '处长助理',
+        '8': '普通员工'
+    };
+
+    // 格式化日期
+    function formatDateTime(dt) {
+        if (!dt) return '-';
+        var date = new Date(dt);
+        if (isNaN(date.getTime())) return dt;
+        var y = date.getFullYear();
+        var m = (date.getMonth() + 1).toString().padStart(2, '0');
+        var d = date.getDate().toString().padStart(2, '0');
+        var h = date.getHours().toString().padStart(2, '0');
+        var min = date.getMinutes().toString().padStart(2, '0');
+        var s = date.getSeconds().toString().padStart(2, '0');
+        return y + '-' + m + '-' + d + ' ' + h + ':' + min + ':' + s;
+    }
+
     // 加载当前登录用户信息
     layui.use(['jquery'], function() {
         var $ = layui.$;
@@ -194,7 +295,8 @@
             dataType: 'json',
             success: function(res) {
                 if (res.code === 200 && res.data) {
-                    var realName = res.data.realName || res.data.username || '用户';
+                    currentUser = res.data;
+                    var realName = currentUser.realName || currentUser.username || '用户';
                     document.getElementById('userName').textContent = realName;
                     document.getElementById('userAvatar').textContent = realName.substring(0, 1);
                 } else if (res.code === 401) {
@@ -223,6 +325,134 @@
                 localStorage.removeItem('token');
                 window.location.href = '/login.html';
                 layer.close(index);
+            });
+        });
+    }
+
+    // 打开个人信息弹窗
+    function openProfile() {
+        layui.use(['layer'], function() {
+            var layer = layui.layer;
+            var realName = currentUser.realName || currentUser.username || '用户';
+            var roleNames = currentUser.roleNames && currentUser.roleNames.length > 0
+                ? currentUser.roleNames.join('，') : '-';
+            var deptNames = currentUser.deptNames && currentUser.deptNames.length > 0
+                ? currentUser.deptNames.join('，') : '-';
+            var position = positionMap[currentUser.sysPosition] || '-';
+            var statusText = currentUser.status === 1 ? '正常' : (currentUser.status === 0 ? '禁用' : '-');
+            var phone = currentUser.phone || '-';
+            var createTime = formatDateTime(currentUser.createTime);
+
+            var html = '<div class="profile-box">' +
+                '<div class="profile-avatar">' + realName.substring(0, 1) + '</div>' +
+                '<div class="profile-name">' + realName + '</div>' +
+                '<div class="profile-role">' + roleNames + '</div>' +
+                '<div class="profile-item"><span class="profile-label">账号</span><span class="profile-value">' + (currentUser.username || '-') + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">姓名</span><span class="profile-value">' + (currentUser.realName || '-') + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">职位</span><span class="profile-value">' + position + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">电话</span><span class="profile-value">' + phone + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">所属部门</span><span class="profile-value">' + deptNames + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">所属角色</span><span class="profile-value">' + roleNames + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">账号状态</span><span class="profile-value">' + statusText + '</span></div>' +
+                '<div class="profile-item"><span class="profile-label">创建时间</span><span class="profile-value">' + createTime + '</span></div>' +
+                '</div>';
+
+            layer.open({
+                type: 1,
+                title: '个人信息',
+                area: ['420px', 'auto'],
+                shadeClose: true,
+                content: html,
+                btn: ['修改密码', '关闭'],
+                btn1: function(index) {
+                    layer.close(index);
+                    openChangePwd();
+                },
+                btn2: function(index) {
+                    layer.close(index);
+                }
+            });
+        });
+    }
+
+    // 打开修改密码弹窗
+    function openChangePwd() {
+        layui.use(['layer', 'form', 'jquery'], function() {
+            var layer = layui.layer;
+            var form = layui.form;
+            var $ = layui.$;
+
+            var html = '<div class="layui-form" style="padding: 20px 30px 10px;">' +
+                '<div class="layui-form-item">' +
+                '<label class="layui-form-label">旧密码</label>' +
+                '<div class="layui-input-block">' +
+                '<input type="password" id="oldPassword" name="oldPassword" placeholder="请输入旧密码" autocomplete="off" class="layui-input">' +
+                '</div></div>' +
+                '<div class="layui-form-item">' +
+                '<label class="layui-form-label">新密码</label>' +
+                '<div class="layui-input-block">' +
+                '<input type="password" id="newPassword" name="newPassword" placeholder="请输入新密码（至少6位）" autocomplete="off" class="layui-input">' +
+                '</div></div>' +
+                '<div class="layui-form-item">' +
+                '<label class="layui-form-label">确认新密码</label>' +
+                '<div class="layui-input-block">' +
+                '<input type="password" id="confirmPassword" name="confirmPassword" placeholder="请再次输入新密码" autocomplete="off" class="layui-input">' +
+                '</div></div>' +
+                '</div>';
+
+            layer.open({
+                type: 1,
+                title: '修改密码',
+                area: ['420px', 'auto'],
+                shadeClose: false,
+                content: html,
+                btn: ['保存', '取消'],
+                yes: function(index) {
+                    var oldPassword = $('#oldPassword').val().trim();
+                    var newPassword = $('#newPassword').val().trim();
+                    var confirmPassword = $('#confirmPassword').val().trim();
+
+                    if (!oldPassword) {
+                        layer.msg('请输入旧密码', { icon: 2 });
+                        return;
+                    }
+                    if (!newPassword) {
+                        layer.msg('请输入新密码', { icon: 2 });
+                        return;
+                    }
+                    if (newPassword.length < 6) {
+                        layer.msg('新密码长度不能少于6位', { icon: 2 });
+                        return;
+                    }
+                    if (newPassword !== confirmPassword) {
+                        layer.msg('两次输入的新密码不一致', { icon: 2 });
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/sys/user/changePassword',
+                        type: 'POST',
+                        headers: { token: token },
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            oldPassword: oldPassword,
+                            newPassword: newPassword,
+                            confirmPassword: confirmPassword
+                        }),
+                        dataType: 'json',
+                        success: function(res) {
+                            if (res.code === 200) {
+                                layer.msg(res.msg || '密码修改成功', { icon: 1 });
+                                layer.close(index);
+                            } else {
+                                layer.msg(res.msg || '密码修改失败', { icon: 2 });
+                            }
+                        },
+                        error: function() {
+                            layer.msg('网络异常，请稍后重试', { icon: 2 });
+                        }
+                    });
+                }
             });
         });
     }

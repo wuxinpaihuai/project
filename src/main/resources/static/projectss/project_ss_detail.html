@@ -284,12 +284,12 @@ layui.use(['layer'], function(){
 
                 html += '</div>';
 
-                // ========== 四、项目里程碑节点 ==========
+                // ========== 四、项目关键节点 ==========
                 html += '<div class="info-card">';
-                html += '<div class="section-title">四、项目里程碑节点</div>';
+                html += '<div class="section-title">四、项目关键节点</div>';
                 if (milestones.length > 0) {
                     html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
-                    html += '<thead><tr><th>序号</th><th>里程碑节点</th><th>预计完成时间</th><th>节点说明</th></tr></thead><tbody>';
+                    html += '<thead><tr><th>序号</th><th>关键节点</th><th>预计完成时间</th><th>节点说明</th></tr></thead><tbody>';
                     for (var i = 0; i < milestones.length; i++) {
                         var m = milestones[i];
                         html += '<tr>';
@@ -301,7 +301,7 @@ layui.use(['layer'], function(){
                     }
                     html += '</tbody></table>';
                 } else {
-                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无里程碑节点</p>';
+                    html += '<p style="color:#999;text-align:center;padding:20px;">暂无关键节点</p>';
                 }
                 html += '</div>';
 

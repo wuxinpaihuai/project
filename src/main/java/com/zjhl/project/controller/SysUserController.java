@@ -6,9 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zjhl.project.entity.SysUser;
 import com.zjhl.project.entity.SysUserDept;
 import com.zjhl.project.entity.SysUserRole;
+import com.zjhl.project.entity.SysDept;
+import com.zjhl.project.entity.SysRole;
 import com.zjhl.project.service.SysUserService;
 import com.zjhl.project.service.SysUserDeptService;
 import com.zjhl.project.service.SysUserRoleService;
+import com.zjhl.project.service.SysDeptService;
+import com.zjhl.project.service.SysRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +34,12 @@ public class SysUserController {
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private SysDeptService sysDeptService;
+
+    @Autowired
+    private SysRoleService sysRoleService;
 
     /**
      * 根据姓名搜索用户（模糊查询，用于业务员选择）
@@ -310,9 +320,106 @@ public class SysUserController {
         data.put("realName", user.getRealName());
         data.put("phone", user.getPhone());
         data.put("sysPosition", user.getSysPosition());
+        data.put("status", user.getStatus());
+        data.put("createTime", user.getCreateTime());
+
+        // 查询所属部门名称列表
+        QueryWrapper<SysUserDept> deptWrapper = new QueryWrapper<>();
+        deptWrapper.eq("user_id", userId);
+        List<SysUserDept> userDeptList = sysUserDeptService.list(deptWrapper);
+        List<String> deptNames = userDeptList.stream()
+                .map(SysUserDept::getDeptId)
+                .map((Long deptId) -> {
+                    SysDept dept = sysDeptService.getById(deptId);
+                    return dept != null ? dept.getDeptName() : null;
+                })
+                .filter(name -> name != null && !name.isEmpty())
+                .collect(Collectors.toList());
+        data.put("deptNames", deptNames);
+
+        // 查询所属角色名称列表
+        QueryWrapper<SysUserRole> roleWrapper = new QueryWrapper<>();
+        roleWrapper.eq("user_id", userId);
+        List<SysUserRole> userRoleList = sysUserRoleService.list(roleWrapper);
+        List<String> roleNames = userRoleList.stream()
+                .map(SysUserRole::getRoleId)
+                .map((Long roleId) -> {
+                    SysRole role = sysRoleService.getById(roleId);
+                    return role != null ? role.getRoleName() : null;
+                })
+                .filter(name -> name != null && !name.isEmpty())
+                .collect(Collectors.toList());
+        data.put("roleNames", roleNames);
+
         result.put("code", 200);
         result.put("msg", "查询成功");
         result.put("data", data);
+        return result;
+    }
+
+    /**
+     * 修改当前登录用户密码
+     */
+    @PostMapping("/changePassword")
+    public Map<String, Object> changePassword(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        String oldPassword = (String) params.get("oldPassword");
+        String newPassword = (String) params.get("newPassword");
+        String confirmPassword = (String) params.get("confirmPassword");
+
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            result.put("code", 400);
+            result.put("msg", "旧密码不能为空");
+            return result;
+        }
+        if (newPassword == null || newPassword.isEmpty()) {
+            result.put("code", 400);
+            result.put("msg", "新密码不能为空");
+            return result;
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            result.put("code", 400);
+            result.put("msg", "两次输入的新密码不一致");
+            return result;
+        }
+        if (newPassword.length() < 6) {
+            result.put("code", 400);
+            result.put("msg", "新密码长度不能少于6位");
+            return result;
+        }
+
+        Long userId = StpUtil.getLoginIdAsLong();
+        SysUser user = sysUserService.getById(userId);
+        if (user == null) {
+            result.put("code", 404);
+            result.put("msg", "用户不存在");
+            return result;
+        }
+
+        // 项目当前采用明文存储密码
+        if (!oldPassword.equals(user.getPassword())) {
+            result.put("code", 400);
+            result.put("msg", "旧密码错误");
+            return result;
+        }
+
+        SysUser updateUser = new SysUser();
+        updateUser.setId(userId);
+        updateUser.setPassword(newPassword);
+        boolean success = sysUserService.updateById(updateUser);
+        if (success) {
+            result.put("code", 200);
+            result.put("msg", "密码修改成功");
+        } else {
+            result.put("code", 500);
+            result.put("msg", "密码修改失败");
+        }
         return result;
     }
 

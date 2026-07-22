@@ -194,12 +194,10 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         return (v != null && v !== '') ? String(v) : '-';
     }
 
-    // Resolve relateUserIds to display names
     function resolveRelateNames(relateUserIds) {
         if (!relateUserIds || relateUserIds === '') return '-';
         var ids = relateUserIds.split(',');
         var names = [];
-        // We need to resolve each ID to a name using the cached user map
         for (var i = 0; i < ids.length; i++) {
             var uid = ids[i].trim();
             if (uid !== '' && userMap[uid]) {
@@ -209,11 +207,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         return names.length > 0 ? names.join(', ') : '-';
     }
 
-    // Cache user names from search results for resolving relateUserIds
     var userMap = {};
 
     function loadUserMap(taskData) {
-        // Collect all relateUserIds from tasks
         var allIds = [];
         if (taskData) {
             for (var i = 0; i < taskData.length; i++) {
@@ -229,9 +225,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 }
             }
         }
-        // Batch resolve by searching each unknown ID
         if (allIds.length > 0) {
-            // Use a single search call to get all users, then match by ID
             $.ajax({
                 url: '/sys/user/searchByName?name=',
                 type: 'GET',
@@ -249,7 +243,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         }
     }
 
-    // Store task list data for table rendering
     var taskListData = [];
 
     // 加载详情数据
@@ -271,7 +264,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 var milestones = res.milestones || [];
                 var tasks = res.tasks || [];
 
-                // Filter tasks for stage_type=3 (任务分配)
+                //   stage_type=3 (任务分配)
                 taskListData = [];
                 for (var i = 0; i < tasks.length; i++) {
                     if (tasks[i].stageType === 3 || tasks[i].stage_type === 3) {
@@ -279,7 +272,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                     }
                 }
 
-                // Load user name map for relateUserIds resolution
                 loadUserMap(taskListData);
 
                 if (!p) {
@@ -356,12 +348,12 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 }
                 html += '</div>';
 
-                // ========== 第四大模块：项目里程碑节点 ==========
+                // ========== 第四大模块：项目关键节点 ==========
                 html += '<div class="info-card">';
-                html += '<div class="section-title">四、项目里程碑节点</div>';
+                html += '<div class="section-title">四、项目关键节点</div>';
                 if (milestones.length > 0) {
                     html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
-                    html += '<thead><tr><th>序号</th><th>里程碑节点</th><th>预计完成时间</th><th>节点说明</th></tr></thead><tbody>';
+                    html += '<thead><tr><th>序号</th><th>关键节点</th><th>预计完成时间</th><th>节点说明</th></tr></thead><tbody>';
                     for (var i = 0; i < milestones.length; i++) {
                         var m = milestones[i];
                         html += '<tr>';
@@ -373,7 +365,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                     }
                     html += '</tbody></table>';
                 } else {
-                    html += '<p style="color:#999;text-align:center;">暂无里程碑节点</p>';
+                    html += '<p style="color:#999;text-align:center;">暂无关键节点</p>';
                 }
                 html += '</div>';
 
@@ -396,20 +388,16 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
 
                 $('#detailContent').html(html);
 
-                // Render task table
                 renderTaskTable();
 
-                // Bind add task button
                 $('#addTaskBtn').on('click', function(){
                     openTaskForm(null);
                 });
 
-                // Bind publish button
                 $('#publishBtn').on('click', function(){
                     publishTasks();
                 });
 
-                // Bind close button
                 $('#closeBtn').on('click', function(){
                     closePage();
                 });
@@ -433,9 +421,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         }
     });
 
-    // Render task table using layui table
     function renderTaskTable() {
-        // Add relateNames to each task data for display
         var displayData = [];
         for (var i = 0; i < taskListData.length; i++) {
             var t = taskListData[i];
@@ -621,7 +607,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         formHtml += '</div>';
         formHtml += '</div>';
 
-        // Buttons
         formHtml += '<div class="layui-form-item" style="text-align:center;margin-top:20px;">';
         formHtml += '<button type="button" class="layui-btn btn-blue" id="submitTaskBtn" lay-submit lay-filter="submitTask">提交</button>';
         formHtml += '<button type="button" class="layui-btn layui-btn-primary" id="cancelTaskBtn">取消</button>';
@@ -637,14 +622,12 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
             success: function(layero, index){
                 form.render(null, 'taskForm');
 
-                // Initialize date picker
                 laydate.render({
                     elem: '#taskEndTime',
                     format: 'yyyy-MM-dd',
                     type: 'date'
                 });
 
-                // Initialize needCar toggle
                 form.on('select(needCar)', function(data){
                     var val = parseInt(data.value);
                     var carGroup = $('#carFieldsGroup');
@@ -652,24 +635,19 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                         carGroup.show();
                     } else {
                         carGroup.hide();
-                        // Clear values when hiding
                         $('#tollFee').val('');
                         $('#mileage').val('');
                     }
                 });
 
-                // Initialize user select component
                 initUserSelect(isEdit ? (taskData.relateUserIds || '') : '', isEdit ? taskData : null);
 
-                // Initialize exec user (责任人) search select component
                 initExecUserSelect(isEdit ? taskData : null);
 
-                // Cancel button
                 layero.find('#cancelTaskBtn').on('click', function(){
                     layer.close(index);
                 });
 
-                // Submit button
                 layero.find('#submitTaskBtn').on('click', function(){
                     submitTaskForm(index, isEdit);
                 });
@@ -677,7 +655,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         });
     }
 
-    // Initialize user select component with fuzzy search
     var selectedUsers = []; // {id, name}
 
     // ========== 责任人搜索选择组件（单选） ==========
@@ -685,13 +662,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         var dropdown = $('#execUserSelectDropdown');
         var searchInput = $('#execUserSearchInput');
 
-        // If editing, the input already has the name value; hidden fields already have id/name/phone
-
-        // Fuzzy search on input
         var searchTimer = null;
         searchInput.off('input').on('input', function(){
             var val = $(this).val().trim();
-            // If user manually clears the input, clear hidden fields too
             if (val === '') {
                 $('#execUserId').val('');
                 $('#execUserName').val('');
@@ -700,7 +673,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 dropdown.empty();
                 return;
             }
-            // Check if the current value matches the selected user name — if yes, don't search
             var currentName = $('#execUserName').val();
             if (val === currentName) {
                 dropdown.hide();
@@ -737,32 +709,26 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
             }, 300);
         });
 
-        // Click on dropdown option to select user
         dropdown.off('click', '.user-select-option').on('click', '.user-select-option', function(){
             var uid = String($(this).data('id'));
             var uname = $(this).data('name');
             var uphone = $(this).data('phone') || '';
-            // Set hidden fields
             $('#execUserId').val(uid);
             $('#execUserName').val(uname);
             $('#execUserPhone').val(uphone);
-            // Set visible input to show name
             searchInput.val(uname);
             dropdown.hide();
             dropdown.empty();
         });
 
-        // Hide dropdown when clicking outside
         $(document).off('click.execUserSelect').on('click.execUserSelect', function(e){
             if (!$(e.target).closest('#execUserSelectWrapper').length) {
                 dropdown.hide();
             }
         });
 
-        // Focus the search input when clicking on it — clear if it was a previous selection, to allow re-search
         searchInput.off('focus').on('focus', function(){
             var currentName = $('#execUserName').val();
-            // If the displayed value matches a selected name, keep it; user can re-type to search again
         });
     }
 
@@ -772,19 +738,15 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         var searchInput = $('#userSearchInput');
         var tagsContainer = $('#userSelectTags');
 
-        // If editing, resolve existing relateUserIds to names
         if (existingIds && existingIds !== '') {
             var ids = existingIds.split(',');
             for (var i = 0; i < ids.length; i++) {
                 var uid = ids[i].trim();
                 if (uid !== '') {
-                    // Use userMap to resolve ID -> name
                     var uname = userMap[uid];
                     if (uname) {
                         selectedUsers.push({id: uid, name: uname});
                     } else {
-                        // If not in map, try to fetch all users and find by ID
-                        // We'll use a fallback approach
                         selectedUsers.push({id: uid, name: '用户' + uid});
                     }
                 }
@@ -793,7 +755,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
             updateRelateUserIdsHidden();
         }
 
-        // Fuzzy search on input
         var searchTimer = null;
         searchInput.off('input').on('input', function(){
             var val = $(this).val().trim();
@@ -815,10 +776,8 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                                 var u = res.data[i];
                                 var uName = u.realName || u.name || u.userName || '-';
                                 var uId = u.id;
-                                // Also update userMap
                                 userMap[String(uId)] = uName;
 
-                                // Check if already selected
                                 var alreadySelected = false;
                                 for (var j = 0; j < selectedUsers.length; j++) {
                                     if (selectedUsers[j].id === String(uId)) {
@@ -848,11 +807,9 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
             }, 300);
         });
 
-        // Click on dropdown option to add user
         dropdown.off('click', '.user-select-option').on('click', '.user-select-option', function(){
             var uid = String($(this).data('id'));
             var uname = $(this).data('name');
-            // Add to selected
             var exists = false;
             for (var i = 0; i < selectedUsers.length; i++) {
                 if (selectedUsers[i].id === uid) {
@@ -865,13 +822,11 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 renderUserTags();
                 updateRelateUserIdsHidden();
             }
-            // Clear input and hide dropdown
             searchInput.val('');
             dropdown.hide();
             dropdown.empty();
         });
 
-        // Hide dropdown when clicking outside (scoped to the wrapper)
         $(document).off('click.userSelect').on('click.userSelect', function(e){
             if (!$(e.target).closest('#userSelectWrapper').length) {
                 dropdown.hide();
@@ -890,7 +845,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         }
         tagsContainer.html(html);
 
-        // Bind remove click
         tagsContainer.find('.tag-remove').off('click').on('click', function(){
             var rid = String($(this).data('id'));
             for (var i = 0; i < selectedUsers.length; i++) {
@@ -912,7 +866,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         $('#relateUserIds').val(ids.join(','));
     }
 
-    // Submit task form
     function submitTaskForm(layerIndex, isEdit) {
         var execUserId = $('#execUserId').val();
         var execUserName = $('#execUserName').val();
@@ -984,7 +937,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         });
     }
 
-    // Reload task table data
     function reloadTaskTable() {
         $.ajax({
             url: '/project/execute/executeDetail/' + projectId,
@@ -999,7 +951,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                             taskListData.push(tasks[i]);
                         }
                     }
-                    // Refresh user map
                     loadUserMap(taskListData);
                     renderTaskTable();
                 }
@@ -1007,7 +958,6 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         });
     }
 
-    // (Operation buttons are now handled via templet + done callback click bindings)
     // ========== 任务延期弹窗 ==========
     function openDelayForm(taskId) {
         // Find task data

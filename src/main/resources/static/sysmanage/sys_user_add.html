@@ -334,7 +334,6 @@ function setCheckedDeptIds(form, $, deptIds) {
         }
     });
 
-    console.log('[DEBUG] setCheckedDeptIds - idList:', idList);
 
     $('#deptTreeContainer input[name="deptIds"]').each(function() {
         var val = $(this).val(); // 保持字符串比较
@@ -406,7 +405,6 @@ function setCheckedRoleIds(form, $, roleIds) {
         }
     });
 
-    console.log('[DEBUG] setCheckedRoleIds - idList:', idList);
 
     $('#roleListContainer input[name="roleIds"]').each(function() {
         var val = $(this).val();
@@ -506,7 +504,6 @@ layui.use(['form', 'layer'], function(){
                 type: 'GET',
                 headers: {token: token},
                 success: function(res) {
-                    console.log('[DEBUG] /sys/userDept/listByUser response:', JSON.stringify(res));
                     if (res.code === 200 && res.data) {
                         setCheckedDeptIds(form, $, res.data);
                     }

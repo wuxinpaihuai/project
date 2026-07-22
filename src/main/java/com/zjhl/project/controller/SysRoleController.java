@@ -100,7 +100,8 @@ public class SysRoleController {
     /**
      * 新增角色（同时保存菜单权限）
      */
-    @PostMapping("/add")
+    @SuppressWarnings("unchecked")
+	@PostMapping("/add")
     public Map<String, Object> add(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         if (!StpUtil.isLogin()) {
@@ -146,6 +147,7 @@ public class SysRoleController {
     /**
      * 更新角色（同时更新菜单权限）
      */
+    @SuppressWarnings("unchecked")
     @PutMapping("/update")
     public Map<String, Object> update(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
