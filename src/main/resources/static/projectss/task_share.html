@@ -122,6 +122,13 @@
         /* Bottom buttons */
         .bottom-btns { text-align: center; padding: 20px 0; margin-top: 15px; }
         .disabled-op { color: #999; font-size: 12px; }
+        .car-info-btn {
+            color: #1e9fff; cursor: pointer; text-decoration: underline;
+            display: inline-block; padding: 0 4px;
+        }
+        .car-info-btn:hover { color: #0d8dee; }
+        .car-tips-content { font-size: 13px; line-height: 1.8; min-width: 140px; }
+        .car-tips-content div { margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -439,7 +446,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                     return d.LAY_INDEX+1;
                 }},
                 {field: 'execUserName', title: '责任人', width: 100},
-                {field: 'taskContent', title: '主体工作', minWidth: 150},
+                {field: 'taskContent', title: '主体工作', minWidth: 120},
                 {field: 'taskEndTime', title: '截止时间', width: 120, templet: function(d){
                     var dlStatus = getDeadlineStatus(d.taskEndTime, d.taskStatus);
                     var dateStr = formatShortDate(d.taskEndTime);
@@ -451,13 +458,19 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                     return dateStr;
                 }},
                 {field: 'workAmount', title: '耗时(天)', width: 80},
-                {field: 'workContent', title: '工作成果', minWidth: 120},
-                {field: 'relateNames', title: '关联提醒', minWidth: 120},
+                {field: 'workContent', title: '工作成果', minWidth: 100},
+                {field: 'relateNames', title: '关联提醒', minWidth: 100},
+                {field: 'needCar', title: '是否派车', width: 90, align: 'center', templet: function(d){
+                    if (d.needCar === 1) {
+                        return '<span class="car-info-btn" data-toll="' + (d.tollFee || 0) + '" data-mile="' + (d.mileage || 0) + '">是</span>';
+                    }
+                    return '否';
+                }},
                 {field: 'taskStatus', title: '任务状态', width: 100, templet: function(d){
                     var statusInfo = taskStatusMap[d.taskStatus] || {name: '-', cls: ''};
                     return '<span class="' + statusInfo.cls + '">' + statusInfo.name + '</span>';
                 }},
-                {field: 'operation', title: '操作', width: 130, fixed: 'right', templet: function(d){
+                {field: 'operation', title: '操作', width: 130, templet: function(d){
                     var status = d.taskStatus;
                     if (status === 1 || status === 2 || status === 3 || status === 4 || status === 5) {
                         return '<span class="disabled-op">不可操作</span>'; 
@@ -504,6 +517,20 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
                 $('.delay-btn').off('click').on('click', function(){
                     var taskId = String($(this).data('id'));
                     openDelayForm(taskId);
+                });
+                $('.car-info-btn').off('click').on('click', function(){
+                    var toll = parseFloat($(this).data('toll') || 0).toFixed(2);
+                    var mile = parseFloat($(this).data('mile') || 0).toFixed(1);
+                    var tipsHtml = '<div class="car-tips-content">' +
+                        '<div><strong>通行费：</strong>' + toll + ' 元</div>' +
+                        '<div><strong>里程数：</strong>' + mile + ' 公里</div>' +
+                        '</div>';
+                    layer.tips(tipsHtml, this, {
+                        tips: [3, '#1e9fff'],
+                        time: 5000,
+                        area: 'auto',
+                        maxWidth: 260
+                    });
                 });
             }
         });

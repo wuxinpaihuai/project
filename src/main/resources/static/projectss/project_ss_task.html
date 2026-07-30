@@ -335,8 +335,11 @@
                     if (status === 3 || status === 4 || status === 5 || status === 6) {
                         return '<a class="op-btn op-btn-detail" data-task-id="' + taskId + '" data-action="detail">任务详情</a>';
                     }
-                    if (status === 0 || status === 1 || status === 2) {
+                    if (status === 1 || status === 2) {
                         return '<a class="op-btn op-btn-submit" data-task-id="' + taskId + '" data-action="complete">提交任务</a>';
+                    }
+                    if (status === 0) {
+                        return '等待发布';
                     }
                     return '-';
                 }}

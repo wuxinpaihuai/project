@@ -126,10 +126,13 @@ public class PrjectExcuteController {
     }
 
     /**
-     * 项目实施详情 - 返回项目信息、拜访记录、签约信息、里程碑、实施任务
+     * 项目实施详情 - 返回项目信息、拜访记录、签约信息、里程碑、任务
+     * 通过 stageType 参数支持不同阶段（1=投标阶段, 3=实施阶段），默认3
      */
     @GetMapping("/executeDetail/{projectId}")
-    public Map<String, Object> executeDetail(@PathVariable Long projectId) {
+    public Map<String, Object> executeDetail(
+            @PathVariable Long projectId,
+            @RequestParam(required = false, defaultValue = "3") Integer stageType) {
         Map<String, Object> result = new HashMap<>();
         if (!StpUtil.isLogin()) {
             result.put("code", 401);
@@ -190,12 +193,19 @@ public class PrjectExcuteController {
         List<SignMilestone> milestones = signMilestoneService.list(milestoneWrapper);
         result.put("milestones", milestones);
 
-        // 6. 实施任务列表（stage_type=3）
+        // 6. 任务列表（根据stageType过滤，默认实施阶段stage_type=3）
         QueryWrapper<ProjectTask> taskWrapper = new QueryWrapper<>();
-        taskWrapper.eq("project_id", projectId).eq("stage_type", 3);
+        taskWrapper.eq("project_id", projectId).eq("stage_type", stageType);
         taskWrapper.orderByAsc("task_end_time");
         List<ProjectTask> tasks = projectTaskService.list(taskWrapper);
         result.put("tasks", tasks);
+
+        // 7. 当前阶段附件
+        QueryWrapper<ProjectFile> stageFileWrapper = new QueryWrapper<>();
+        stageFileWrapper.eq("project_id", projectId).eq("stage_type", stageType);
+        stageFileWrapper.orderByAsc("create_time");
+        List<ProjectFile> stageFiles = projectFileService.list(stageFileWrapper);
+        result.put("stageFiles", stageFiles);
 
         result.put("code", 200);
         result.put("msg", "查询成功");
@@ -203,7 +213,7 @@ public class PrjectExcuteController {
     }
 
     /**
-     * 新增实施任务
+     * 新增任务（支持投标阶段/实施阶段，通过stageType指定，默认实施阶段3）
      */
     @PostMapping("/addTask")
     public Map<String, Object> addTask(@RequestBody Map<String, Object> params) {
@@ -217,7 +227,8 @@ public class PrjectExcuteController {
         Long projectId = Long.parseLong(params.get("projectId").toString());
         ProjectTask task = new ProjectTask();
         task.setProjectId(projectId);
-        task.setStageType(3); // 实施阶段
+        Integer stageType = params.get("stageType") != null ? Integer.parseInt(params.get("stageType").toString()) : 3;
+        task.setStageType(stageType);
         
         // 设置当前登录用户为任务分配人
         Long loginUserId = StpUtil.getLoginIdAsLong();
@@ -363,10 +374,13 @@ public class PrjectExcuteController {
     }
     
     /**
-     * 任务发布 - 将该项目所有未开始(task_status=0)的实施任务更新为执行中(task_status=1)
+     * 任务发布 - 将该项目所有未开始(task_status=0)的任务更新为执行中(task_status=1)
+     * 通过 stageType 参数支持不同阶段（1=投标阶段, 3=实施阶段），默认3
      */
     @PostMapping("/publishTask/{projectId}")
-    public Map<String, Object> publishTask(@PathVariable Long projectId) {
+    public Map<String, Object> publishTask(
+            @PathVariable Long projectId,
+            @RequestParam(required = false, defaultValue = "3") Integer stageType) {
         Map<String, Object> result = new HashMap<>();
         if (!StpUtil.isLogin()) {
             result.put("code", 401);
@@ -375,7 +389,7 @@ public class PrjectExcuteController {
         }
 
         QueryWrapper<ProjectTask> wrapper = new QueryWrapper<>();
-        wrapper.eq("project_id", projectId).eq("stage_type", 3).eq("task_status", 0);
+        wrapper.eq("project_id", projectId).eq("stage_type", stageType).eq("task_status", 0);
         List<ProjectTask> tasks = projectTaskService.list(wrapper);
 
         if (tasks.isEmpty()) {
@@ -399,19 +413,22 @@ public class PrjectExcuteController {
             sms.setProjectId(task.getProjectId());
             sms.setReceiveUserId(task.getExecUserId());//责任人
             sms.setCreateTime(LocalDateTime.now());
-            if(task.getRelateUserIds() != null && task.getRelateUserIds().split(",").length > 0) {
+            if(task.getRelateUserIds() != null && !task.getRelateUserIds().trim().isEmpty()) {
             	List<SysMessage> smsList = new ArrayList<>();
             	smsList.add(sms);
-            	for (String id :task.getRelateUserIds().split(",")) {
+            	for (String id : task.getRelateUserIds().split(",")) {
+            		if (id == null || id.trim().isEmpty()) {
+            			continue;
+            		}
             		SysMessage s = new SysMessage();
-            		 s.setContent("项目："+ projectName +" 已为："+ task.getAssignUserName()+" 分配工作：" + task.getTaskContent() );
-                     s.setReadStatus(0);//未读
-                     s.setMsgType(2);//消息通知
-                     s.setTaskId(task.getId());
-                     s.setProjectId(task.getProjectId());
-                     s.setReceiveUserId(Long.parseLong(id));//关联领导
-                     s.setCreateTime(LocalDateTime.now());
-                     smsList.add(s);
+            		s.setContent("项目："+ projectName +" 已为："+ task.getAssignUserName()+" 分配工作：" + task.getTaskContent() );
+                    s.setReadStatus(0);//未读
+                    s.setMsgType(2);//消息通知
+                    s.setTaskId(task.getId());
+                    s.setProjectId(task.getProjectId());
+                    s.setReceiveUserId(Long.parseLong(id.trim()));//关联领导
+                    s.setCreateTime(LocalDateTime.now());
+                    smsList.add(s);
 				}
             	sysMessageService.saveBatch(smsList);
             }
