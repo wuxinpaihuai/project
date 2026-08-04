@@ -701,7 +701,7 @@ public class ProjectSignController {
         for (ProjectTask task : tasks) {
             QueryWrapper<ProjectTaskAttachment> attachWrapper = new QueryWrapper<>();
             attachWrapper.eq("task_id", task.getId());
-            attachWrapper.eq("attach_type", 2);
+            //attachWrapper.eq("attach_type", 2);
             attachWrapper.orderByAsc("create_time");
             List<ProjectTaskAttachment> attachments = projectTaskAttachmentService.list(attachWrapper);
             Map<String, Object> taskMap = new HashMap<>();

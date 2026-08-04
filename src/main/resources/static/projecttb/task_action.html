@@ -22,6 +22,9 @@
             display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 8px 30px;
         }
+        .info-item-full { grid-column: 1 / -1; }
+        .deadline-overdue { color: #ff5722; font-weight: bold; }
+        .deadline-near { color: #ffb800; font-weight: bold; }
         .info-item {
             display: flex; line-height: 28px; font-size: 14px;
         }
@@ -73,9 +76,15 @@
         <div class="section-title">任务完成信息</div>
         <form class="layui-form" lay-filter="taskActionForm">
             <div class="layui-form-item">
-                <label class="layui-form-label">完成说明</label>
+                <label class="layui-form-label"><span style="color:red;">*</span>工作成果</label>
                 <div class="layui-input-block">
-                    <textarea name="taskDesc" id="taskDesc" placeholder="请输入任务完成说明" class="layui-textarea" style="height:120px;"></textarea>
+                    <textarea name="workContent" id="workContent" placeholder="请输入工作成果" class="layui-textarea" style="height:100px;"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-block">
+                    <textarea name="taskDesc" id="taskDesc" placeholder="请输入备注" class="layui-textarea" style="height:100px;"></textarea>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -126,6 +135,25 @@ layui.use(['form', 'layer', 'upload'], function(){
         return t ? t.replace('T', ' ') : '-';
     }
 
+    // 判断截止时间状态：已超期 / 即将到期(3天内) / 正常
+    function getDeadlineStatus(taskEndTime, taskStatus) {
+        if (!taskEndTime || taskStatus === 3 || taskStatus === 4) return 'normal';
+        try {
+            var endStr = taskEndTime;
+            if (endStr.indexOf('T') > -1) endStr = endStr.replace('T', ' ');
+            if (endStr.length === 10) endStr += ' 00:00:00';
+            var end = new Date(endStr);
+            var now = new Date();
+            var diffMs = end.getTime() - now.getTime();
+            var diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays < 0) return 'overdue';
+            if (diffDays <= 3) return 'near';
+            return 'normal';
+        } catch(e) {
+            return 'normal';
+        }
+    }
+
     // 加载任务详情
     $.ajax({
         url: '/project/tb/taskDetail/' + taskId,
@@ -142,17 +170,28 @@ layui.use(['form', 'layer', 'upload'], function(){
             var statusInfo = taskStatusMap[task.taskStatus] || {name: '-', cls: ''};
 
             var html = '';
-            html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + (project ? project.projectName : '-') + '</span></div>';
+            // 第一行：项目名称（独占一行）
+            html += '<div class="info-item info-item-full"><span class="info-label">项目名称：</span><span class="info-value">' + (project ? project.projectName : '-') + '</span></div>';
+            // 第二行：任务分配人、联系方式
             html += '<div class="info-item"><span class="info-label">任务分配人：</span><span class="info-value">' + (task.assignUserName || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + (task.assignUserPhone || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">任务内容：</span><span class="info-value">' + (task.taskContent || '-') + '</span></div>';
+            // 第三行：主体工作（独占一行）
+            html += '<div class="info-item info-item-full"><span class="info-label">主体工作：</span><span class="info-value">' + (task.taskContent || '-') + '</span></div>';
+            // 第四行：任务截止时间、是否派车
+            var dlStatus = getDeadlineStatus(task.taskEndTime, task.taskStatus);
+            var endTimeHtml = formatTime(task.taskEndTime);
+            if (dlStatus === 'overdue') {
+                endTimeHtml = '<span class="deadline-overdue">' + endTimeHtml + '（已超期）</span>';
+            } else if (dlStatus === 'near') {
+                endTimeHtml = '<span class="deadline-near">' + endTimeHtml + '（即将到期）</span>';
+            }
+            html += '<div class="info-item"><span class="info-label">任务截止时间：</span><span class="info-value">' + endTimeHtml + '</span></div>';
             html += '<div class="info-item"><span class="info-label">是否派车：</span><span class="info-value">' + (task.needCar === 1 ? '是' : '否') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">通行费：</span><span class="info-value">' + (task.tollFee != null ? parseFloat(task.tollFee).toFixed(2) : '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">里程数：</span><span class="info-value">' + (task.mileage != null ? parseFloat(task.mileage).toFixed(1) : '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">交付类型：</span><span class="info-value">' + (deliverTypeMap[task.deliverType] || '-') + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">任务开始：</span><span class="info-value">' + formatTime(task.taskStartTime) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">任务截止：</span><span class="info-value">' + formatTime(task.taskEndTime) + '</span></div>';
-            html += '<div class="info-item"><span class="info-label">当前状态：</span><span class="info-value"><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></span></div>';
+            // 第五行（条件展示）：里程数、通行费
+            if (task.needCar === 1) {
+                html += '<div class="info-item"><span class="info-label">里程数：</span><span class="info-value">' + (task.mileage != null ? parseFloat(task.mileage).toFixed(1) : '-') + ' 公里</span></div>';
+                html += '<div class="info-item"><span class="info-label">通行费：</span><span class="info-value">' + (task.tollFee != null ? parseFloat(task.tollFee).toFixed(2) : '-') + ' 元</span></div>';
+            }
 
             $('#taskInfoGrid').html(html);
         }
@@ -165,6 +204,7 @@ layui.use(['form', 'layer', 'upload'], function(){
         headers: {token: token},
         multiple: true,
         auto: true,
+        accept: 'file',
         done: function(res) {
             if (res.code === 200) {
                 uploadedFiles.push({
@@ -203,9 +243,10 @@ layui.use(['form', 'layer', 'upload'], function(){
 
     // 提交任务
     $('#submitBtn').on('click', function(){
+        var workContent = $('#workContent').val().trim();
         var taskDesc = $('#taskDesc').val().trim();
-        if (!taskDesc) {
-            layer.msg('请填写任务完成说明', {icon: 5});
+        if (!workContent) {
+            layer.msg('请填写工作成果', {icon: 5});
             return;
         }
 
@@ -225,25 +266,27 @@ layui.use(['form', 'layer', 'upload'], function(){
                 var isOverdue = endTime && now.getTime() > endTime.getTime();
                 var taskStatus = isOverdue ? 4 : 3; // 4=延迟完成，3=已完成
 
-                doSubmit(taskStatus, taskDesc);
+                doSubmit(taskStatus, workContent, taskDesc);
             }
         });
     });
 
     // 提交但未完成
     $('#submitFailBtn').on('click', function(){
+        var workContent = $('#workContent').val().trim();
         var taskDesc = $('#taskDesc').val().trim();
-        if (!taskDesc) {
-            layer.msg('请填写任务完成说明', {icon: 5});
+        if (!workContent) {
+            layer.msg('请填写工作成果', {icon: 5});
             return;
         }
-        doSubmit(5, taskDesc); // 5=任务失败
+        doSubmit(5, workContent, taskDesc); // 5=任务失败
     });
 
-    function doSubmit(taskStatus, taskDesc) {
+    function doSubmit(taskStatus, workContent, taskDesc) {
         var postData = {
             taskId: taskId,
             taskStatus: taskStatus,
+            workContent: workContent,
             taskDesc: taskDesc,
             fileList: uploadedFiles
         };

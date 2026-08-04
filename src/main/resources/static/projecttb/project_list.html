@@ -248,8 +248,8 @@ layui.use(['table', 'layer', 'form'], function(){
             return;
         }
         var selectedProject = checkData[0];
-        if (selectedProject.stageStatus !== 0) {
-            layer.msg('只能对未开始状态的项目进行体系作战任务分配', {icon: 5});
+        if (selectedProject.stageStatus === 2) {
+            layer.msg('该项目投标已结束', {icon: 5});
             return;
         }
         layer.open({

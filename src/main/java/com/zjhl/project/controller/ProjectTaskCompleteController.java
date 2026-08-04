@@ -143,6 +143,9 @@ public class ProjectTaskCompleteController {
             row.put("remark", task.getRemark());
             row.put("assignUserName", task.getAssignUserName());
             row.put("assignUserPhone", task.getAssignUserPhone());
+            row.put("needCar", task.getNeedCar());
+            row.put("tollFee", task.getTollFee());
+            row.put("mileage", task.getMileage());
             // 附件列表
             List<ProjectTaskAttachment> taskAttachs = attachMap.getOrDefault(task.getId(), new ArrayList<>());
             List<Map<String, Object>> attachList = new ArrayList<>();

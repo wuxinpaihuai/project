@@ -54,12 +54,19 @@
         .file-item a:hover {
             text-decoration: underline;
         }
-        .task-status-0 { color: #ff5722; }
-        .task-status-1 { color: #ff5722; }
+        .task-status-0 { color: #999; }
+        .task-status-1 { color: #1e9fff; }
         .task-status-2 { color: #ff5722; }
         .task-status-3 { color: #86c566; }
         .task-status-4 { color: #ffb800; }
         .task-status-5 { color: #999; }
+        .task-status-6 { color: #a233c6; }
+        .car-yes {
+            color: #1e9fff; cursor: pointer; text-decoration: underline;
+        }
+        .car-no {
+            color: #999;
+        }
         .btn-blue {
             background-color: #1e9fff !important; color: #fff !important;
             border-color: #1e9fff !important;
@@ -105,15 +112,14 @@ layui.use(['layer'], function(){
     };
 
     var taskStatusMap = {
-        0: {name: '未完成', cls: 'task-status-0'},
-        1: {name: '进行中', cls: 'task-status-1'},
-        2: {name: '进行中', cls: 'task-status-2'},
-        3: {name: '已完成', cls: 'task-status-3'},
-        4: {name: '延迟完成', cls: 'task-status-4'},
-        5: {name: '任务失败', cls: 'task-status-5'}
+        0: {name: '未开始', cls: 'task-status-0'},
+        1: {name: '执行中', cls: 'task-status-1'},
+        2: {name: '延时执行中', cls: 'task-status-2'},
+        3: {name: '按时完成', cls: 'task-status-3'},
+        4: {name: '延时完成', cls: 'task-status-4'},
+        5: {name: '未完成', cls: 'task-status-5'},
+        6: {name: '申请延期中', cls: 'task-status-6'}
     };
-
-    var deliverTypeMap = {1: '文档', 2: '表格', 3: '图片', 4: '其他'};
 
     function formatTime(t) {
         return t ? t.replace('T', ' ') : '-';
@@ -129,6 +135,70 @@ layui.use(['layer'], function(){
     function safeStr(v) {
         return (v != null && v !== '') ? String(v) : '-';
     }
+
+    var userMap = {};
+
+    // 加载关联提醒用户映射（根据任务中的 relateUserIds 收集用户 ID，再批量查询用户名）
+    function loadUserMap(tasks) {
+        var allIds = [];
+        if (tasks) {
+            for (var i = 0; i < tasks.length; i++) {
+                var rids = tasks[i].relateUserIds;
+                if (rids) {
+                    var ids = rids.split(',');
+                    for (var j = 0; j < ids.length; j++) {
+                        var uid = ids[j].trim();
+                        if (uid !== '' && !userMap[uid]) {
+                            allIds.push(uid);
+                        }
+                    }
+                }
+            }
+        }
+        if (allIds.length > 0) {
+            $.ajax({
+                url: '/sys/user/searchByName?name=',
+                type: 'GET',
+                headers: {token: token},
+                async: false,
+                success: function(res) {
+                    if (res && res.code === 200 && res.data) {
+                        for (var i = 0; i < res.data.length; i++) {
+                            var u = res.data[i];
+                            userMap[String(u.id)] = u.realName || u.name || '-';
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function resolveRelateNames(relateUserIds) {
+        if (!relateUserIds || relateUserIds === '') return '-';
+        var ids = relateUserIds.split(',');
+        var names = [];
+        for (var i = 0; i < ids.length; i++) {
+            var uid = ids[i].trim();
+            if (uid !== '' && userMap[uid]) {
+                names.push(userMap[uid]);
+            }
+        }
+        return names.length > 0 ? names.join(', ') : '-';
+    }
+
+    function showCarInfo(tollFee, mileage) {
+        layer.open({
+            type: 1,
+            title: '派车信息',
+            skin: 'layui-layer-lan',
+            area: ['320px', 'auto'],
+            content: '<div style="padding:15px;font-size:14px;line-height:2;">' +
+                '<p><strong>通行费：</strong>' + formatAmount(tollFee) + ' 元</p>' +
+                '<p><strong>里程数：</strong>' + safeStr(mileage) + ' 公里</p>' +
+                '</div>'
+        });
+    }
+    window.showCarInfo = showCarInfo;
 
     // 加载详情数据
     $.ajax({
@@ -152,6 +222,9 @@ layui.use(['layer'], function(){
                     $('#detailContent').html('<p class="error-msg">项目数据为空</p>');
                     return;
                 }
+
+                // 预加载关联提醒用户名
+                loadUserMap(tasks);
 
                 var html = '';
 
@@ -199,27 +272,46 @@ layui.use(['layer'], function(){
                 if (tasks.length === 0) {
                     html += '<p style="color:#999;text-align:center;padding:20px;">暂无任务</p>';
                 } else {
-                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+                    html += '<div style="overflow-x:auto;">';
+                    html += '<table class="layui-table" lay-skin="line" style="margin-top:0;min-width:1100px;">';
                     html += '<thead><tr>';
-                    html += '<th>序号</th><th>负责人</th><th>联系方式</th><th>任务内容</th><th>工作成果类型</th><th>完成描述</th><th>工作成果</th><th>任务截止</th><th>完成时间</th><th>状态</th>';
+                    html += '<th style="width:50px;">序号</th>';
+                    html += '<th>责任人</th>';
+                    html += '<th>主体工作</th>';
+                    html += '<th>截止时间</th>';
+                    html += '<th style="width:80px;">耗时（天）</th>';
+                    html += '<th>工作成果</th>';
+                    html += '<th>关联提醒</th>';
+                    html += '<th style="width:90px;">任务状态</th>';
+                    html += '<th style="width:80px;">是否派车</th>';
+                    html += '<th>备注</th>';
+                    html += '<th>工作附件</th>';
                     html += '</tr></thead><tbody>';
                     for (var i = 0; i < tasks.length; i++) {
                         var t = tasks[i];
                         var statusInfo = taskStatusMap[t.taskStatus] || {name: '-', cls: ''};
+                        var carHtml = '';
+                        if (t.needCar === 1) {
+                            carHtml = '<span class="car-yes" onclick="showCarInfo(' + (t.tollFee != null ? '\'' + t.tollFee + '\'' : 'null') + ', ' + (t.mileage != null ? '\'' + t.mileage + '\'' : 'null') + ')">是</span>';
+                        } else {
+                            carHtml = '<span class="car-no">否</span>';
+                        }
                         html += '<tr>';
                         html += '<td>' + (i+1) + '</td>';
                         html += '<td>' + safeStr(t.execUserName) + '</td>';
-                        html += '<td>' + safeStr(t.execUserPhone) + '</td>';
                         html += '<td>' + safeStr(t.taskContent) + '</td>';
-                        html += '<td>' + (deliverTypeMap[t.deliverType] || '-') + '</td>';
-                        html += '<td>' + safeStr(t.completeDesc) + '</td>';
-                        html += '<td id="taskAttach_' + t.id + '">-</td>';
                         html += '<td>' + formatTime(t.taskEndTime) + '</td>';
-                        html += '<td>' + formatTime(t.execFinishTime) + '</td>';
+                        html += '<td>' + safeStr(t.workAmount) + '</td>';
+                        html += '<td>' + safeStr(t.workContent) + '</td>';
+                        html += '<td>' + resolveRelateNames(t.relateUserIds) + '</td>';
                         html += '<td><span class="' + statusInfo.cls + '">' + statusInfo.name + '</span></td>';
+                        html += '<td>' + carHtml + '</td>';
+                        html += '<td>' + safeStr(t.remark) + '</td>';
+                        html += '<td id="taskAttach_' + t.id + '">-</td>';
                         html += '</tr>';
                     }
                     html += '</tbody></table>';
+                    html += '</div>';
                 }
                 html += '</div>';
 

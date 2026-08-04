@@ -97,6 +97,18 @@
         .tech-user-wrap .tech-dropdown .tech-list .tech-item .item-phone { color: #999; font-size: 12px; }
         .tech-user-wrap .tech-dropdown .tech-list .tech-empty { padding: 15px; text-align: center; color: #999; font-size: 13px; }
         .sign-form .readonly-input { background:#f2f2f2; cursor:not-allowed; }
+        .car-info-btn {
+            color: #1e9fff; cursor: pointer; text-decoration: underline;
+            display: inline-block; padding: 0 4px;
+        }
+        .car-info-btn:hover { color: #0d8dee; }
+        .car-tips-content { font-size: 13px; line-height: 1.8; min-width: 140px; }
+        .car-tips-content div { margin-bottom: 2px; }
+        .task-attachment-list a {
+            display: inline-block; color: #1e9fff; font-size: 12px;
+            margin-right: 8px; line-height: 1.8;
+        }
+        .task-attachment-list a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -146,6 +158,37 @@
             </div>
             <!-- 我的任务Tab -->
             <div class="layui-tab-item">
+                <div class="search-card">
+                    <form class="layui-form" lay-filter="myTaskSearchForm">
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">项目名称</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="projectName" id="searchMyTaskProjectName" placeholder="请输入项目名称" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">任务状态</label>
+                                <div class="layui-input-inline">
+                                    <select name="taskStatus" id="searchMyTaskStatus">
+                                        <option value="">全部</option>
+                                        <option value="0">未开始</option>
+                                        <option value="1">执行中</option>
+                                        <option value="2">延时执行中</option>
+                                        <option value="3">按时完成</option>
+                                        <option value="4">延时完成</option>
+                                        <option value="5">未完成</option>
+                                        <option value="6">申请延期中</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <button type="button" class="layui-btn btn-green" id="searchMyTaskBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                                <button type="reset" class="layui-btn layui-btn-primary" id="resetMyTaskBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
                 <div class="table-card">
                     <table id="myTaskTable" lay-filter="myTaskTable"></table>
                 </div>
@@ -296,7 +339,10 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
         url: '/project/tb/myTaskList',
         method: 'GET',
         headers: {token: token},
-        where: {},
+        where: {
+            projectName: '',
+            taskStatus: ''
+        },
         page: true,
         limit: 10,
         limits: [10, 20, 50, 100],
@@ -310,25 +356,17 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
             {type: 'numbers', title: '序号', width: 60, align: 'center'},
             {field: 'assignUserName', title: '任务分配人', width: 100, align: 'center'},
             {field: 'assignUserPhone', title: '联系方式', width: 120, align: 'center'},
-            {field: 'taskType', title: '任务类型', width: 100, align: 'center', templet: function(d){
-                var typeMap = {1:'业主调研', 2:'资料收集', 3:'现场勘察', 4:'成本估算', 5:'风险分析', 6:'方案设计', 7:'方案一审', 8:'方案二审', 9:'实施任务'};
-                return typeMap[d.taskType] || '-';
-            }},
-            {field: 'taskContent', title: '任务内容', minWidth: 180},
+            {field: 'taskContent', title: '主体工作', minWidth: 150},
+            {field: 'projectName', title: '项目名称', minWidth: 150},
+            {field: 'workAmount', title: '耗时（天）', width: 90, align: 'center'},
             {field: 'needCar', title: '是否派车', width: 90, align: 'center', templet: function(d){
-                return d.needCar === 1 ? '是' : '否';
+                if (d.needCar === 1) {
+                    return '<span class="car-info-btn" data-toll="' + (d.tollFee || 0) + '" data-mile="' + (d.mileage || 0) + '">是</span>';
+                }
+                return '否';
             }},
-            {field: 'tollFee', title: '通行费', width: 90, align: 'right', templet: function(d){
-                return d.tollFee != null ? parseFloat(d.tollFee).toFixed(2) : '-';
-            }},
-            {field: 'mileage', title: '里程数', width: 90, align: 'right', templet: function(d){
-                return d.mileage != null ? parseFloat(d.mileage).toFixed(1) : '-';
-            }},
-            {field: 'taskEndTime', title: '任务结束时间', width: 160, align: 'center', templet: function(d){
+            {field: 'taskEndTime', title: '截止时间', width: 160, align: 'center', templet: function(d){
                 return d.taskEndTime ? d.taskEndTime.replace('T', ' ') : '-';
-            }},
-            {field: 'deliverType', title: '交付类型', width: 90, align: 'center', templet: function(d){
-                return deliverTypeMap[d.deliverType] || '-';
             }},
             {field: 'taskStatus', title: '任务状态', width: 100, align: 'center', templet: function(d){
                 var info = taskStatusMap[d.taskStatus];
@@ -340,7 +378,22 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
             {field: 'execFinishTime', title: '任务完成时间', width: 160, align: 'center', templet: function(d){
                 return d.execFinishTime ? d.execFinishTime.replace('T', ' ') : '-';
             }},
-            {title: '操作', width: 100, align: 'center', fixed: 'right', toolbar: '#taskRowToolbar'}
+            {field: 'workContent', title: '工作成果', minWidth: 120},
+            {field: 'remark', title: '备注', minWidth: 100},
+            {field: 'attachments', title: '工作附件', width: 160, templet: function(d){
+                var atts = d.attachments;
+                if (!atts || !atts.length) return '-';
+                var html = '<div class="task-attachment-list">';
+                for (var i = 0; i < atts.length; i++) {
+                    var att = atts[i];
+                    var filePath = att.filePath || '';
+                    var fileName = att.fileName || '附件' + (i+1);
+                    html += '<a href="/file/download?filePath=' + encodeURIComponent(filePath) + '&fileName=' + encodeURIComponent(fileName) + '" target="_blank" title="' + fileName + '">' + fileName + '</a>';
+                }
+                html += '</div>';
+                return html;
+            }},
+            {title: '操作', width: 100, align: 'center', toolbar: '#taskRowToolbar'}
         ]],
         done: function(res) {
             if (res.code === 401) {
@@ -348,6 +401,20 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
                     window.top.location.href = '/login.html';
                 });
             }
+            $('.car-info-btn').off('click').on('click', function(){
+                var toll = parseFloat($(this).data('toll') || 0).toFixed(2);
+                var mile = parseFloat($(this).data('mile') || 0).toFixed(1);
+                var tipsHtml = '<div class="car-tips-content">' +
+                    '<div><strong>通行费：</strong>' + toll + ' 元</div>' +
+                    '<div><strong>里程数：</strong>' + mile + ' 公里</div>' +
+                    '</div>';
+                layer.tips(tipsHtml, this, {
+                    tips: [3, '#1e9fff'],
+                    time: 5000,
+                    area: 'auto',
+                    maxWidth: 260
+                });
+            });
         }
     });
 
@@ -399,6 +466,28 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
         table.reload('projectTable', {
             page: {curr: 1},
             where: {projectName: '', bidTimeStart: '', bidTimeEnd: ''}
+        });
+    });
+
+    // 我的任务搜索
+    $('#searchMyTaskBtn').on('click', function(){
+        table.reload('myTaskTable', {
+            page: {curr: 1},
+            where: {
+                projectName: $('#searchMyTaskProjectName').val().trim(),
+                taskStatus: $('#searchMyTaskStatus').val()
+            }
+        });
+    });
+
+    // 我的任务重置
+    $('#resetMyTaskBtn').on('click', function(){
+        $('#searchMyTaskProjectName').val('');
+        $('#searchMyTaskStatus').val('');
+        form.render('select', 'myTaskSearchForm');
+        table.reload('myTaskTable', {
+            page: {curr: 1},
+            where: {projectName: '', taskStatus: ''}
         });
     });
 

@@ -2,7 +2,9 @@ package com.zjhl.project.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,14 +168,14 @@ public class ProjectTbController {
         List<ProjectTask> tasks = projectTaskService.list(taskWrapper);
 
         // 为每个任务查询附件
-        for (ProjectTask task : tasks) {
-            QueryWrapper<ProjectTaskAttachment> attachWrapper = new QueryWrapper<>();
-            attachWrapper.eq("task_id", task.getId());
-            attachWrapper.eq("attach_type", 2);
-            attachWrapper.orderByAsc("create_time");
-           // List<ProjectTaskAttachment> attachments = projectTaskAttachmentService.list(attachWrapper);
-            task.setTaskDesc(task.getTaskDesc()); // 借用taskDesc暂存附件JSON
-        }
+		/*
+		 * for (ProjectTask task : tasks) { QueryWrapper<ProjectTaskAttachment>
+		 * attachWrapper = new QueryWrapper<>(); attachWrapper.eq("task_id",
+		 * task.getId()); attachWrapper.eq("attach_type", 2);
+		 * attachWrapper.orderByAsc("create_time"); // List<ProjectTaskAttachment>
+		 * attachments = projectTaskAttachmentService.list(attachWrapper);
+		 * task.setTaskDesc(task.getTaskDesc()); // 借用taskDesc暂存附件JSON }
+		 */
 
         // 投标结果 - 是否中标
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
@@ -427,7 +429,9 @@ public class ProjectTbController {
     @GetMapping("/myTaskList")
     public Map<String, Object> myTaskList(
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String projectName,
+            @RequestParam(required = false) String taskStatus) {
         Map<String, Object> result = new HashMap<>();
         if (!StpUtil.isLogin()) {
             result.put("code", 401);
@@ -437,19 +441,109 @@ public class ProjectTbController {
 
         Long userId = StpUtil.getLoginIdAsLong();
 
+        // 解析任务状态（兼容空字符串、null、数字字符串）
+        Integer status = null;
+        if (taskStatus != null && !taskStatus.isEmpty()) {
+            try {
+                status = Integer.parseInt(taskStatus);
+            } catch (NumberFormatException e) {
+                result.put("code", 400);
+                result.put("msg", "任务状态参数格式错误");
+                return result;
+            }
+        }
+
+        // 如果有项目名称筛选，先查匹配的项目ID
+        List<Long> projectIds = null;
+        if (projectName != null && !projectName.isEmpty()) {
+            QueryWrapper<ProjectInfo> piWrapper = new QueryWrapper<>();
+            piWrapper.like("project_name", projectName);
+            List<ProjectInfo> projects = projectInfoService.list(piWrapper);
+            projectIds = projects.stream().map(ProjectInfo::getId).collect(Collectors.toList());
+            if (projectIds.isEmpty()) {
+                result.put("code", 200);
+                result.put("msg", "查询成功");
+                result.put("total", 0);
+                result.put("records", Collections.EMPTY_LIST);
+                return result;
+            }
+        }
+
         QueryWrapper<ProjectTask> wrapper = new QueryWrapper<>();
         wrapper.eq("exec_user_id", userId);
         wrapper.eq("stage_type", 1);
+        if (projectIds != null) {
+            wrapper.in("project_id", projectIds);
+        }
+        if (status != null) {
+            wrapper.eq("task_status", status);
+        }
         wrapper.orderByAsc("task_status");
         wrapper.orderByAsc("task_end_time");
 
         Page<ProjectTask> page = new Page<>(pageNum, pageSize);
         Page<ProjectTask> resultPage = projectTaskService.page(page, wrapper);
 
+        // 批量获取项目名称
+        List<Long> allProjectIds = resultPage.getRecords().stream()
+                .map(ProjectTask::getProjectId).distinct().collect(Collectors.toList());
+        Map<Long, String> projectNameMap = new HashMap<>();
+        if (!allProjectIds.isEmpty()) {
+            List<ProjectInfo> projectInfos = projectInfoService.listByIds(allProjectIds);
+            for (ProjectInfo pi : projectInfos) {
+                projectNameMap.put(pi.getId(), pi.getProjectName());
+            }
+        }
+
+        // 批量获取任务附件
+        List<Long> allTaskIds = resultPage.getRecords().stream()
+                .map(ProjectTask::getId).collect(Collectors.toList());
+        Map<Long, List<ProjectTaskAttachment>> attachMap = new HashMap<>();
+        if (!allTaskIds.isEmpty()) {
+            QueryWrapper<ProjectTaskAttachment> attWrapper = new QueryWrapper<>();
+            attWrapper.in("task_id", allTaskIds);
+            List<ProjectTaskAttachment> allAttachs = projectTaskAttachmentService.list(attWrapper);
+            for (ProjectTaskAttachment att : allAttachs) {
+                attachMap.computeIfAbsent(att.getTaskId(), k -> new ArrayList<>()).add(att);
+            }
+        }
+
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (ProjectTask task : resultPage.getRecords()) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", task.getId());
+            row.put("projectId", task.getProjectId());
+            row.put("projectName", projectNameMap.getOrDefault(task.getProjectId(), "-"));
+            row.put("taskContent", task.getTaskContent());
+            row.put("workAmount", task.getWorkAmount());
+            row.put("needCar", task.getNeedCar());
+            row.put("tollFee", task.getTollFee());
+            row.put("mileage", task.getMileage());
+            row.put("taskEndTime", task.getTaskEndTime() != null ? task.getTaskEndTime().toString() : null);
+            row.put("taskStatus", task.getTaskStatus());
+            row.put("execFinishTime", task.getExecFinishTime() != null ? task.getExecFinishTime().toString() : null);
+            row.put("workContent", task.getWorkContent());
+            row.put("remark", task.getRemark());
+            row.put("assignUserName", task.getAssignUserName());
+            row.put("assignUserPhone", task.getAssignUserPhone());
+
+            List<ProjectTaskAttachment> taskAttachs = attachMap.getOrDefault(task.getId(), new ArrayList<>());
+            List<Map<String, Object>> attachList = new ArrayList<>();
+            for (ProjectTaskAttachment att : taskAttachs) {
+                Map<String, Object> attMap = new HashMap<>();
+                attMap.put("id", att.getId());
+                attMap.put("fileName", att.getFileName());
+                attMap.put("filePath", att.getFilePath());
+                attachList.add(attMap);
+            }
+            row.put("attachments", attachList);
+            records.add(row);
+        }
+
         result.put("code", 200);
         result.put("msg", "查询成功");
         result.put("total", resultPage.getTotal());
-        result.put("records", resultPage.getRecords());
+        result.put("records", records);
         return result;
     }
 
@@ -503,6 +597,7 @@ public class ProjectTbController {
 
         Long taskId = Long.parseLong(params.get("taskId").toString());
         String taskDesc = (String) params.get("taskDesc");
+        String workContent = (String) params.get("workContent");
         Integer taskStatus = params.get("taskStatus") != null ? Integer.parseInt(params.get("taskStatus").toString()) : 3;
 
         ProjectTask task = projectTaskService.getById(taskId);
@@ -514,6 +609,7 @@ public class ProjectTbController {
 
         // 更新任务状态
         task.setTaskDesc(taskDesc);
+        task.setWorkContent(workContent);
         task.setTaskStatus(taskStatus);
         task.setExecFinishTime(LocalDateTime.now());
         projectTaskService.updateById(task);

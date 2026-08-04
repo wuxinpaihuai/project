@@ -162,7 +162,7 @@ public class ProjectInfoController {
             ProjectStage stage = new ProjectStage();
             stage.setProjectId(project.getId());
             stage.setStageType(1); // 1=投标阶段
-            stage.setStageStatus(0); // 0=未开始
+            stage.setStageStatus(1); // 0=未开始 1投标中 默认
             stage.setCreateTime(LocalDateTime.now());
             projectStageService.save(stage);
 
