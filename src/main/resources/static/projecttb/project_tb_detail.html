@@ -67,6 +67,10 @@
         .car-no {
             color: #999;
         }
+        .car-info-btn {
+            color: #1e9fff; cursor: pointer; text-decoration: underline;
+            display: inline-block; padding: 0 4px;
+        }
         .btn-blue {
             background-color: #1e9fff !important; color: #fff !important;
             border-color: #1e9fff !important;
@@ -191,7 +195,7 @@ layui.use(['layer'], function(){
             type: 1,
             title: '派车信息',
             skin: 'layui-layer-lan',
-            area: ['320px', 'auto'],
+            area: ['220px', 'auto'],
             content: '<div style="padding:15px;font-size:14px;line-height:2;">' +
                 '<p><strong>通行费：</strong>' + formatAmount(tollFee) + ' 元</p>' +
                 '<p><strong>里程数：</strong>' + safeStr(mileage) + ' 公里</p>' +
@@ -199,6 +203,7 @@ layui.use(['layer'], function(){
         });
     }
     window.showCarInfo = showCarInfo;
+
 
     // 加载详情数据
     $.ajax({

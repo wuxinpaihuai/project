@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作台</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; height: calc(100vh - 30px); display: flex; flex-direction: column; }
+
+        /* 上下布局 8:2 */
+        .top-section { flex: 8; display: flex; gap: 15px; margin-bottom: 15px; min-height: 0; }
+        .bottom-section { flex: 2; min-height: 0; }
+
+        /* 上左 上右 7:3 */
+        .top-left { flex: 7; display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+        .top-right { flex: 3; min-width: 0; }
+
+        /* 通用卡片 */
+        .card {
+            background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .card-header {
+            padding: 12px 18px; border-bottom: 1px solid #f0f0f0;
+            display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        .card-header h3 {
+            font-size: 15px; font-weight: 600; color: #333;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .card-header h3 i { font-size: 18px; color: #86c566; }
+        .card-body { flex: 1; overflow-y: auto; padding: 0; min-height: 0; }
+
+        /* 消息通知模块 */
+        .msg-module { flex: 1; min-height: 0; }
+        .todo-module { flex: 1; min-height: 0; }
+
+        /* 消息筛选 */
+        .msg-filter { display: flex; gap: 8px; }
+        .msg-filter .filter-btn {
+            padding: 2px 12px; border-radius: 3px; font-size: 12px; cursor: pointer;
+            border: 1px solid #d2d2d2; background: #fff; color: #666; transition: all .2s;
+        }
+        .msg-filter .filter-btn.active { background: #86c566; color: #fff; border-color: #86c566; }
+        .msg-filter .filter-btn:hover { opacity: .85; }
+
+        /* 消息列表 */
+        .msg-list { padding: 0; }
+        .msg-item {
+            display: flex; align-items: flex-start; padding: 10px 18px;
+            border-bottom: 1px solid #f6f6f6; cursor: pointer; transition: background .2s;
+        }
+        .msg-item:hover { background: #f9f9f9; }
+        .msg-item.unread { background: #fffbf0; }
+        .msg-item.unread:hover { background: #fff8e6; }
+        .msg-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #ff5722;
+            margin-top: 6px; margin-right: 10px; flex-shrink: 0;
+        }
+        .msg-item.read .msg-dot { visibility: hidden; }
+        .msg-content { flex: 1; min-width: 0; }
+        .msg-text { font-size: 13px; color: #333; line-height: 1.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .msg-item.unread .msg-text { font-weight: 600; }
+        .msg-time { font-size: 12px; color: #999; margin-top: 2px; }
+
+        /* 待办列表 */
+        .todo-list { padding: 0; }
+        .todo-item {
+            display: flex; align-items: center; padding: 10px 18px;
+            border-bottom: 1px solid #f6f6f6; transition: background .2s;
+        }
+        .todo-item:hover { background: #f9f9f9; }
+        .todo-index {
+            width: 24px; height: 24px; border-radius: 50%; background: #86c566; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            margin-right: 12px; flex-shrink: 0;
+        }
+        .todo-info { flex: 1; min-width: 0; }
+        .todo-assign { font-size: 12px; color: #999; margin-bottom: 2px; }
+        .todo-content { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .todo-end-time { font-size: 12px; color: #ff5722; margin-left: 12px; flex-shrink: 0; white-space: nowrap; }
+
+        /* 分页 */
+        .card-footer { padding: 8px 18px; border-top: 1px solid #f0f0f0; flex-shrink: 0; text-align: right; }
+        .layui-laypage { margin: 0; }
+        .layui-laypage a, .layui-laypage span { font-size: 12px; }
+
+        /* 空提示 */
+        .empty-tip { text-align: center; padding: 40px 0; color: #bbb; font-size: 14px; }
+
+        /* 日历模块 */
+        .calendar-module { height: 100%; }
+        .calendar-header {
+            display: flex; align-items: center; justify-content: center; gap: 20px;
+            padding: 10px 0; flex-shrink: 0;
+        }
+        .calendar-header .month-label { font-size: 16px; font-weight: 600; color: #333; min-width: 120px; text-align: center; }
+        .calendar-header .cal-nav {
+            width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d2d2d2;
+            background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all .2s; color: #666;
+        }
+        .calendar-header .cal-nav:hover { background: #86c566; color: #fff; border-color: #86c566; }
+
+        .calendar-grid { width: 100%; border-collapse: collapse; }
+        .calendar-grid th {
+            padding: 8px 0; font-size: 13px; color: #999; font-weight: normal;
+            text-align: center; border-bottom: 1px solid #f0f0f0;
+        }
+        .calendar-grid td {
+            padding: 6px 4px; text-align: center; vertical-align: top; height: 50px;
+            position: relative; cursor: default;
+        }
+        .calendar-grid td .day-num {
+            display: inline-block; width: 28px; height: 28px; line-height: 28px;
+            border-radius: 50%; font-size: 13px; color: #333; text-align: center;
+        }
+        .calendar-grid td.other-month .day-num { color: #ccc; }
+        .calendar-grid td.today .day-num { background: #86c566; color: #fff; }
+        .calendar-grid td.has-task .day-num { position: relative; }
+        .calendar-grid td.has-task .day-num::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 6px; height: 6px; border-radius: 50%; background: #ff5722;
+        }
+        .calendar-grid td.has-task { cursor: pointer; }
+        .calendar-grid td.has-task:hover .day-num { background: #f0f9eb; }
+
+        /* 日历任务提示框 */
+        .cal-tooltip {
+            display: none; position: absolute; z-index: 9999; background: #fff;
+            border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            padding: 10px 14px; min-width: 180px; max-width: 280px;
+            left: 50%; transform: translateX(-50%); top: 100%;
+        }
+        .calendar-grid td.has-task:hover .cal-tooltip { display: block; }
+        .cal-tooltip .tooltip-title { font-size: 12px; color: #999; margin-bottom: 6px; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
+        .cal-tooltip .tooltip-item { font-size: 12px; color: #333; line-height: 1.8; }
+        .cal-tooltip .tooltip-item .task-index { color: #86c566; margin-right: 4px; }
+
+        /* 快捷入口 */
+        .shortcut-section { height: 100%; }
+        .shortcut-grid {
+            display: flex; align-items: center; justify-content: center; gap: 60px;
+            height: 100%; padding: 0 40px;
+        }
+        .shortcut-item {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            cursor: pointer; text-decoration: none; transition: all .2s; padding: 12px 24px;
+            border-radius: 8px;
+        }
+        .shortcut-item:hover { background: #f0f9eb; transform: translateY(-2px); }
+        .shortcut-icon {
+            width: 56px; height: 56px; border-radius: 12px; display: flex;
+            align-items: center; justify-content: center; font-size: 28px; color: #fff;
+        }
+        .shortcut-icon.icon-blue { background: linear-gradient(135deg, #86c566, #a8e06c); }
+        .shortcut-icon.icon-green { background: linear-gradient(135deg, #86c566, #a8e06c); }
+        .shortcut-icon.icon-orange { background: linear-gradient(135deg, #ffb800, #ffcf4d); }
+        .shortcut-icon.icon-red { background: linear-gradient(135deg, #ff5722, #ff8a65); }
+        .shortcut-label { font-size: 14px; color: #333; font-weight: 500; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+
+    <!-- 上面部分 8 -->
+    <div class="top-section">
+        <!-- 上左 7 -->
+        <div class="top-left">
+            <!-- 消息通知模块 -->
+            <div class="card msg-module">
+                <div class="card-header">
+                    <h3><i class="layui-icon">&#xe611;</i> 消息通知</h3>
+                    <div class="msg-filter">
+                        <span class="filter-btn active" data-status="">全部</span>
+                        <span class="filter-btn" data-status="0">未读</span>
+                        <span class="filter-btn" data-status="1">已读</span>
+                    </div>
+                </div>
+                <div class="card-body" id="msgListBody">
+                    <div class="msg-list" id="msgList"></div>
+                </div>
+                <div class="card-footer">
+                    <div id="msgPager"></div>
+                </div>
+            </div>
+
+            <!-- 待办事项模块 -->
+            <div class="card todo-module">
+                <div class="card-header">
+                    <h3><i class="layui-icon">&#xe67c;</i> 待办事项</h3>
+                </div>
+                <div class="card-body" id="todoListBody">
+                    <div class="todo-list" id="todoList"></div>
+                </div>
+                <div class="card-footer">
+                    <div id="todoPager"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 上右 3 -->
+        <div class="top-right">
+            <div class="card calendar-module">
+                <div class="card-header">
+                    <h3><i class="layui-icon">&#xe637;</i> 日历</h3>
+                </div>
+                <div class="calendar-header">
+                    <button class="cal-nav" id="prevMonth"><i class="layui-icon">&#xe603;</i></button>
+                    <span class="month-label" id="monthLabel"></span>
+                    <button class="cal-nav" id="nextMonth"><i class="layui-icon">&#xe602;</i></button>
+                </div>
+                <div class="card-body" style="padding: 0 10px 10px;">
+                    <table class="calendar-grid" id="calendarGrid">
+                        <thead>
+                            <tr><th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th></tr>
+                        </thead>
+                        <tbody id="calendarBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下面部分 2 -->
+    <div class="bottom-section">
+        <div class="card shortcut-section">
+            <div class="shortcut-grid">
+                <a class="shortcut-item" href="/projecttb/project_list.html">
+                    <div class="shortcut-icon icon-blue"><i class="layui-icon">&#xe654;</i></div>
+                    <span class="shortcut-label">项目发起</span>
+                </a>
+                <a class="shortcut-item" href="/projecttb/project_task_list.html">
+                    <div class="shortcut-icon icon-green"><i class="layui-icon">&#xe67c;</i></div>
+                    <span class="shortcut-label">体系作战</span>
+                </a>
+                <a class="shortcut-item" href="/projectqy/project_sign_list.html">
+                    <div class="shortcut-icon icon-orange"><i class="layui-icon">&#xe605;</i></div>
+                    <span class="shortcut-label">合同签订</span>
+                </a>
+                <a class="shortcut-item" href="/projectss/project_execute_list.html">
+                    <div class="shortcut-icon icon-red"><i class="layui-icon">&#xe6b2;</i></div>
+                    <span class="shortcut-label">项目实施</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['laypage'], function(){
+    var laypage = layui.laypage;
+    var $ = layui.jquery;
+
+    // ========== 消息通知模块 ==========
+    var msgPage = 1;
+    var msgLimit = 5;
+    var msgReadStatus = ''; // 空=全部, 0=未读, 1=已读
+
+    function loadMessages() {
+        var params = { page: msgPage, limit: msgLimit };
+        if (msgReadStatus !== '') { params.readStatus = msgReadStatus; }
+
+        $.ajax({
+            url: '/workplat/message/list',
+            type: 'GET',
+            data: params,
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    var records = res.records || [];
+                    var html = '';
+                    if (records.length === 0) {
+                        html = '<div class="empty-tip">暂无消息</div>';
+                    } else {
+                        for (var i = 0; i < records.length; i++) {
+                            var msg = records[i];
+                            var isUnread = msg.readStatus === 0;
+                            html += '<div class="msg-item ' + (isUnread ? 'unread' : 'read') + '" data-id="' + msg.id + '">';
+                            html += '  <span class="msg-dot"></span>';
+                            html += '  <div class="msg-content">';
+                            html += '    <div class="msg-text">' + escapeHtml(msg.content || '') + '</div>';
+                            html += '    <div class="msg-time">' + formatTime(msg.createTime) + '</div>';
+                            html += '  </div>';
+                            html += '</div>';
+                        }
+                    }
+                    $('#msgList').html(html);
+
+                    // 绑定点击标记已读
+                    $('.msg-item.unread').off('click').on('click', function(){
+                        var id = $(this).data('id');
+                        $.ajax({
+                            url: '/workplat/message/read/' + id,
+                            type: 'POST',
+                            headers: { token: token },
+                            dataType: 'json',
+                            success: function(r) {
+                                if (r.code === 200) { loadMessages(); }
+                            }
+                        });
+                    });
+
+                    // 分页
+                    laypage.render({
+                        elem: 'msgPager',
+                        count: res.total,
+                        limit: msgLimit,
+                        curr: msgPage,
+                        jump: function(obj, first) {
+                            if (!first) { msgPage = obj.curr; loadMessages(); }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // 筛选按钮
+    $('.msg-filter .filter-btn').on('click', function(){
+        $('.msg-filter .filter-btn').removeClass('active');
+        $(this).addClass('active');
+        msgReadStatus = $(this).data('status');
+        msgPage = 1;
+        loadMessages();
+    });
+
+    // ========== 待办事项模块 ==========
+    var todoPage = 1;
+    var todoLimit = 5;
+
+    function loadTodos() {
+        $.ajax({
+            url: '/workplat/todo/list',
+            type: 'GET',
+            data: { page: todoPage, limit: todoLimit },
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    var records = res.records || [];
+                    var html = '';
+                    if (records.length === 0) {
+                        html = '<div class="empty-tip">暂无待办事项</div>';
+                    } else {
+                        for (var i = 0; i < records.length; i++) {
+                            var task = records[i];
+                            var idx = (todoPage - 1) * todoLimit + i + 1;
+                            html += '<div class="todo-item">';
+                            html += '  <span class="todo-index">' + idx + '</span>';
+                            html += '  <div class="todo-info">';
+                            html += '    <div class="todo-assign">发起人：' + escapeHtml(task.assignUserName || '') + '</div>';
+                            html += '    <div class="todo-content">' + escapeHtml(task.taskContent || '') + '</div>';
+                            html += '  </div>';
+                            html += '  <span class="todo-end-time">到期：' + formatDate(task.taskEndTime) + '</span>';
+                            html += '</div>';
+                        }
+                    }
+                    $('#todoList').html(html);
+
+                    laypage.render({
+                        elem: 'todoPager',
+                        count: res.total,
+                        limit: todoLimit,
+                        curr: todoPage,
+                        jump: function(obj, first) {
+                            if (!first) { todoPage = obj.curr; loadTodos(); }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // ========== 日历模块 ==========
+    var calYear, calMonth;
+    var calTaskData = {}; // { '2026-08-05': [{content: '...'}, ...] }
+
+    function initCalendar() {
+        var now = new Date();
+        calYear = now.getFullYear();
+        calMonth = now.getMonth() + 1;
+        loadCalendarTasks();
+    }
+
+    function loadCalendarTasks() {
+        $.ajax({
+            url: '/workplat/calendar/tasks',
+            type: 'GET',
+            data: { year: calYear, month: calMonth },
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    calTaskData = res.data || {};
+                    renderCalendar();
+                }
+            }
+        });
+    }
+
+    function renderCalendar() {
+        $('#monthLabel').text(calYear + '年' + calMonth + '月');
+
+        var firstDay = new Date(calYear, calMonth - 1, 1);
+        var lastDay = new Date(calYear, calMonth, 0);
+        var daysInMonth = lastDay.getDate();
+        var startWeekDay = firstDay.getDay(); // 0=周日
+
+        // 上月补位
+        var prevMonthLastDay = new Date(calYear, calMonth - 1, 0).getDate();
+
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-' + padZero(today.getMonth() + 1) + '-' + padZero(today.getDate());
+
+        var html = '';
+        var dayCount = 1;
+        var nextMonthDay = 1;
+        var totalCells = Math.ceil((startWeekDay + daysInMonth) / 7) * 7;
+
+        for (var i = 0; i < totalCells; i++) {
+            if (i % 7 === 0) html += '<tr>';
+
+            if (i < startWeekDay) {
+                // 上月日期
+                var d = prevMonthLastDay - startWeekDay + i + 1;
+                html += '<td class="other-month"><span class="day-num">' + d + '</span></td>';
+            } else if (dayCount <= daysInMonth) {
+                var dateStr = calYear + '-' + padZero(calMonth) + '-' + padZero(dayCount);
+                var isToday = dateStr === todayStr;
+                var hasTask = calTaskData[dateStr] && calTaskData[dateStr].length > 0;
+                var cls = '';
+                if (isToday) cls += ' today';
+                if (hasTask) cls += ' has-task';
+
+                html += '<td class="' + cls.trim() + '">';
+                html += '<span class="day-num">' + dayCount + '</span>';
+
+                if (hasTask) {
+                    html += '<div class="cal-tooltip">';
+                    html += '<div class="tooltip-title">' + dateStr + ' 任务</div>';
+                    var tasks = calTaskData[dateStr];
+                    for (var t = 0; t < tasks.length; t++) {
+                        html += '<div class="tooltip-item"><span class="task-index">' + (t + 1) + '.</span>' + escapeHtml(tasks[t].content || '') + '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '</td>';
+                dayCount++;
+            } else {
+                // 下月补位
+                html += '<td class="other-month"><span class="day-num">' + nextMonthDay + '</span></td>';
+                nextMonthDay++;
+            }
+
+            if (i % 7 === 6) html += '</tr>';
+        }
+
+        $('#calendarBody').html(html);
+    }
+
+    // 月份切换
+    $('#prevMonth').on('click', function(){
+        calMonth--;
+        if (calMonth < 1) { calMonth = 12; calYear--; }
+        loadCalendarTasks();
+    });
+    $('#nextMonth').on('click', function(){
+        calMonth++;
+        if (calMonth > 12) { calMonth = 1; calYear++; }
+        loadCalendarTasks();
+    });
+
+    // ========== 工具函数 ==========
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatTime(dt) {
+        if (!dt) return '';
+        // 后端返回格式: 2026-08-05T14:30:00 或 2026-08-05 14:30:00
+        return dt.replace('T', ' ').substring(0, 16);
+    }
+
+    function formatDate(dt) {
+        if (!dt) return '';
+        return dt.replace('T', ' ').substring(0, 10);
+    }
+
+    function padZero(n) {
+        return n < 10 ? '0' + n : '' + n;
+    }
+
+    // ========== 初始化 ==========
+    loadMessages();
+    loadTodos();
+    initCalendar();
+});
+</script>
+</body>
+</html>
