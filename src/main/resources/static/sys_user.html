@@ -161,18 +161,28 @@
             padding: 15px 20px;
             border-bottom: 1px solid #f0f0f0;
         }
+        .search-form .layui-form {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 15px;
+        }
         .search-form .layui-form-item {
-            display: inline-block;
+            display: flex;
+            align-items: center;
             margin-bottom: 0;
-            margin-right: 15px;
-            vertical-align: middle;
+            white-space: nowrap;
         }
         .search-form .layui-form-label {
             width: 70px;
             padding: 9px 8px 9px 0;
+            white-space: nowrap;
         }
         .search-form .layui-input-inline {
             width: 110px;
+        }
+        .search-form .layui-form-item:last-child {
+            margin-left: auto;
         }
 
         /* 按钮 */

@@ -26,18 +26,28 @@
             border-radius: 0;
             margin-bottom: 0;
         }
+        .search-form .layui-form {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 15px;
+        }
         .search-form .layui-form-item {
-            display: inline-block;
+            display: flex;
+            align-items: center;
             margin-bottom: 0;
-            margin-right: 15px;
-            vertical-align: middle;
+            white-space: nowrap;
         }
         .search-form .layui-form-label {
             width: 80px;
             padding: 9px 10px 9px 0;
+            white-space: nowrap;
         }
         .search-form .layui-input-inline {
             width: 180px;
+        }
+        .search-form .layui-form-item:last-child {
+            margin-left: auto;
         }
         .btn-green {
             background-color: #86c566 !important;

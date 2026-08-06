@@ -80,7 +80,8 @@
         }
         .todo-info { flex: 1; min-width: 0; }
         .todo-assign { font-size: 12px; color: #999; margin-bottom: 2px; }
-        .todo-content { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .todo-content { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+        .todo-content:hover { color: #1e9fff; text-decoration: underline; }
         .todo-end-time { font-size: 12px; color: #ff5722; margin-left: 12px; flex-shrink: 0; white-space: nowrap; }
 
         /* 分页 */
@@ -255,8 +256,9 @@
 <script>
 var token = localStorage.getItem('token');
 
-layui.use(['laypage'], function(){
+layui.use(['laypage', 'layer'], function(){
     var laypage = layui.laypage;
+    var layer = layui.layer;
     var $ = layui.jquery;
 
     // ========== 消息通知模块 ==========
@@ -287,7 +289,7 @@ layui.use(['laypage'], function(){
                             html += '<div class="msg-item ' + (isUnread ? 'unread' : 'read') + '" data-id="' + msg.id + '">';
                             html += '  <span class="msg-dot"></span>';
                             html += '  <div class="msg-content">';
-                            html += '    <div class="msg-text">' + escapeHtml(msg.content || '') + '</div>';
+                            html += '    <div class="msg-text" title="' + escapeHtml(msg.content || '') + '">' + escapeHtml(msg.content || '') + '</div>';
                             html += '    <div class="msg-time">' + formatTime(msg.createTime) + '</div>';
                             html += '  </div>';
                             html += '</div>';
@@ -358,13 +360,40 @@ layui.use(['laypage'], function(){
                             html += '  <span class="todo-index">' + idx + '</span>';
                             html += '  <div class="todo-info">';
                             html += '    <div class="todo-assign">发起人：' + escapeHtml(task.assignUserName || '') + '</div>';
-                            html += '    <div class="todo-content">' + escapeHtml(task.taskContent || '') + '</div>';
+                            html += '    <div class="todo-content" data-task-id="' + (task.id || '') + '" data-stage-type="' + (task.stageType || task.stage_type || '') + '">' + escapeHtml(task.taskContent || '') + '</div>';
                             html += '  </div>';
                             html += '  <span class="todo-end-time">到期：' + formatDate(task.taskEndTime) + '</span>';
                             html += '</div>';
                         }
                     }
                     $('#todoList').html(html);
+
+                    // 点击任务内容弹出对应页面
+                    $('#todoList .todo-content').off('click').on('click', function(e) {
+                        e.stopPropagation();
+                        var taskId = $(this).data('task-id');
+                        var stageType = $(this).data('stage-type');
+                        if (!taskId) { return; }
+                        var url;
+                        var title;
+                        if (stageType == 1) {
+                            url = '/projecttb/task_action.html?taskId=' + taskId;
+                            title = '完成任务';
+                        } else if (stageType == 3) {
+                            url = '/projectss/project_task_complete.html?taskId=' + taskId;
+                            title = '提交任务';
+                        } else {
+                            return;
+                        }
+                        layer.open({
+                            type: 2,
+                            title: title,
+                            area: ['900px', '750px'],
+                            shadeClose: true,
+                            content: url,
+                            end: function() { loadTodos(); }
+                        });
+                    });
 
                     laypage.render({
                         elem: 'todoPager',
