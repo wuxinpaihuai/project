@@ -333,6 +333,41 @@ public class ProjectTbController {
     }
 
     /**
+     * 校验项目是否可提交签约（检查 project_extend 中标结果）
+     */
+    @GetMapping("/checkBidResult/{projectId}")
+    public Map<String, Object> checkBidResult(@PathVariable Long projectId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        extendWrapper.orderByDesc("id");
+        List<ProjectExtend> extendList = projectExtendService.list(extendWrapper);
+
+        if (extendList == null || extendList.isEmpty()) {
+            result.put("code", 500);
+            result.put("msg", "该项目还未录入中标结果，不能提交签约");
+            return result;
+        }
+
+        ProjectExtend extend = extendList.get(0);
+        if (extend.getIsWinBid() == null || extend.getIsWinBid() != 1) {
+            result.put("code", 500);
+            result.put("msg", "该项目未中标，不能提交签约");
+            return result;
+        }
+
+        result.put("code", 200);
+        result.put("msg", "可以提交签约");
+        return result;
+    }
+
+    /**
      * 提交签约
      */
     @PostMapping("/signContract")
@@ -346,14 +381,22 @@ public class ProjectTbController {
 
         Long projectId = Long.parseLong(params.get("projectId").toString());
 
-        // 检查是否中标
+        // 检查是否中标（存在多条时取 id 最大的一条）
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
         extendWrapper.eq("project_id", projectId);
-        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        extendWrapper.orderByDesc("id");
+        List<ProjectExtend> extendList = projectExtendService.list(extendWrapper);
 
-        if (extend == null || extend.getIsWinBid() == null || extend.getIsWinBid() != 1) {
+        if (extendList == null || extendList.isEmpty()) {
             result.put("code", 500);
-            result.put("msg", "项目未中标，不能提交签约");
+            result.put("msg", "该项目还未录入中标结果，不能提交签约");
+            return result;
+        }
+
+        ProjectExtend extend = extendList.get(0);
+        if (extend.getIsWinBid() == null || extend.getIsWinBid() != 1) {
+            result.put("code", 500);
+            result.put("msg", "该项目未中标，不能提交签约");
             return result;
         }
 

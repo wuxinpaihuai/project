@@ -43,6 +43,9 @@ public class PrjectExcuteController {
     
     @Autowired
     private  SysUserService   sysUserService;
+    
+    @Autowired
+    private SysUserRoleService sysUserRoleService;
 
     /**
      * 项目实施列表 - 查询已中标的项目（分页）
@@ -80,6 +83,20 @@ public class PrjectExcuteController {
         // 2. 查询项目信息
         QueryWrapper<ProjectInfo> wrapper = new QueryWrapper<>();
         wrapper.in("id", projectIds);
+        
+      //如果是分管领导以及董事长则可以查看全部项目,否则只显示当前用户复杂的项目 role id = 1 和 role id =5
+        QueryWrapper<SysUserRole> roleWrapper = new QueryWrapper<>();
+        Long userId = StpUtil.getLoginIdAsLong();
+        roleWrapper.eq("user_id", userId);
+        List<Long> roleIds = new ArrayList<Long>();
+        roleIds.add(new Long(1));
+        roleIds.add(new Long(5));
+        roleWrapper.in("role_id", roleIds);
+        long roles = sysUserRoleService.count(roleWrapper);
+        if (roles == 0) {
+        	wrapper.eq("bisness_user_id",   userId);//当前登录用户
+		}
+        
         if (projectName != null && !projectName.isEmpty()) {
             wrapper.like("project_name", projectName);
         }

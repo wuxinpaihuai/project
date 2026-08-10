@@ -137,7 +137,40 @@ layui.use(['layer'], function(){
     };
 
     var deliverTypeMap = {1: '文档', 2: '表格', 3: '图片', 4: '其他'};
-
+    var userMap = {};
+    
+    function loadUserMapForDetail(tasks) {
+        var allIds = [];
+        for (var i = 0; i < tasks.length; i++) {
+            var rids = tasks[i].relateUserIds;
+            if (rids) {
+                var ids = rids.split(',');
+                for (var j = 0; j < ids.length; j++) {
+                    var uid = ids[j].trim();
+                    if (uid !== '' && !userMap[uid]) {
+                        allIds.push(uid);
+                    }
+                }
+            }
+        }
+        if (allIds.length > 0) {
+            $.ajax({
+                url: '/sys/user/searchByName?name=',
+                type: 'GET',
+                headers: {token: token},
+                async: false,
+                success: function(res) {
+                    if (res && res.code === 200 && res.data) {
+                        for (var i = 0; i < res.data.length; i++) {
+                            var u = res.data[i];
+                            userMap[String(u.id)] = u.realName || u.name || '-';
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
     function formatTime(t) {
         return t ? t.replace('T', ' ') : '-';
     }
@@ -199,6 +232,7 @@ layui.use(['layer'], function(){
                 var p = res.project;
                 var files = res.files || [];
                 var tasks = res.tasks || [];
+                loadUserMapForDetail(tasks);
                 var taskAttachments = res.taskAttachments || [];
                 var extend = res.extend;
                 var bidResults = res.bidResults || [];

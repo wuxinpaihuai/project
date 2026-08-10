@@ -696,61 +696,77 @@ layui.use(['table', 'layer', 'form', 'laydate', 'element'], function(){
         }
         var selectedProject = checkData[0];
 
-        // 重置弹窗
-        document.getElementById('signProjectId').value = selectedProject.id;
-        document.getElementById('signProjectName').value = selectedProject.projectName || '';
-        techUserIdEl.value = '';
-        techInputEl.value = '';
-        techPhoneEl.value = '';
-        selectedTechUserName = '';
-        allTechUsers = [];
-        techUsersLoaded = false;
-        techListEl.innerHTML = '<div class="tech-empty">点击输入框加载用户数据</div>';
-
-        layer.open({
-            type: 1,
-            title: '提交签约 - ' + selectedProject.projectName,
-            area: ['500px', '360px'],
-            content: $('#signContractForm'),
-            btn: ['确认签约', '取消'],
-            yes: function(index, layero){
-                var projectId = document.getElementById('signProjectId').value;
-                var techUserId = techUserIdEl.value;
-                var techUserName = techInputEl.value.trim();
-                var techUserPhone = techPhoneEl.value.trim();
-
-                if (!techUserId || !techUserName) {
-                    layer.msg('请选择技术负责人', {icon: 5});
+        // 先校验项目是否已录入中标结果且已中标
+        $.ajax({
+            url: '/project/tb/checkBidResult/' + selectedProject.id,
+            type: 'GET',
+            headers: {token: token},
+            success: function(checkRes) {
+                if (checkRes.code !== 200) {
+                    layer.msg(checkRes.msg || '校验失败', {icon: 5});
                     return;
                 }
 
-                $.ajax({
-                    url: '/project/tb/signContract',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {token: token},
-                    data: JSON.stringify({
-                        projectId: projectId,
-                        techUserId: techUserId,
-                        techUserName: techUserName,
-                        techUserPhone: techUserPhone
-                    }),
-                    success: function(res) {
-                        if (res.code === 200) {
-                            layer.msg('提交签约成功', {icon: 1});
-                            layer.close(index);
-                            table.reload('projectTable');
-                        } else {
-                            layer.msg(res.msg || '操作失败', {icon: 2});
+                // 重置弹窗
+                document.getElementById('signProjectId').value = selectedProject.id;
+                document.getElementById('signProjectName').value = selectedProject.projectName || '';
+                techUserIdEl.value = '';
+                techInputEl.value = '';
+                techPhoneEl.value = '';
+                selectedTechUserName = '';
+                allTechUsers = [];
+                techUsersLoaded = false;
+                techListEl.innerHTML = '<div class="tech-empty">点击输入框加载用户数据</div>';
+
+                layer.open({
+                    type: 1,
+                    title: '提交签约 - ' + selectedProject.projectName,
+                    area: ['500px', '360px'],
+                    content: $('#signContractForm'),
+                    btn: ['确认签约', '取消'],
+                    yes: function(index, layero){
+                        var projectId = document.getElementById('signProjectId').value;
+                        var techUserId = techUserIdEl.value;
+                        var techUserName = techInputEl.value.trim();
+                        var techUserPhone = techPhoneEl.value.trim();
+
+                        if (!techUserId || !techUserName) {
+                            layer.msg('请选择技术负责人', {icon: 5});
+                            return;
                         }
+
+                        $.ajax({
+                            url: '/project/tb/signContract',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: {token: token},
+                            data: JSON.stringify({
+                                projectId: projectId,
+                                techUserId: techUserId,
+                                techUserName: techUserName,
+                                techUserPhone: techUserPhone
+                            }),
+                            success: function(res) {
+                                if (res.code === 200) {
+                                    layer.msg('提交签约成功', {icon: 1});
+                                    layer.close(index);
+                                    table.reload('projectTable');
+                                } else {
+                                    layer.msg(res.msg || '操作失败', {icon: 2});
+                                }
+                            },
+                            error: function() {
+                                layer.msg('请求失败，请重试', {icon: 2});
+                            }
+                        });
                     },
-                    error: function() {
-                        layer.msg('请求失败，请重试', {icon: 2});
+                    end: function(){
+                        $('#signContractForm').hide();
                     }
                 });
             },
-            end: function(){
-                $('#signContractForm').hide();
+            error: function() {
+                layer.msg('校验失败，请重试', {icon: 2});
             }
         });
     });
