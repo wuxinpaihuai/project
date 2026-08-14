@@ -112,7 +112,7 @@ layui.use(['table', 'layer', 'form'], function(){
     // 项目状态映射
     var stageStatusMap = {
         0: {name: '未开始', cls: 'status-not-started'},
-        1: {name: '执行中', cls: 'status-in-progress'},
+        1: {name: '进行中', cls: 'status-in-progress'},
         2: {name: '已完成', cls: 'status-completed'}
     };
 
@@ -147,7 +147,7 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'stageStatus', title: '项目状态', width: 100, align: 'center', templet: function(d){
                 var info = stageStatusMap[d.stageStatus];
                 if (info) {
-                    return '<span class="' + info.cls + '">投标' + info.name + '</span>';
+                    return '<span class="' + info.cls + '">' + info.name + '</span>';
                 }
                 return '-';
             }},

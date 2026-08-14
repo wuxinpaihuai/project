@@ -94,7 +94,7 @@
         </div>
         <div class="col-item">
             <div class="layui-form-item">
-                <label class="layui-form-label"><span class="required-star">*</span>项目编号</label>
+                <label class="layui-form-label">项目编号</label>
                 <div class="layui-input-block">
                     <input type="text" name="projectNo" id="projectNo" lay-verify="required" placeholder="请输入项目编号" class="layui-input" maxlength="255">
                 </div>
@@ -133,25 +133,27 @@
     <div class="row-group">
         <div class="col-item">
             <div class="layui-form-item">
-                <label class="layui-form-label">竞价类型</label>
+                <label class="layui-form-label">招标类型</label>
                 <div class="layui-input-block">
                     <select name="bidType" id="bidType">
-                        <option value="">请选择竞价类型</option>
-                        <option value="1">明标</option>
-                        <option value="2">暗标</option>
-                        <option value="3">两阶段标</option>
+                        <option value="">请选择招标类型</option>
+                        <option value="1">公开招标</option>
+                        <option value="2">邀请招标</option>
+                        <option value="3">竞争性谈判</option>
+                        <option value="4">单一来源</option>
+                        <option value="5">询价</option>
+                        <option value="6">竞争性磋商</option>
                     </select>
                 </div>
             </div>
         </div>
         <div class="col-item">
             <div class="layui-form-item">
-                <label class="layui-form-label">竞价方式</label>
+                <label class="layui-form-label">评标方式</label>
                 <div class="layui-input-block">
                     <select name="bidWay" id="bidWay">
-                        <option value="">请选择竞价方式</option>
-                        <option value="1">邀请招标</option>
-                        <option value="2">竞争性谈判</option>
+                        <option value="">请选择评标方式</option>
+                        <option value="1">综合评分法</option>
                         <option value="3">竞争性磋商</option>
                         <option value="4">询价采购</option>
                         <option value="5">单一来源采购</option>
@@ -176,16 +178,9 @@
         </div>
         <div class="col-item">
             <div class="layui-form-item">
-                <label class="layui-form-label">项目周期</label>
+                <label class="layui-form-label">项目周期(天)</label>
                 <div class="layui-input-block">
-                    <select name="projectCycle" id="projectCycle">
-                        <option value="">请选择项目周期</option>
-                        <option value="1">1个月</option>
-                        <option value="2">3个月</option>
-                        <option value="3">6个月</option>
-                        <option value="4">1年</option>
-                        <option value="5">1年以上</option>
-                    </select>
+                    <input type="number" name="projectCycle" id="projectCycle" placeholder="请输入项目周期（天）" class="layui-input" min="0">
                 </div>
             </div>
         </div>
@@ -303,7 +298,7 @@
         </div>
         <div class="col-item">
             <div class="layui-form-item">
-                <label class="layui-form-label"><span class="required-star">*</span>投标时间</label>
+                <label class="layui-form-label">投标时间</label>
                 <div class="layui-input-block">
                     <input type="text" name="bidTime" id="bidTime" placeholder="请选择投标时间" class="layui-input" readonly lay-verify="required">
                 </div>
@@ -785,7 +780,7 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     if (data.bidType != null) $('select[name="bidType"]').val(data.bidType.toString());
                     if (data.bidWay != null) $('select[name="bidWay"]').val(data.bidWay.toString());
                     if (data.priceType != null) $('select[name="priceType"]').val(data.priceType.toString());
-                    if (data.projectCycle != null) $('select[name="projectCycle"]').val(data.projectCycle.toString());
+                    if (data.projectCycle != null) document.getElementById('projectCycle').value = data.projectCycle;
                     form.render('select');
 
                     // 日期回显
@@ -833,8 +828,8 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
         var bidTime = document.getElementById('bidTime').value.trim();
 
         if (!projectName) { layer.msg('请输入项目名称', {icon: 5}); isSubmitting = false; return false; }
-        if (!projectNo) { layer.msg('请输入项目编号', {icon: 5}); isSubmitting = false; return false; }
-        if (!bidTime) { layer.msg('请选择投标时间', {icon: 5}); isSubmitting = false; return false; }
+        //if (!projectNo) { layer.msg('请输入项目编号', {icon: 5}); isSubmitting = false; return false; }
+        //if (!bidTime) { layer.msg('请选择投标时间', {icon: 5}); isSubmitting = false; return false; }
 
         var $submitBtn = $('#submitBtn');
         $submitBtn.prop('disabled', true).addClass('layui-btn-disabled').text('保存中...');
@@ -854,7 +849,7 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
             bidWebsite: document.getElementById('bidWebsite').value.trim() || null,
             bidUrl: document.getElementById('bidUrl').value.trim() || null,
             priceType: $('select[name="priceType"]').val() || null,
-            projectCycle: $('select[name="projectCycle"]').val() || null,
+            projectCycle: document.getElementById('projectCycle').value.trim() || null,
             projectAmount: document.getElementById('projectAmount').value.trim() || null,
             maxPrice: document.getElementById('maxPrice').value.trim() || null,
             minPrice: document.getElementById('minPrice').value.trim() || null,
