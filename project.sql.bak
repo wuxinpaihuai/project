@@ -214,6 +214,7 @@ CREATE TABLE `project_extend` (
   `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
   `is_win_bid` tinyint DEFAULT '0' COMMENT '是否中标 0=否,1=是',
   `win_bid_amount` varchar(500) DEFAULT NULL COMMENT '中标金额(字符型，支持金额、费率等)',
+   `contract_amount` decimal(12,2) DEFAULT NULL COMMENT '合同金额',
   `file_path` varchar(500) DEFAULT NULL COMMENT '中标通知书路径',
   `file_name` varchar(255) DEFAULT NULL COMMENT '中标通知书文件名',
   `sign_end_time` datetime DEFAULT null COMMENT '签约截止时间',
