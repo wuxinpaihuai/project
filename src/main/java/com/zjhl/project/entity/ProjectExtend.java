@@ -1,5 +1,6 @@
 package com.zjhl.project.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -29,6 +30,7 @@ public class ProjectExtend {
     private LocalDateTime updateTime;
     private String filePath;
     private String fileName;
+    private BigDecimal contractAmount;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -73,6 +75,12 @@ public class ProjectExtend {
 	}
 	public void setSignTime(LocalDate signTime) {
 		this.signTime = signTime;
+	}
+	public BigDecimal getContractAmount() {
+		return contractAmount;
+	}
+	public void setContractAmount(BigDecimal contractAmount) {
+		this.contractAmount = contractAmount;
 	}
     
     

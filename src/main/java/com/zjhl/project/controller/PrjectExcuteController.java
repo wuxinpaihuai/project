@@ -123,6 +123,7 @@ public class PrjectExcuteController {
                     .findFirst().orElse(null);
             if (ext != null) {
                 row.put("winBidAmount", ext.getWinBidAmount());
+                row.put("contractAmount", ext.getContractAmount());
                 row.put("fileName", ext.getFileName());
                 row.put("filePath", ext.getFilePath());
                 row.put("isSign", ext.getIsSign());

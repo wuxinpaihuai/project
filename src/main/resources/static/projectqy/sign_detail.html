@@ -135,6 +135,8 @@ layui.use(['layer'], function(){
         4: {name: '延迟完成', cls: 'task-status-4'},
         5: {name: '任务失败', cls: 'task-status-5'}
     };
+    
+    var projectSourceMap = {'1': '自拓非招投标', '2': '自拓+招投标', '3': '渠道维护', '4': '渠道维护+招投标','5': '公开招投标'};
 
     var deliverTypeMap = {1: '文档', 2: '表格', 3: '图片', 4: '其他'};
     var userMap = {};
@@ -268,7 +270,7 @@ layui.use(['layer'], function(){
                 html += '<div class="info-item"><span class="info-label">联系人：</span><span class="info-value">' + safeStr(p.ownerContact) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">联系方式：</span><span class="info-value">' + safeStr(p.ownerPhone) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">投标时间：</span><span class="info-value">' + formatTime(p.bidTime) + '</span></div>';
-                html += '<div class="info-item"><span class="info-label">项目来源：</span><span class="info-value">' + safeStr(p.projectSource) + '</span></div>';
+                html += '<div class="info-item"><span class="info-label">项目来源：</span><span class="info-value">' + safeStr(projectSourceMap[p.projectSource]) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">报价类型：</span><span class="info-value">' + (p.priceType === 1 ? '金额' : (p.priceType === 0 ? '其他' : '-')) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">最高限价：</span><span class="info-value">' + formatAmount(p.maxPrice) + '</span></div>';
                 html += '<div class="info-item"><span class="info-label">最低限价：</span><span class="info-value">' + formatAmount(p.minPrice) + '</span></div>';

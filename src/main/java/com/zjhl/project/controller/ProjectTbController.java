@@ -344,6 +344,23 @@ public class ProjectTbController {
             return result;
         }
 
+        //先判断该项目是不是招投标项目。如果不是招投标项目直接进入提交签约
+        ProjectInfo info =  projectInfoService.getById(projectId);
+        if (info == null) {
+        	 result.put("code", 500);
+             result.put("msg", "未找到该项目");
+             return result;
+		}
+        
+        String source = info.getProjectSource();
+        
+        //1=自拓非招投标1=自拓非招投标，2=自拓+招投标，3=渠道维护，4=渠道维护+招投标，5=公开招投标
+        if (source!=null && (source.equals("1")||source.equals("3"))) {
+        	 result.put("code", 200);
+             result.put("msg", "可以提交签约");
+             return result;
+		}
+        
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
         extendWrapper.eq("project_id", projectId);
         extendWrapper.orderByDesc("id");
@@ -378,52 +395,74 @@ public class ProjectTbController {
             result.put("msg", "未登录");
             return result;
         }
+     // 校验技术负责人
+    	Long techUserId = params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null;
+    	String techUserName = (String) params.get("techUserName");
+    	String techUserPhone = (String) params.get("techUserPhone");
+    	if (techUserId == null) {
+    		result.put("code", 500);
+    		result.put("msg", "请选择技术负责人");
+    		return result;
+    	}
 
         Long projectId = Long.parseLong(params.get("projectId").toString());
 
-        // 检查是否中标（存在多条时取 id 最大的一条）
-        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
-        extendWrapper.eq("project_id", projectId);
-        extendWrapper.orderByDesc("id");
-        List<ProjectExtend> extendList = projectExtendService.list(extendWrapper);
-
-        if (extendList == null || extendList.isEmpty()) {
+        ProjectInfo project = projectInfoService.getById(projectId);
+        
+        if (project == null) {
             result.put("code", 500);
-            result.put("msg", "该项目还未录入中标结果，不能提交签约");
+            result.put("msg", "根据id未找到项目，id:"+projectId);
             return result;
         }
-
-        ProjectExtend extend = extendList.get(0);
-        if (extend.getIsWinBid() == null || extend.getIsWinBid() != 1) {
-            result.put("code", 500);
-            result.put("msg", "该项目未中标，不能提交签约");
-            return result;
-        }
-
-        // 校验技术负责人
-        Long techUserId = params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null;
-        String techUserName = (String) params.get("techUserName");
-        String techUserPhone = (String) params.get("techUserPhone");
-        if (techUserId == null) {
-            result.put("code", 500);
-            result.put("msg", "请选择技术负责人");
-            return result;
-        }
-
-        // 更新签约状态
-       // extend.setIsSign(1);
-        extend.setUpdateTime(LocalDateTime.now());
-        projectExtendService.updateById(extend);
+        
+        String source = project.getProjectSource();
+        
+        //1=自拓非招投标1=自拓非招投标，2=自拓+招投标，3=渠道维护，4=渠道维护+招投标，5=公开招投标
+        if (source ==null || source.equals("2")||source.equals("4") ||source.equals("5") ) {
+        	  
+        	// 检查是否中标（存在多条时取 id 最大的一条）
+        	QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        	extendWrapper.eq("project_id", projectId);
+        	extendWrapper.orderByDesc("id");
+        	List<ProjectExtend> extendList = projectExtendService.list(extendWrapper);
+        	
+        	if (extendList == null || extendList.isEmpty()) {
+        		result.put("code", 500);
+        		result.put("msg", "该项目还未录入中标结果，不能提交签约");
+        		return result;
+        	}
+        	
+        	ProjectExtend extend = extendList.get(0);
+        	if (extend.getIsWinBid() == null || extend.getIsWinBid() != 1) {
+        		result.put("code", 500);
+        		result.put("msg", "该项目未中标，不能提交签约");
+        		return result;
+        	}
+        	
+        	// 更新签约状态
+        	// extend.setIsSign(1);
+        	//extend.setUpdateTime(LocalDateTime.now());
+        	//projectExtendService.updateById(extend);
+		}
+        else {
+			//需要向project_extend表里插入一条签约记录
+        	ProjectExtend extendnew = new ProjectExtend();
+        	extendnew.setCreateTime(LocalDateTime.now());
+        	extendnew.setProjectId(projectId);
+        	extendnew.setIsWinBid(1);//虽然没有招投标，但是默认中标
+        	extendnew.setIsSign(0);
+        	projectExtendService.save(extendnew);
+		}
 
         // 更新项目信息表的技术负责人
-        ProjectInfo project = projectInfoService.getById(projectId);
-        if (project != null) {
-            project.setTechUserId(techUserId);
-            project.setTechUserName(techUserName);
-            project.setTechUserPhone(techUserPhone);
-            project.setUpdateTime(LocalDateTime.now());
-            projectInfoService.updateById(project);
-        }
+     //   ProjectInfo project = projectInfoService.getById(projectId);
+       // if (project != null) {
+        project.setTechUserId(techUserId);
+        project.setTechUserName(techUserName);
+        project.setTechUserPhone(techUserPhone);
+        project.setUpdateTime(LocalDateTime.now());
+        projectInfoService.updateById(project);
+     //   }
 
         //更新投标阶段结束时间，插入签约阶段和实施阶段记录。（目前机制是默认签约阶段和实施阶段同时展开）
         QueryWrapper<ProjectStage> stageWrapper =  new QueryWrapper<>();

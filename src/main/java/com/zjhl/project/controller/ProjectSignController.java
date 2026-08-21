@@ -368,7 +368,7 @@ public class ProjectSignController {
     }
 
     /**
-     * 保存签约信息（签约日期 + 合同附件 + 标记签约）
+     * 保存签约信息（签约日期 + 合同总金额 + 合同附件 + 标记签约）
      */
     @PostMapping("/saveSignInfo")
     public Map<String, Object> saveSignInfo(@RequestBody Map<String, Object> params) {
@@ -381,7 +381,28 @@ public class ProjectSignController {
 
         Long projectId = Long.parseLong(params.get("projectId").toString());
 
-        // 1. 更新 project_extend：签约日期 + 标记签约
+        // 合同总金额校验
+        Object contractAmountObj = params.get("contractAmount");
+        if (contractAmountObj == null || contractAmountObj.toString().trim().isEmpty()) {
+            result.put("code", 400);
+            result.put("msg", "合同总金额不能为空");
+            return result;
+        }
+        BigDecimal contractAmount;
+        try {
+            contractAmount = new BigDecimal(contractAmountObj.toString().trim());
+            if (contractAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                result.put("code", 400);
+                result.put("msg", "合同总金额必须大于0");
+                return result;
+            }
+        } catch (NumberFormatException e) {
+            result.put("code", 400);
+            result.put("msg", "合同总金额格式不正确");
+            return result;
+        }
+
+        // 1. 更新 project_extend：签约日期 + 合同总金额 + 标记签约
         QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
         extendWrapper.eq("project_id", projectId);
         ProjectExtend extend = projectExtendService.getOne(extendWrapper);
@@ -395,6 +416,7 @@ public class ProjectSignController {
         if (signTimeStr != null && !signTimeStr.isEmpty()) {
             extend.setSignTime(LocalDate.parse(signTimeStr));
         }
+        extend.setContractAmount(contractAmount);
         extend.setIsSign(1);
         extend.setUpdateTime(LocalDateTime.now());
         projectExtendService.updateById(extend);

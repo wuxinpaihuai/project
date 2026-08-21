@@ -172,7 +172,14 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">项目来源</label>
                 <div class="layui-input-block">
-                    <input type="text" name="projectSource" id="projectSource" placeholder="请输入项目来源" class="layui-input" maxlength="100">
+                     <select name="projectSource" id="projectSource">
+                        <option value="">请选择项目来源</option>
+                        <option value="1">自拓非招投标</option>
+                        <option value="2">自拓+招投标</option>
+                        <option value="3">渠道维护非招投标</option>
+                        <option value="4">渠道维护+招投标</option>
+                        <option value="5">公开招投标</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -300,7 +307,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">投标时间</label>
                 <div class="layui-input-block">
-                    <input type="text" name="bidTime" id="bidTime" placeholder="请选择投标时间" class="layui-input" readonly lay-verify="required">
+                    <input type="text" name="bidTime" id="bidTime" placeholder="请选择投标时间" class="layui-input" readonly >
                 </div>
             </div>
         </div>
@@ -752,7 +759,7 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     document.getElementById('projectName').value = data.projectName || '';
                     document.getElementById('projectNo').value = data.projectNo || '';
                     document.getElementById('area').value = data.area || '';
-                    document.getElementById('projectSource').value = data.projectSource || '';
+                    //document.getElementById('projectSource').value = data.projectSource || '';
                     document.getElementById('ownerCompany').value = data.ownerCompany || '';
                     document.getElementById('ownerContact').value = data.ownerContact || '';
                     document.getElementById('ownerPhone').value = data.ownerPhone || '';
@@ -779,6 +786,7 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
                     if (data.projectType != null) $('select[name="projectType"]').val(data.projectType.toString());
                     if (data.bidType != null) $('select[name="bidType"]').val(data.bidType.toString());
                     if (data.bidWay != null) $('select[name="bidWay"]').val(data.bidWay.toString());
+                    if (data.projectSource != null) $('select[name="projectSource"]').val(data.projectSource.toString());
                     if (data.priceType != null) $('select[name="priceType"]').val(data.priceType.toString());
                     if (data.projectCycle != null) document.getElementById('projectCycle').value = data.projectCycle;
                     form.render('select');
@@ -841,7 +849,8 @@ layui.use(['form', 'layer', 'laydate', 'upload'], function(){
             bidType: $('select[name="bidType"]').val() || null,
             bidWay: $('select[name="bidWay"]').val() || null,
             area: document.getElementById('area').value.trim() || null,
-            projectSource: document.getElementById('projectSource').value.trim() || null,
+            //projectSource: document.getElementById('projectSource').value.trim() || null,
+            projectSource: $('select[name="projectSource"]').val() || null,
             ownerCompany: document.getElementById('ownerCompany').value.trim() || null,
             ownerContact: document.getElementById('ownerContact').value.trim() || null,
             ownerPhone: document.getElementById('ownerPhone').value.trim() || null,

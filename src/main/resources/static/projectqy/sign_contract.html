@@ -95,9 +95,17 @@
         </div>
         <form class="layui-form" lay-filter="signForm">
             <div class="layui-form-item">
-                <label class="layui-form-label">签约日期</label>
-                <div class="layui-input-inline">
-                    <input type="text" name="signTime" id="signTime" placeholder="请选择签约日期" class="layui-input">
+                <div class="layui-inline">
+                    <label class="layui-form-label">签约日期</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="signTime" id="signTime" placeholder="请选择签约日期" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">合同总金额</label>
+                    <div class="layui-input-inline">
+                        <input type="number" name="contractAmount" id="contractAmount" placeholder="请输入合同总金额" class="layui-input">
+                    </div>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -216,6 +224,11 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
                 var ext = res.extend;
                 if (ext && ext.signTime) {
                     $('#signTime').val(ext.signTime);
+                }
+
+                // 合同总金额回填
+                if (ext && ext.contractAmount != null) {
+                    $('#contractAmount').val(ext.contractAmount);
                 }
 
                 // 合同附件回填
@@ -689,11 +702,17 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
         tbody.html(html);
     }
 
-    // ========== 保存全部（签约日期 + 合同附件 + 标记签约）==========
+    // ========== 保存全部（签约日期 + 合同总金额 + 合同附件 + 标记签约）==========
     $('#saveAllBtn').on('click', function(){
         var signTime = $('#signTime').val();
         if (!signTime) {
             layer.msg('请选择签约日期', {icon: 5});
+            return;
+        }
+
+        var contractAmount = $('#contractAmount').val();
+        if (!contractAmount || parseFloat(contractAmount) <= 0) {
+            layer.msg('请输入合同总金额', {icon: 5});
             return;
         }
 
@@ -711,6 +730,7 @@ layui.use(['layer', 'form', 'laydate', 'upload'], function(){
         var postData = {
             projectId: projectId,
             signTime: signTime,
+            contractAmount: contractAmount,
             contractFiles: newFiles
         };
 

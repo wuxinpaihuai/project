@@ -74,9 +74,9 @@ CREATE TABLE `project_info` (
   `project_no` varchar(255) NOT NULL COMMENT '项目编号',
   `project_type` tinyint DEFAULT NULL COMMENT '项目类型 1=环评,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,99=其他',
   `bid_type` tinyint DEFAULT NULL COMMENT '招标类型 1=公开招标,2=邀请招标,3=竞争性谈判，4=单一来源,5=询价,6=竞争性磋商',
-  `bid_way` tinyint DEFAULT NULL COMMENT '评标方式 1=综合评标,2=竞争性谈判,3=竞争性磋商,4=询价采购,5=单一来源采购,6=框架协议采购,7=电子竞价,8=均价比选,9=最低价中标',
+  `bid_way` tinyint DEFAULT NULL COMMENT '评标方式 1=综合评分法,2=竞争性谈判,3=竞争性磋商,4=询价采购,5=单一来源采购,6=框架协议采购,7=电子竞价,8=均价比选,9=最低价中标',
   `area` varchar(100) DEFAULT NULL COMMENT '项目所在区域',
-  `project_source` varchar(100) DEFAULT NULL COMMENT '项目来源',
+  `project_source` varchar(100) DEFAULT '5' COMMENT '项目来源，1=自拓非招投标，2=自拓+招投标，3=渠道维护，4=渠道维护+招投标，5=公开招投标',
   `owner_company` varchar(255) DEFAULT NULL COMMENT '项目业主单位',
   `owner_contact` varchar(50) DEFAULT NULL COMMENT '业主单位联系人',
   `owner_phone` varchar(20) DEFAULT NULL COMMENT '联系方式',
@@ -216,7 +216,6 @@ CREATE TABLE `project_extend` (
   `win_bid_amount` varchar(500) DEFAULT NULL COMMENT '中标金额(字符型，支持金额、费率等)',
   `file_path` varchar(500) DEFAULT NULL COMMENT '中标通知书路径',
   `file_name` varchar(255) DEFAULT NULL COMMENT '中标通知书文件名',
-  `is_sign` tinyint DEFAULT '0' COMMENT '是否签约 0=否,1=是',
   `sign_end_time` datetime DEFAULT null COMMENT '签约截止时间',
   `sign_time` datetime DEFAULT null COMMENT '签约时间',
   `is_sign` tinyint DEFAULT '0' COMMENT '是否签约 0=否,1=是',
@@ -301,3 +300,41 @@ CREATE TABLE `project_task_log_attachment` (
     PRIMARY KEY (`id`),
     KEY `idx_log_id` (`log_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作日志附件表';
+
+-- 项目考核表
+CREATE TABLE `project_assessment` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
+  `monitor_fee` decimal(16,4) DEFAULT NULL COMMENT '监测费',
+  `review_fee` decimal(16,4) DEFAULT NULL COMMENT '评审费',
+  `cooperation_fee` decimal(16,4) DEFAULT NULL COMMENT '协作费/业务费',
+  `public_notice_fee` decimal(16,4) DEFAULT NULL COMMENT '公示公告费',
+  `material_fee` decimal(16,4) DEFAULT NULL COMMENT '材料费',
+  `travel_fee` decimal(16,4) DEFAULT NULL COMMENT '差旅费',
+  `bind_express_fee` decimal(16,4) DEFAULT NULL COMMENT '装订费/快递费',
+  `tax_fee` decimal(16,4) DEFAULT NULL COMMENT '税费',
+  `other_direct_fee` decimal(16,4) DEFAULT NULL COMMENT '其他直接费用',
+  `net_receive_amount` decimal(16,4) DEFAULT NULL COMMENT '净收款额',
+  `net_assess_amount` decimal(16,4) DEFAULT NULL COMMENT '净考核额',
+  `is_government_approve` tinyint DEFAULT NULL COMMENT '是否通过政府部门审批或备案 0=否 1=是',
+  `meeting_approve` tinyint DEFAULT NULL COMMENT '过会审批(0=一次性过会、1=多次过会、2=其他等)',
+  `is_archive_finish` tinyint DEFAULT NULL COMMENT '存档是否完成 0=否 1=是',
+  `progress_info` varchar(500) DEFAULT NULL COMMENT '进展情况',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  
+  UNIQUE KEY `uk_project_id` (`project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核表';
+
+CREATE TABLE `project_ratio` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `ratio` decimal(5,2) DEFAULT NULL COMMENT '占比(%)，例如 30.50 代表30.50%',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_project_user` (`project_id`,`user_id`),
+  KEY `idx_project_id` (`project_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目分配表';

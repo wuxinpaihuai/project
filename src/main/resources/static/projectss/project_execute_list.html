@@ -123,11 +123,11 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'projectName', title: '项目名称', minWidth: 180},
             {field: 'projectNo', title: '项目编号', width: 140, align: 'center'},
             {field: 'area', title: '项目地址', width: 130, align: 'center'},
-            {field: 'projectAmount', title: '项目金额(元)', width: 130, align: 'right', templet: function(d){
+            {field: 'projectAmount', title: '项目金额(元)', width: 120, align: 'right', templet: function(d){
                 return d.projectAmount != null ? parseFloat(d.projectAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
             }},
-            {field: 'winBidAmount', title: '中标金额', width: 130, align: 'center', templet: function(d){
-                return d.winBidAmount || '-';
+            {field: 'contractAmount', title: '合同金额(元)', width: 120, align: 'center', templet: function(d){
+                return d.contractAmount || '-';
             }},
             {field: 'fileName', title: '中标通知书', width: 130, align: 'center', templet: function(d){
                 if (d.fileName && d.filePath) {
