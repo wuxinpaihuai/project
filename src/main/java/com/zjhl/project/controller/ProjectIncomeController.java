@@ -150,6 +150,48 @@ public class ProjectIncomeController {
         return result;
     }
 
+    /***
+     * 判断新增收款金额是否合理
+     * @param projectId
+     * @param juegeAmount
+     * @return
+     */
+    private boolean isAllowAmount(Long projectId,BigDecimal juegeAmount ,Long incomeId) {
+    	//根据项目id查询合同金额
+		 QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+	     extendWrapper.eq("project_id", projectId);
+	     ProjectExtend extend =  projectExtendService.getOne(extendWrapper);
+	     if (extend != null) {
+	    	 BigDecimal contractAmount = extend.getContractAmount();
+	    	 // 已收款 = SUM(project_income.receive_amount where project_id=info.id)
+	            QueryWrapper<ProjectIncome> incomeWrapper = new QueryWrapper<>();
+	            incomeWrapper.eq("project_id", projectId);
+	            List<ProjectIncome> incomes = projectIncomeService.list(incomeWrapper);
+	            BigDecimal receivedAmount = BigDecimal.ZERO;
+	            boolean isUpdate = incomeId != null;
+	            for(ProjectIncome i:incomes) {
+	            	if (isUpdate && incomeId.equals(i.getId())) {
+						//去掉当前编辑的收款记录，不参与计算
+					}else {
+						receivedAmount = receivedAmount.add(i.getReceiveAmount()==null?BigDecimal.ZERO:i.getReceiveAmount());
+					}
+	            }
+	            
+				/*
+				 * BigDecimal receivedAmount = incomes.stream()
+				 * .map(ProjectIncome::getReceiveAmount) .filter(Objects::nonNull)
+				 * .reduce(BigDecimal.ZERO, BigDecimal::add);
+				 */
+	            int result = contractAmount.compareTo(receivedAmount.add(juegeAmount));
+	            if (result < 0) {
+					return false;
+				}
+	            
+		 }
+
+    	return true;
+    }
+    
     /**
      * 收款详情 - 按项目ID查看收款明细
      */
@@ -280,6 +322,12 @@ public class ProjectIncomeController {
                 ? Long.parseLong(params.get("paymentNodeId").toString()) : null);
         income.setCreateTime(LocalDateTime.now());
 
+        if (!isAllowAmount(income.getProjectId(), income.getReceiveAmount(),null)) {
+        	result.put("code", 500);
+            result.put("msg", "收款金额太大，总收款额超过合同金额！");
+            return result;
+		}
+        
         boolean success = projectIncomeService.save(income);
         if (success) {
             // 保存附件
@@ -311,8 +359,7 @@ public class ProjectIncomeController {
         }
 
         Long id = Long.parseLong(params.get("id").toString());
-        ProjectIncome income = new ProjectIncome();
-        income.setId(id);
+        ProjectIncome income = projectIncomeService.getById(id);
         income.setReceiveAmount(new BigDecimal(params.get("receiveAmount").toString()));
         income.setReceiveTime(params.get("receiveTime") != null && !params.get("receiveTime").toString().isEmpty()
                 ? LocalDate.parse(params.get("receiveTime").toString()) : null);
@@ -321,6 +368,12 @@ public class ProjectIncomeController {
         income.setIsMatchnode(params.get("isMatchnode") != null ? Integer.parseInt(params.get("isMatchnode").toString()) : 0);
         income.setPaymentNodeId(params.get("paymentNodeId") != null && !params.get("paymentNodeId").toString().isEmpty()
                 ? Long.parseLong(params.get("paymentNodeId").toString()) : null);
+        
+        if (!isAllowAmount(income.getProjectId(), income.getReceiveAmount(),income.getId())) {
+        	result.put("code", 500);
+            result.put("msg", "收款金额太大，总收款额超过合同金额！");
+            return result;
+		}
 
         boolean success = projectIncomeService.updateById(income);
         if (success) {

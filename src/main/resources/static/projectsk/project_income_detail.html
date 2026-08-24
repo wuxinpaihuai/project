@@ -118,7 +118,7 @@ layui.use(['table', 'layer', 'form'], function(){
     // 加载项目信息和收款明细
     function loadDetail() {
         $.ajax({
-            url: '/project/income/detail/' + projectId,
+            url: '/project/income/detail?projectId=' + projectId,
             type: 'GET',
             headers: { token: token },
             dataType: 'json',
