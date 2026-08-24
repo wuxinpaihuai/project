@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增收款</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #fff; font-family: "Microsoft YaHei", sans-serif; }
+        .form-container { padding: 20px 30px 10px; }
+        .layui-form-label { width: 140px !important; }
+        .layui-input-block { margin-left: 170px !important; }
+        .form-footer {
+            text-align: center; padding: 15px 0; border-top: 1px solid #f0f0f0;
+            margin-top: 10px;
+        }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .attach-item {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; background: #f2f2f2; border-radius: 3px;
+            margin: 3px 6px 3px 0; font-size: 12px;
+        }
+        .attach-item .attach-del {
+            cursor: pointer; color: #ff5722; font-size: 14px; font-weight: bold;
+        }
+        .attach-item .attach-del:hover { color: #d23; }
+        .attach-item .attach-name { color: #1e9fff; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+</head>
+<body>
+<div class="form-container">
+    <form class="layui-form" lay-filter="incomeForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">付款单位</label>
+            <div class="layui-input-block">
+                <input type="text" name="payerCompanyName" id="payerCompanyName" placeholder="请输入付款单位" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">付款方式</label>
+            <div class="layui-input-block">
+                <select name="payType" id="payType">
+                    <option value="">请选择</option>
+                    <option value="1">银承</option>
+                    <option value="2">转账</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>到账金额/元</label>
+            <div class="layui-input-block">
+                <input type="number" name="receiveAmount" id="receiveAmount" placeholder="请输入到账金额" class="layui-input" step="0.01" min="0" lay-verify="required|number">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>到账时间</label>
+            <div class="layui-input-block">
+                <input type="text" name="receiveTime" id="receiveTime" placeholder="请选择到账时间" class="layui-input" lay-verify="required">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否与合同节点一致</label>
+            <div class="layui-input-block">
+                <select name="isMatchnode" id="isMatchnode">
+                    <option value="0">否</option>
+                    <option value="1">是</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">关联收款节点</label>
+            <div class="layui-input-block">
+                <select name="paymentNodeId" id="paymentNodeId" lay-filter="paymentNodeId" lay-search>
+                    <option value="">请选择收款节点</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">附件</label>
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn layui-btn-xs btn-green" id="uploadFileBtn"><i class="layui-icon">&#xe67c;</i> 上传附件</button>
+                <div id="attachList" style="margin-top: 6px;"></div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button type="button" class="layui-btn btn-green" id="saveBtn" lay-submit lay-filter="incomeForm">保存</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelBtn">取消</button>
+        </div>
+    </form>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = getQueryParam('projectId');
+var incomeId = getQueryParam('incomeId');
+var ownerCompany = getQueryParam('ownerCompany');
+var isEdit = !!incomeId;
+var attachments = []; // 附件列表 [{fileName, filePath}]
+
+function getQueryParam(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
+    var r = window.location.search.substr(1).match(reg);
+    return r ? decodeURIComponent(r[2]) : null;
+}
+
+layui.use(['form', 'layer', 'laydate', 'upload'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+    var $ = layui.jquery;
+
+    // 日期控件
+    laydate.render({ elem: '#receiveTime', type: 'date', format: 'yyyy-MM-dd' });
+
+    // 项目ID必传：无论是新增还是编辑，projectId始终从URL获取
+    // 页面加载时立即根据projectId加载收款节点下拉
+    if (projectId) {
+        loadPaymentNodes(projectId);
+    }
+    if(!isEdit){
+    	$('#payerCompanyName').val(ownerCompany || '');
+    }
+
+    // 上传附件
+    upload.render({
+        elem: '#uploadFileBtn',
+        url: '/file/upload',
+        headers: { token: token },
+        accept: 'file',
+        auto: true,
+        done: function(res) {
+            if (res.code === 200) {
+                attachments.push({
+                    fileName: res.originalName || res.data,
+                    filePath: res.data
+                });
+                renderAttachments();
+            } else {
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+        },
+        error: function() {
+            layer.msg('上传异常', {icon: 2});
+        }
+    });
+
+    // 渲染附件列表
+    function renderAttachments() {
+        var html = '';
+        for (var i = 0; i < attachments.length; i++) {
+            html += '<span class="attach-item">';
+            html += '<a class="attach-name" href="/file/download?filePath=' + encodeURIComponent(attachments[i].filePath) + '&fileName=' + encodeURIComponent(attachments[i].fileName) + '" target="_blank">' + escapeHtml(attachments[i].fileName) + '</a>';
+            html += '<span class="attach-del" data-idx="' + i + '">×</span>';
+            html += '</span>';
+        }
+        $('#attachList').html(html);
+
+        // 绑定删除
+        $('.attach-del').on('click', function(){
+            var idx = parseInt($(this).data('idx'));
+            attachments.splice(idx, 1);
+            renderAttachments();
+        });
+    }
+
+    // 保存
+    $('#saveBtn').on('click', function(){
+        var receiveAmount = $('#receiveAmount').val();
+        var receiveTime = $('#receiveTime').val();
+        if (!projectId) {
+            layer.msg('缺少项目信息', {icon: 5});
+            return;
+        }
+        if (!receiveAmount || isNaN(receiveAmount)) {
+            layer.msg('请输入有效的到账金额', {icon: 5});
+            return;
+        }
+        if (!receiveTime) {
+            layer.msg('请选择到账时间', {icon: 5});
+            return;
+        }
+
+        var params = {
+            projectId: projectId,
+            payerCompanyName: $('#payerCompanyName').val(),
+            payType: $('#payType').val() || null,
+            receiveAmount: receiveAmount,
+            receiveTime: receiveTime,
+            isMatchnode: $('#isMatchnode').val() || 0,
+            paymentNodeId: $('#paymentNodeId').val() || null,
+            files: attachments
+        };
+
+        var url, method;
+        if (isEdit) {
+            url = '/project/income/update';
+            method = 'PUT';
+            params.id = incomeId;
+        } else {
+            url = '/project/income/add';
+            method = 'POST';
+        }
+
+        $.ajax({
+            url: url,
+            type: method,
+            contentType: 'application/json',
+            headers: { token: token },
+            data: JSON.stringify(params),
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    layer.msg(isEdit ? '编辑成功' : '新增成功', {icon: 1}, function(){
+                        parent.layer.closeAll();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    });
+
+    // 取消
+    $('#cancelBtn').on('click', function(){
+        parent.layer.closeAll();
+    });
+
+    // 根据项目ID加载收款节点下拉列表
+    function loadPaymentNodes(pid) {
+        if (!pid) {
+            $('#paymentNodeId').html('<option value="">请选择收款节点</option>');
+            form.render('select');
+            return;
+        }
+        $.ajax({
+            url: '/project/income/paymentNodes/' + pid,
+            type: 'GET',
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    var nodes = res.data || [];
+                    var html = '<option value="">请选择收款节点</option>';
+                    for (var i = 0; i < nodes.length; i++) {
+                        html += '<option value="' + nodes[i].id + '">' + escapeHtml(nodes[i].label) + '</option>';
+                    }
+                    $('#paymentNodeId').html(html);
+                    form.render('select');
+
+                    // 编辑模式回显选中的收款节点
+                    if (isEdit && editData && editData.paymentNodeId) {
+                        $('#paymentNodeId').val(String(editData.paymentNodeId));
+                        form.render('select');
+                    }
+                }
+            }
+        });
+    }
+
+    // 编辑模式：加载已有数据回显
+    var editData = null;
+    if (isEdit) {
+        $.ajax({
+            url: '/project/income/get/' + incomeId,
+            type: 'GET',
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    editData = res.data;
+                    // 编辑时projectId可能从incomeId接口获取（优先用URL传入的）
+                    if (!projectId && editData.projectId) {
+                        projectId = String(editData.projectId);
+                    }
+                    $('#payerCompanyName').val(editData.payerCompanyName || '');
+                    $('#payType').val(editData.payType != null ? String(editData.payType) : '');
+                    $('#receiveAmount').val(editData.receiveAmount || '');
+                    $('#receiveTime').val(editData.receiveTime || '');
+                    $('#isMatchnode').val(editData.isMatchnode != null ? String(editData.isMatchnode) : '0');
+                    form.render('select');
+
+                    // 加载收款节点并回显
+                    if (editData.projectId) {
+                        loadPaymentNodes(editData.projectId);
+                    }
+
+                    // 回显附件
+                    if (editData.files && editData.files.length > 0) {
+                        attachments = editData.files.map(function(f){
+                            return { fileName: f.fileName, filePath: f.filePath };
+                        });
+                        renderAttachments();
+                    }
+                }
+            }
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+});
+</script>
+</body>
+</html>

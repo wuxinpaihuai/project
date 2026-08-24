@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收款管理</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 200px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .money-complete { color: #86c566; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card">
+        <form class="layui-form" lay-filter="incomeSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">项目名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="projectName" id="searchProjectName" placeholder="请输入项目名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-green" id="addIncomeBtn"><i class="layui-icon">&#xe654;</i> 新增收款</button>
+        </div>
+        <table id="incomeTable" lay-filter="incomeTable"></table>
+    </div>
+</div>
+
+<!-- 行操作模板 -->
+<script type="text/html" id="incomeRowToolbar">
+    <a class="layui-btn layui-btn-xs btn-blue" lay-event="detail">收款详情</a>
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    var currentProjectId = null; // 当前选中的项目ID（新增收款用）
+
+    // 渲染收款管理列表
+    table.render({
+        elem: '#incomeTable',
+        id: 'incomeTable',
+        url: '/project/income/list',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'checkbox', width: 50, align: 'center'},
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'projectName', title: '项目名称', minWidth: 200},
+            {field: 'contractAmount', title: '合同金额/元', width: 140, align: 'right', templet: function(d){
+                return d.contractAmount != null ? parseFloat(d.contractAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+            }},
+            {field: 'receivedAmount', title: '已收款/元', width: 140, align: 'right', templet: function(d){
+                return d.receivedAmount != null ? parseFloat(d.receivedAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00';
+            }},
+            {field: 'unReceivedAmount', title: '未收款/元', width: 140, align: 'right', templet: function(d){
+                if (d.incomeComplete) {
+                    return '<span class="money-complete">已完成收款</span>';
+                }
+                return d.unReceivedAmount != null ? parseFloat(d.unReceivedAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+            }},
+            {field: 'bisnessUserName', title: '业务员', width: 100, align: 'center'},
+            {field: 'techUserName', title: '技术负责人', width: 110, align: 'center'},
+            {title: '操作', width: 110, align: 'center', toolbar: '#incomeRowToolbar'}
+        ]]
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('incomeTable', {
+            page: { curr: 1 },
+            where: { projectName: $('#searchProjectName').val() }
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchProjectName').val('');
+        table.reload('incomeTable', {
+            page: { curr: 1 },
+            where: { projectName: '' }
+        });
+    });
+
+    // 行操作
+    table.on('tool(incomeTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'detail') {
+            currentProjectId = data.id;
+            layer.open({
+                type: 2,
+                title: '收款详情 - ' + data.projectName,
+                area: ['900px', '600px'],
+                content: '/projectsk/project_income_detail.html?projectId=' + data.id,
+                end: function(){
+                    // 关闭详情页后刷新列表
+                    table.reload('incomeTable');
+                }
+            });
+        }
+    });
+
+    // 新增收款
+    $('#addIncomeBtn').on('click', function(){
+        var checkStatus = table.checkStatus('incomeTable');
+        var selected = checkStatus.data;
+        if (selected.length === 0) {
+            layer.msg('请选择一个项目', {icon: 5});
+            return;
+        }
+        if (selected.length > 1) {
+            layer.msg('只能选择一个项目', {icon: 5});
+            return;
+        }
+        var projectId = selected[0].id;
+        var ownerCompany = selected[0].ownerCompany;
+        layer.open({
+            type: 2,
+            title: '新增收款 - ' + selected[0].projectName,
+            area: ['800px', '520px'],
+            content: '/projectsk/project_income_add.html?projectId=' + projectId+'&ownerCompany='+ownerCompany,
+            end: function(){
+                table.reload('incomeTable');
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

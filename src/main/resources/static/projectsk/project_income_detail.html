@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收款详情</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .info-card-title {
+            font-size: 15px; font-weight: 600; color: #333; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .info-card-title i { color: #86c566; font-size: 18px; }
+        .info-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px 30px;
+        }
+        .info-item { display: flex; align-items: center; }
+        .info-label { color: #999; font-size: 13px; min-width: 100px; flex-shrink: 0; }
+        .info-value { color: #333; font-size: 13px; font-weight: 500; }
+        .info-value.money-complete { color: #86c566; font-weight: bold; }
+        .info-value.rate { color: #1e9fff; font-weight: bold; }
+        .detail-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .detail-card-title {
+            font-size: 15px; font-weight: 600; color: #333; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .detail-card-title i { color: #86c566; font-size: 18px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .file-link { color: #1e9fff; cursor: pointer; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- 项目基本信息 -->
+    <div class="info-card">
+        <div class="info-card-title"><i class="layui-icon">&#xe638;</i> 项目基本信息</div>
+        <div class="info-grid" id="projectInfoGrid">
+            <div class="info-item"><span class="info-label">项目名称：</span><span class="info-value" id="infoProjectName">-</span></div>
+            <div class="info-item"><span class="info-label">合同金额：</span><span class="info-value" id="infoContractAmount">-</span></div>
+            <div class="info-item"><span class="info-label">已收款额/元：</span><span class="info-value" id="infoReceivedAmount">-</span></div>
+            <div class="info-item"><span class="info-label">已收款比例：</span><span class="info-value rate" id="infoReceiveRate">-</span></div>
+            <div class="info-item"><span class="info-label">未收款额/元：</span><span class="info-value" id="infoUnReceivedAmount">-</span></div>
+            <div class="info-item"><span class="info-label">业务员：</span><span class="info-value" id="infoBisnessUserName">-</span></div>
+            <div class="info-item"><span class="info-label">技术负责人：</span><span class="info-value" id="infoTechUserName">-</span></div>
+        </div>
+    </div>
+
+    <!-- 收款明细 -->
+    <div class="detail-card">
+        <div class="detail-card-title"><i class="layui-icon">&#xe6b2;</i> 收款明细</div>
+        <table id="incomeDetailTable" lay-filter="incomeDetailTable"></table>
+    </div>
+</div>
+
+<!-- 行操作模板 -->
+<script type="text/html" id="detailRowToolbar">
+    <a class="layui-btn layui-btn-xs btn-orange" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs btn-red" lay-event="del">删除</a>
+</script>
+
+<!-- 附件模板 -->
+<script type="text/html" id="fileTpl">
+{{#  if(d.files && d.files.length > 0){ }}
+    {{#  for(var i=0; i<d.files.length; i++){ }}
+        {{#  if(i>0){ }}、{{#  } }}
+        <a class="file-link" href="/file/download?filePath={{encodeURIComponent(d.files[i].filePath)}}&fileName={{encodeURIComponent(d.files[i].fileName)}}" target="_blank">{{ d.files[i].fileName }}</a>
+    {{#  } }}
+{{#  } else { }}
+    -
+{{#  } }}
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = getQueryParam('projectId');
+
+function getQueryParam(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
+    var r = window.location.search.substr(1).match(reg);
+    return r ? decodeURIComponent(r[2]) : null;
+}
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+
+    // 加载项目信息和收款明细
+    function loadDetail() {
+        $.ajax({
+            url: '/project/income/detail/' + projectId,
+            type: 'GET',
+            headers: { token: token },
+            dataType: 'json',
+            success: function(res) {
+                if (res.code === 200) {
+                    var info = res.projectInfo;
+                    $('#infoProjectName').text(info.projectName || '-');
+                    $('#infoContractAmount').text(info.contractAmount != null ? formatMoney(info.contractAmount) + ' 元' : '-');
+                    $('#infoReceivedAmount').text(info.receivedAmount != null ? formatMoney(info.receivedAmount) + ' 元' : '0.00 元');
+                    $('#infoReceiveRate').text(info.receiveRate != null ? info.receiveRate + '%' : '0%');
+                    
+                    var $unRecv = $('#infoUnReceivedAmount');
+                    if (info.unReceivedAmount != null && parseFloat(info.unReceivedAmount) === 0 && parseFloat(info.contractAmount) > 0) {
+                        $unRecv.text('已完成收款').addClass('money-complete');
+                    } else {
+                        $unRecv.text(info.unReceivedAmount != null ? formatMoney(info.unReceivedAmount) + ' 元' : '-').removeClass('money-complete');
+                    }
+
+                    $('#infoBisnessUserName').text(info.bisnessUserName || '-');
+                    $('#infoTechUserName').text(info.techUserName || '-');
+
+                    // 渲染收款明细表格
+                    var incomeList = res.incomeList || [];
+                    table.render({
+                        elem: '#incomeDetailTable',
+                        data: incomeList,
+                        page: false,
+                        cols: [[
+                            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+                            {field: 'payerCompanyName', title: '付款单位', minWidth: 150},
+                            {field: 'payType', title: '付款方式', width: 100, align: 'center', templet: function(d){
+                                if (d.payType === 1) return '银承';
+                                if (d.payType === 2) return '转账';
+                                return '-';
+                            }},
+                            {field: 'receiveAmount', title: '到账金额/元', width: 130, align: 'right', templet: function(d){
+                                return d.receiveAmount != null ? parseFloat(d.receiveAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
+                            }},
+                            {field: 'receiveTime', title: '到账时间', width: 120, align: 'center'},
+                            {field: 'paymentNodeName', title: '关联付款节点', width: 150, align: 'center'},
+                            {field: 'files', title: '附件', minWidth: 160, templet: '#fileTpl'},
+                            {title: '操作', width: 140, align: 'center', toolbar: '#detailRowToolbar'}
+                        ]]
+                    });
+                }
+            }
+        });
+    }
+
+    loadDetail();
+
+    // 行操作
+    table.on('tool(incomeDetailTable)', function(obj){
+        var data = obj.data;
+        if (obj.event === 'edit') {
+            layer.open({
+                type: 2,
+                title: '编辑收款记录',
+                area: ['600px', '520px'],
+                content: '/projectsk/project_income_add.html?projectId=' + projectId + '&incomeId=' + data.id,
+                end: function(){
+                    loadDetail(); // 编辑后重新加载
+                }
+            });
+        } else if (obj.event === 'del') {
+            layer.confirm('确定要删除这条收款记录吗？', {icon: 3, title: '确认删除'}, function(index){
+                $.ajax({
+                    url: '/project/income/delete/' + data.id,
+                    type: 'DELETE',
+                    headers: { token: token },
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 200) {
+                            layer.msg('删除成功', {icon: 1});
+                            loadDetail(); // 删除后重新加载
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+
+    function formatMoney(val) {
+        if (val == null) return '0.00';
+        return parseFloat(val).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+});
+</script>
+</body>
+</html>

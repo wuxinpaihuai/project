@@ -129,6 +129,9 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'winBidAmount', title: '中标金额/费率', width: 130, align: 'center', templet: function(d){
                 return d.winBidAmount || '-';
             }},
+            {field: 'contractAmount', title: '合同金额', width: 130, align: 'center', templet: function(d){
+                return d.contractAmount || '-';
+            }},
             {field: 'fileName', title: '中标通知书', width: 130, align: 'center', templet: function(d){
                 if (d.fileName && d.filePath) {
                     return '<a href="/file/download?filePath=' + encodeURIComponent(d.filePath) + '&fileName=' + encodeURIComponent(d.fileName) + '" target="_blank" style="color:#1e9fff;">' + d.fileName + '</a>';

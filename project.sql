@@ -353,3 +353,13 @@ CREATE TABLE `project_income` (
   PRIMARY KEY (`id`),
   KEY `idx_project_id` (`project_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收款信息表';
+
+CREATE TABLE `project_income_file` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `income_id` bigint NOT NULL COMMENT '收款记录ID(关联project_income.id)',
+  `file_name` varchar(255) DEFAULT NULL COMMENT '文件名',
+  `file_path` varchar(500) DEFAULT NULL COMMENT '文件路径',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_income_id` (`income_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收款记录附件表';
