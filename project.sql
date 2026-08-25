@@ -221,8 +221,14 @@ CREATE TABLE `project_extend` (
   `sign_time` datetime DEFAULT null COMMENT '签约时间',
   `is_sign` tinyint DEFAULT '0' COMMENT '是否签约 0=否,1=是',
   `is_receive_money` tinyint DEFAULT '0' COMMENT '是否收款 0=否,1=是',
-  `is_deliver` tinyint DEFAULT '0' COMMENT '是否成功交付 0=否,1=是',
+  `is_deliver` tinyint DEFAULT '0' COMMENT '是否已确定项目分配 0=否,1=是',
   `is_finish` tinyint DEFAULT '0' COMMENT '是否结束 0=否,1=是',
+  `ys_user_id` bigint DEFAULT NULL COMMENT '一审用户ID',
+  `ys_user_name` varchar(50) DEFAULT NULL COMMENT '一审姓名',
+  `es_user_id` bigint DEFAULT NULL COMMENT '二审用户ID',
+  `es_user_name` varchar(50) DEFAULT NULL COMMENT '二审姓名',
+  `ss_user_id` bigint DEFAULT NULL COMMENT '三审用户ID',
+  `ss_user_name` varchar(50) DEFAULT NULL COMMENT '三审姓名',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -363,3 +369,13 @@ CREATE TABLE `project_income_file` (
   PRIMARY KEY (`id`),
   KEY `idx_income_id` (`income_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收款记录附件表';
+
+CREATE TABLE `project_assessment_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键id',
+  `project_id` bigint NOT NULL COMMENT '项目id',
+  `user_id` bigint NOT NULL COMMENT '人员id',
+  `user_name` varchar(50) DEFAULT NULL COMMENT '人员姓名',
+  `ratio` decimal(5,2) NOT NULL COMMENT '占比(数值，20代表20%)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核人员分配表';

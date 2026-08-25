@@ -32,6 +32,36 @@ public class ProjectExtend {
     private String fileName;
     private BigDecimal contractAmount;
 
+    /**
+     * 一审用户ID
+     */
+    private Long ysUserId;
+
+    /**
+     * 一审姓名
+     */
+    private String ysUserName;
+
+    /**
+     * 二审用户ID
+     */
+    private Long esUserId;
+
+    /**
+     * 二审姓名
+     */
+    private String esUserName;
+
+    /**
+     * 三审用户ID
+     */
+    private Long ssUserId;
+
+    /**
+     * 三审姓名
+     */
+    private String ssUserName;
+    
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getProjectId() { return projectId; }
@@ -81,6 +111,42 @@ public class ProjectExtend {
 	}
 	public void setContractAmount(BigDecimal contractAmount) {
 		this.contractAmount = contractAmount;
+	}
+	public Long getYsUserId() {
+		return ysUserId;
+	}
+	public void setYsUserId(Long ysUserId) {
+		this.ysUserId = ysUserId;
+	}
+	public String getYsUserName() {
+		return ysUserName;
+	}
+	public void setYsUserName(String ysUserName) {
+		this.ysUserName = ysUserName;
+	}
+	public Long getEsUserId() {
+		return esUserId;
+	}
+	public void setEsUserId(Long esUserId) {
+		this.esUserId = esUserId;
+	}
+	public String getEsUserName() {
+		return esUserName;
+	}
+	public void setEsUserName(String esUserName) {
+		this.esUserName = esUserName;
+	}
+	public Long getSsUserId() {
+		return ssUserId;
+	}
+	public void setSsUserId(Long ssUserId) {
+		this.ssUserId = ssUserId;
+	}
+	public String getSsUserName() {
+		return ssUserName;
+	}
+	public void setSsUserName(String ssUserName) {
+		this.ssUserName = ssUserName;
 	}
     
     

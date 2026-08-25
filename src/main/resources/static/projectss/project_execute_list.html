@@ -81,6 +81,7 @@
         <div class="toolbar-btns">
             <button type="button" class="layui-btn btn-blue" id="taskAssignBtn"><i class="layui-icon">&#xe67c;</i> 任务分配</button>
             <button type="button" class="layui-btn btn-orange" id="viewWorkLogBtn"><i class="layui-icon">&#xe705;</i> 查看工作日志</button>
+            <button type="button" class="layui-btn btn-green" id="assessmentBtn"><i class="layui-icon">&#xe6b2;</i> 提交考核</button>
         </div>
         <table id="executeTable" lay-filter="executeTable"></table>
     </div>
@@ -228,6 +229,28 @@ layui.use(['table', 'layer', 'form'], function(){
             area: ['100%', '100%'],
             maxmin: true,
             content: 'project_log_view.html?projectId=' + selectedProject.id + '&projectName=' + encodeURIComponent(selectedProject.projectName || '')
+        });
+    });
+
+    // 提交考核
+    $('#assessmentBtn').on('click', function(){
+        var checkData = table.checkStatus('executeTable').data;
+        if (checkData.length === 0) {
+            layer.msg('请先选择一个项目', {icon: 5});
+            return;
+        }
+        if (checkData.length > 1) {
+            layer.msg('只能选择一个项目', {icon: 5});
+            return;
+        }
+        var selectedProject = checkData[0];
+        layer.open({
+            type: 2,
+            title: '项目考核人员分配 - ' + selectedProject.projectName,
+            area: ['900px', '85%'],
+            content: '/projectss/project_assessment_user.html?projectId=' + selectedProject.id,
+            maxmin: true,
+            shadeClose: false
         });
     });
 });

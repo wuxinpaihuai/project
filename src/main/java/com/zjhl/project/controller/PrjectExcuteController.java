@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zjhl.project.entity.*;
 import com.zjhl.project.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -46,6 +48,9 @@ public class PrjectExcuteController {
     
     @Autowired
     private SysUserRoleService sysUserRoleService;
+    
+    @Autowired
+    private ProjectAssessmentUserService projectAssessmentUserService;
 
     /**
      * 项目实施列表 - 查询已中标的项目（分页）
@@ -500,5 +505,156 @@ public class PrjectExcuteController {
         result.put("code", 200);
         result.put("msg", "延期处理成功");
         return result;
+    }
+
+    /**
+     * 查询项目考核人员分配数据（人员比例 + 审核人员 + is_deliver）
+     */
+    @GetMapping("/assessmentUser/{projectId}")
+    public Map<String, Object> assessmentUser(@PathVariable Long projectId) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        ProjectInfo project = projectInfoService.getById(projectId);
+        if (project == null) {
+            result.put("code", 404);
+            result.put("msg", "项目不存在");
+            return result;
+        }
+
+        // 人员比例分配
+        QueryWrapper<ProjectAssessmentUser> auWrapper = new QueryWrapper<>();
+        auWrapper.eq("project_id", projectId);
+        List<ProjectAssessmentUser> assessmentUsers = projectAssessmentUserService.list(auWrapper);
+
+        // 审核人员
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        if (extend == null) {
+            extend = new ProjectExtend();
+            extend.setProjectId(projectId);
+            extend.setIsDeliver(0);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("projectId", projectId);
+        data.put("projectName", project.getProjectName());
+        data.put("isDeliver", extend.getIsDeliver() != null && extend.getIsDeliver() == 1 ? 1 : 0);
+        data.put("assessmentUsers", assessmentUsers);
+        data.put("extend", extend);
+
+        result.put("code", 200);
+        result.put("msg", "查询成功");
+        result.put("data", data);
+        return result;
+    }
+
+    /**
+     * 保存项目考核人员分配
+     * submit=true 时同时更新 is_deliver=1（提交审核）
+     */
+    @Transactional
+    @PostMapping("/saveAssessmentUser")
+    public Map<String, Object> saveAssessmentUser(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        Long projectId = Long.parseLong(params.get("projectId").toString());
+        boolean submit = Boolean.TRUE.equals(params.get("submit"));
+
+        ProjectInfo project = projectInfoService.getById(projectId);
+        if (project == null) {
+            result.put("code", 404);
+            result.put("msg", "项目不存在");
+            return result;
+        }
+
+        // 1. 保存人员比例分配：先删除再新增
+        QueryWrapper<ProjectAssessmentUser> delWrapper = new QueryWrapper<>();
+        delWrapper.eq("project_id", projectId);
+        projectAssessmentUserService.remove(delWrapper);
+
+        List<Map<String, Object>> userList = params.get("assessmentUsers") != null ?
+                (List<Map<String, Object>>) params.get("assessmentUsers") : new ArrayList<>();
+        if (!userList.isEmpty()) {
+            List<ProjectAssessmentUser> saveList = new ArrayList<>();
+            for (Map<String, Object> item : userList) {
+                ProjectAssessmentUser au = new ProjectAssessmentUser();
+                au.setProjectId(projectId);
+                if (item.get("userId") != null && !item.get("userId").toString().isEmpty()) {
+                    au.setUserId(Long.parseLong(item.get("userId").toString()));
+                }
+                au.setUserName(item.get("userName") != null ? item.get("userName").toString() : null);
+                if (item.get("ratio") != null && !item.get("ratio").toString().isEmpty()) {
+                    au.setRatio(new BigDecimal(item.get("ratio").toString()));
+                }
+                au.setCreateTime(LocalDateTime.now());
+                saveList.add(au);
+            }
+            projectAssessmentUserService.saveBatch(saveList);
+        }
+
+        // 2. 保存审核人员（更新 project_extend）
+        QueryWrapper<ProjectExtend> extendWrapper = new QueryWrapper<>();
+        extendWrapper.eq("project_id", projectId);
+        ProjectExtend extend = projectExtendService.getOne(extendWrapper);
+        if (extend == null) {
+            extend = new ProjectExtend();
+            extend.setProjectId(projectId);
+            extend.setIsWinBid(1);
+            extend.setIsDeliver(0);
+            extend.setCreateTime(LocalDateTime.now());
+        }
+
+        Map<String, Object> extMap = params.get("extend") != null ?
+                (Map<String, Object>) params.get("extend") : new HashMap<>();
+        extend.setYsUserId(parseLongOrNull(extMap.get("ysUserId")));
+        extend.setYsUserName(parseStringOrNull(extMap.get("ysUserName")));
+        extend.setEsUserId(parseLongOrNull(extMap.get("esUserId")));
+        extend.setEsUserName(parseStringOrNull(extMap.get("esUserName")));
+        extend.setSsUserId(parseLongOrNull(extMap.get("ssUserId")));
+        extend.setSsUserName(parseStringOrNull(extMap.get("ssUserName")));
+
+        if (submit) {
+            extend.setIsDeliver(1);
+        }
+        extend.setUpdateTime(LocalDateTime.now());
+
+        if (extend.getId() != null) {
+            projectExtendService.updateById(extend);
+        } else {
+            projectExtendService.save(extend);
+        }
+
+        result.put("code", 200);
+        result.put("msg", submit ? "提交审核成功" : "保存成功");
+        return result;
+    }
+
+    private Long parseLongOrNull(Object obj) {
+        if (obj == null || obj.toString().isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(obj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String parseStringOrNull(Object obj) {
+        if (obj == null || obj.toString().isEmpty()) {
+            return null;
+        }
+        return obj.toString();
     }
 }

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目考核人员分配</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .info-card {
+            background: #fff; border-radius: 4px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            padding-bottom: 10px; margin-bottom: 15px;
+            border-bottom: 2px solid #1e9fff;
+        }
+        .info-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px 30px;
+        }
+        .info-item {
+            display: flex; line-height: 28px; font-size: 14px;
+        }
+        .info-label {
+            color: #666; min-width: 90px; text-align: right; margin-right: 8px;
+        }
+        .info-value {
+            color: #333; flex: 1; word-break: break-all;
+        }
+        .readonly-text {
+            line-height: 32px; color: #333; font-size: 14px;
+        }
+        .readonly-empty {
+            line-height: 32px; color: #999; font-size: 14px;
+        }
+        .toolbar { margin-bottom: 10px; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .bottom-btns { text-align: center; padding: 20px 0; margin-top: 15px; }
+        .ratio-tip { color: #999; font-size: 12px; margin-left: 10px; }
+        .ratio-tip.error { color: #ff5722; }
+        .ratio-tip.success { color: #86c566; }
+
+        /* User select component styles */
+        .user-select-wrapper { position: relative; width: 100%; }
+        .user-select-input { width: 100%; }
+        .user-select-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #fff; border: 1px solid #e2e2e2;
+            border-radius: 2px; max-height: 180px; overflow-y: auto;
+            z-index: 9999; display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        }
+        .user-select-dropdown .user-select-option {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            color: #333; border-bottom: 1px solid #f2f2f2;
+        }
+        .user-select-dropdown .user-select-option:hover {
+            background-color: #f2f2f2; color: #1e9fff;
+        }
+        .error-msg { color: red; text-align: center; padding: 50px; font-size: 14px; }
+        .readonly-table th, .readonly-table td {
+            padding: 9px 15px; text-align: left;
+        }
+        .readonly-table th {
+            background-color: #f2f2f2; font-weight: normal; color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div id="pageContent">加载中...</div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var projectId = new URLSearchParams(window.location.search).get('projectId');
+
+layui.use(['layer', 'form'], function(){
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+
+    if (!projectId) {
+        $('#pageContent').html('<p class="error-msg">缺少项目ID参数</p>');
+        return;
+    }
+    if (!token) {
+        $('#pageContent').html('<p class="error-msg">未登录或登录已过期，请重新登录</p>');
+        return;
+    }
+
+    var isDeliver = 0;
+    var projectName = '';
+    var assessmentRows = []; // {userId, userName, ratio, elId}
+    var reviewerData = { ysUserId: '', ysUserName: '', esUserId: '', esUserName: '', ssUserId: '', ssUserName: '' };
+
+    // 加载页面数据
+    $.ajax({
+        url: '/project/execute/assessmentUser/' + projectId,
+        type: 'GET',
+        headers: {token: token},
+        success: function(res) {
+            if (!res || res.code !== 200) {
+                $('#pageContent').html('<p class="error-msg">' + (res && res.msg ? res.msg : '加载失败') + '</p>');
+                return;
+            }
+            var data = res.data || {};
+            projectName = data.projectName || '';
+            isDeliver = data.isDeliver === 1 ? 1 : 0;
+            assessmentRows = [];
+            var list = data.assessmentUsers || [];
+            for (var i = 0; i < list.length; i++) {
+                assessmentRows.push({
+                    userId: list[i].userId || '',
+                    userName: list[i].userName || '',
+                    ratio: list[i].ratio != null ? list[i].ratio : ''
+                });
+            }
+            var ext = data.extend || {};
+            reviewerData = {
+                ysUserId: ext.ysUserId || '',
+                ysUserName: ext.ysUserName || '',
+                esUserId: ext.esUserId || '',
+                esUserName: ext.esUserName || '',
+                ssUserId: ext.ssUserId || '',
+                ssUserName: ext.ssUserName || ''
+            };
+            renderPage();
+        },
+        error: function(xhr) {
+            var msg = '请求失败';
+            if (xhr.status === 401) msg = '登录已过期，请重新登录';
+            else if (xhr.status === 500) msg = '服务器内部错误';
+            $('#pageContent').html('<p class="error-msg">' + msg + '</p>');
+        }
+    });
+
+    function renderPage() {
+        var html = '';
+
+        // 项目基本信息
+        html += '<div class="info-card">';
+        html += '<div class="section-title">项目基本信息</div>';
+        html += '<div class="info-grid">';
+        html += '<div class="info-item"><span class="info-label">项目ID：</span><span class="info-value">' + escapeHtml(projectId) + '</span></div>';
+        html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + escapeHtml(projectName) + '</span></div>';
+        html += '<div class="info-item"><span class="info-label">状态：</span><span class="info-value">' + (isDeliver === 1 ? '<span style="color:#86c566;">已提交审核</span>' : '<span style="color:#ff5722;">未提交审核</span>') + '</span></div>';
+        html += '</div>';
+        html += '</div>';
+
+        // 第一部分：项目人员比例分配
+        html += '<div class="info-card">';
+        html += '<div class="section-title">项目人员比例分配</div>';
+        if (isDeliver === 0) {
+            html += '<div class="toolbar"><button type="button" class="layui-btn btn-blue" id="addRatioRowBtn"><i class="layui-icon">&#xe654;</i> 新增一行</button><span class="ratio-tip" id="ratioTip"></span></div>';
+            html += '<table class="layui-table" lay-skin="line" style="margin-top:0;">';
+            html += '<thead><tr><th style="width:45%;">人员姓名</th><th style="width:35%;">占比%</th><th style="width:20%;">操作</th></tr></thead>';
+            html += '<tbody id="ratioTableBody"></tbody>';
+            html += '</table>';
+        } else {
+            html += renderReadonlyRatioTable();
+        }
+        html += '</div>';
+
+        // 第二部分：项目审核人员分配
+        html += '<div class="info-card">';
+        html += '<div class="section-title">项目审核人员分配</div>';
+        if (isDeliver === 0) {
+            html += '<div class="layui-form" style="margin-top:10px;">';
+            html += '<div class="layui-form-item">';
+            html += '<label class="layui-form-label">一审</label>';
+            html += '<div class="layui-input-block" style="margin-left:90px;">';
+            html += renderUserSelect('ysUser', reviewerData.ysUserId, reviewerData.ysUserName, false);
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="layui-form-item">';
+            html += '<label class="layui-form-label">二审</label>';
+            html += '<div class="layui-input-block" style="margin-left:90px;">';
+            html += renderUserSelect('esUser', reviewerData.esUserId, reviewerData.esUserName, false);
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="layui-form-item">';
+            html += '<label class="layui-form-label">三审</label>';
+            html += '<div class="layui-input-block" style="margin-left:90px;">';
+            html += renderUserSelect('ssUser', reviewerData.ssUserId, reviewerData.ssUserName, false);
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+        } else {
+            html += '<table class="layui-table readonly-table" lay-skin="line" style="margin-top:0;width:auto;">';
+            html += '<tbody>';
+            html += '<tr><th style="width:80px;">一审</th><td>' + (reviewerData.ysUserName ? escapeHtml(reviewerData.ysUserName) : '<span class="readonly-empty">未设置</span>') + '</td></tr>';
+            html += '<tr><th>二审</th><td>' + (reviewerData.esUserName ? escapeHtml(reviewerData.esUserName) : '<span class="readonly-empty">未设置</span>') + '</td></tr>';
+            html += '<tr><th>三审</th><td>' + (reviewerData.ssUserName ? escapeHtml(reviewerData.ssUserName) : '<span class="readonly-empty">未设置</span>') + '</td></tr>';
+            html += '</tbody></table>';
+        }
+        html += '</div>';
+
+        // 底部按钮
+        html += '<div class="bottom-btns">';
+        if (isDeliver === 0) {
+            html += '<button type="button" class="layui-btn btn-green" id="submitAuditBtn"><i class="layui-icon">&#xe605;</i> 提交审核</button>';
+            html += '<button type="button" class="layui-btn btn-blue" id="saveOnlyBtn"><i class="layui-icon">&#xe60e;</i> 保存但不提交</button>';
+        }
+        html += '<button type="button" class="layui-btn layui-btn-primary" id="closeBtn">关闭</button>';
+        html += '</div>';
+
+        $('#pageContent').html(html);
+
+        if (isDeliver === 0) {
+            renderEditableRatioRows();
+            bindUserSelect('ysUser');
+            bindUserSelect('esUser');
+            bindUserSelect('ssUser');
+            updateRatioTip();
+
+            $('#addRatioRowBtn').on('click', function(){
+                assessmentRows.push({ userId: '', userName: '', ratio: '' });
+                renderEditableRatioRows();
+                updateRatioTip();
+            });
+
+            $('#submitAuditBtn').on('click', function(){
+                saveAssessment(1);
+            });
+            $('#saveOnlyBtn').on('click', function(){
+                saveAssessment(0);
+            });
+        }
+
+        $('#closeBtn').on('click', function(){
+            closePage();
+        });
+    }
+
+    function renderReadonlyRatioTable() {
+        if (assessmentRows.length === 0) {
+            return '<p style="color:#999;text-align:center;padding:20px;">暂无人员比例分配</p>';
+        }
+        var html = '<table class="layui-table readonly-table" lay-skin="line" style="margin-top:0;">';
+        html += '<thead><tr><th style="width:60px;">序号</th><th>人员姓名</th><th>占比%</th></tr></thead><tbody>';
+        for (var i = 0; i < assessmentRows.length; i++) {
+            var row = assessmentRows[i];
+            html += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(row.userName || '-') + '</td><td>' + (row.ratio != null && row.ratio !== '' ? row.ratio + '%' : '-') + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function renderEditableRatioRows() {
+        var tbody = $('#ratioTableBody');
+        if (assessmentRows.length === 0) {
+            tbody.html('<tr id="ratioEmptyRow"><td colspan="3" style="text-align:center;color:#999;">请点击"新增一行"添加人员</td></tr>');
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < assessmentRows.length; i++) {
+            var row = assessmentRows[i];
+            html += '<tr data-index="' + i + '">';
+            html += '<td>' + renderUserSelect('ratioUser_' + i, row.userId, row.userName, true) + '</td>';
+            html += '<td><input type="number" class="layui-input ratio-input" data-index="' + i + '" placeholder="请输入占比" value="' + (row.ratio != null ? row.ratio : '') + '"></td>';
+            html += '<td><button type="button" class="layui-btn layui-btn-xs layui-btn-danger del-ratio-row" data-index="' + i + '"><i class="layui-icon">&#xe640;</i> 删除</button></td>';
+            html += '</tr>';
+        }
+        tbody.html(html);
+
+        // bind user select for each row
+        for (var j = 0; j < assessmentRows.length; j++) {
+            bindUserSelect('ratioUser_' + j);
+        }
+
+        // ratio input change
+        tbody.find('.ratio-input').off('input').on('input', function(){
+            var idx = parseInt($(this).data('index'));
+            assessmentRows[idx].ratio = $(this).val();
+            updateRatioTip();
+        });
+
+        // delete row
+        tbody.find('.del-ratio-row').off('click').on('click', function(){
+            var idx = parseInt($(this).data('index'));
+            assessmentRows.splice(idx, 1);
+            renderEditableRatioRows();
+            updateRatioTip();
+        });
+    }
+
+    function renderUserSelect(prefix, userId, userName, isTableCell) {
+        var html = '<div class="user-select-wrapper" id="' + prefix + 'Wrapper">';
+        html += '<input type="text" id="' + prefix + 'Input" placeholder="输入姓名搜索" autocomplete="off" class="layui-input user-select-input" value="' + escapeHtml(userName) + '"' + (isTableCell ? ' style="width:100%;"' : '') + '>';
+        html += '<div class="user-select-dropdown" id="' + prefix + 'Dropdown"></div>';
+        html += '<input type="hidden" id="' + prefix + 'Id" value="' + escapeHtml(userId) + '">';
+        html += '<input type="hidden" id="' + prefix + 'Name" value="' + escapeHtml(userName) + '">';
+        html += '</div>';
+        return html;
+    }
+
+    function bindUserSelect(prefix) {
+        var wrapper = $('#' + prefix + 'Wrapper');
+        if (wrapper.length === 0) return;
+        var dropdown = $('#' + prefix + 'Dropdown');
+        var searchInput = $('#' + prefix + 'Input');
+        var idInput = $('#' + prefix + 'Id');
+        var nameInput = $('#' + prefix + 'Name');
+        var searchTimer = null;
+
+        searchInput.off('input').on('input', function(){
+            var val = $(this).val().trim();
+            // 手动输入时同步隐藏域：姓名跟随输入，ID清空（只有下拉选择才回填ID）
+            nameInput.val(val);
+            idInput.val('');
+            if (val === '') {
+                dropdown.hide().empty();
+                updateRatioTip();
+                return;
+            }
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(function(){
+                $.ajax({
+                    url: '/sys/user/searchByName?name=' + encodeURIComponent(val),
+                    type: 'GET',
+                    headers: {token: token},
+                    success: function(res) {
+                        if (res && res.code === 200 && res.data && res.data.length > 0) {
+                            var optionsHtml = '';
+                            for (var i = 0; i < res.data.length; i++) {
+                                var u = res.data[i];
+                                var uName = u.realName || u.name || u.userName || '-';
+                                var uId = u.id;
+                                var uPhone = u.phone || '';
+                                optionsHtml += '<div class="user-select-option" data-id="' + uId + '" data-name="' + uName + '">' + escapeHtml(uName) + (uPhone ? ' (' + escapeHtml(uPhone) + ')' : '') + '</div>';
+                            }
+                            dropdown.html(optionsHtml).show();
+                        } else {
+                            dropdown.html('<div style="padding:10px;color:#999;text-align:center;">无匹配结果</div>').show();
+                        }
+                    },
+                    error: function() {
+                        dropdown.html('<div style="padding:10px;color:#999;text-align:center;">搜索失败</div>').show();
+                    }
+                });
+            }, 300);
+        });
+
+        dropdown.off('click').on('click', '.user-select-option', function(){
+            var uid = String($(this).data('id'));
+            var uname = $(this).data('name');
+            idInput.val(uid);
+            nameInput.val(uname);
+            searchInput.val(uname);
+            dropdown.hide().empty();
+            // update model for ratio rows
+            if (prefix.indexOf('ratioUser_') === 0) {
+                var idx = parseInt(prefix.replace('ratioUser_', ''));
+                assessmentRows[idx].userId = uid;
+                assessmentRows[idx].userName = uname;
+            } else if (prefix === 'ysUser') {
+                reviewerData.ysUserId = uid;
+                reviewerData.ysUserName = uname;
+            } else if (prefix === 'esUser') {
+                reviewerData.esUserId = uid;
+                reviewerData.esUserName = uname;
+            } else if (prefix === 'ssUser') {
+                reviewerData.ssUserId = uid;
+                reviewerData.ssUserName = uname;
+            }
+        });
+
+        $(document).off('click.' + prefix).on('click.' + prefix, function(e){
+            if (!$(e.target).closest('#' + prefix + 'Wrapper').length) {
+                dropdown.hide();
+            }
+        });
+    }
+
+    function updateRatioTip() {
+        var sum = 0;
+        var valid = true;
+        $('#ratioTableBody .ratio-input').each(function(){
+            var r = $(this).val();
+            if (r != null && r !== '') {
+                var n = parseFloat(r);
+                if (isNaN(n)) {
+                    valid = false;
+                } else {
+                    sum += n;
+                }
+            }
+        });
+        sum = parseFloat(sum.toFixed(2));
+        var tip = $('#ratioTip');
+        if (!valid) {
+            tip.text('存在非法数值').removeClass('success').addClass('error');
+        } else if (sum === 100) {
+            tip.text('当前占比合计：' + sum + '%').removeClass('error').addClass('success');
+        } else {
+            tip.text('当前占比合计：' + sum + '%，需等于100%').removeClass('success').addClass('error');
+        }
+    }
+
+    function collectData() {
+        var list = [];
+        $('#ratioTableBody tr[data-index]').each(function(){
+            var idx = $(this).data('index');
+            var userId = $('#ratioUser_' + idx + 'Id').val();
+            var userName = $('#ratioUser_' + idx + 'Name').val();
+            var ratio = $(this).find('.ratio-input').val();
+            if ((userId || userName) || (ratio != null && ratio !== '')) {
+                list.push({
+                    userId: userId || '',
+                    userName: userName || '',
+                    ratio: ratio != null && ratio !== '' ? parseFloat(ratio) : null
+                });
+            }
+        });
+        var ext = {
+            ysUserId: $('#ysUserId').val() || null,
+            ysUserName: $('#ysUserName').val() || null,
+            esUserId: $('#esUserId').val() || null,
+            esUserName: $('#esUserName').val() || null,
+            ssUserId: $('#ssUserId').val() || null,
+            ssUserName: $('#ssUserName').val() || null
+        };
+        return { assessmentUsers: list, extend: ext };
+    }
+
+    function saveAssessment(submit) {
+        // 校验人员比例
+        var sum = 0;
+        var rows = $('#ratioTableBody tr[data-index]');
+        if (rows.length === 0) {
+            layer.msg('请至少添加一行人员比例', {icon: 5});
+            return;
+        }
+        var rowIndex = 0;
+        var hasError = false;
+        rows.each(function(){
+            if (hasError) return;
+            rowIndex++;
+            var idx = $(this).data('index');
+            var userName = $('#ratioUser_' + idx + 'Name').val();
+            var ratio = $(this).find('.ratio-input').val();
+            if (!userName) {
+                layer.msg('第' + rowIndex + '行人员姓名不能为空', {icon: 5});
+                hasError = true;
+                return;
+            }
+            if (ratio == null || ratio === '') {
+                layer.msg('第' + rowIndex + '行占比不能为空', {icon: 5});
+                hasError = true;
+                return;
+            }
+            var r = parseFloat(ratio);
+            if (isNaN(r) || r < 0 || r > 100) {
+                layer.msg('第' + rowIndex + '行占比必须是0-100之间的数字', {icon: 5});
+                hasError = true;
+                return;
+            }
+            sum += r;
+        });
+        if (hasError) return;
+        sum = parseFloat(sum.toFixed(2));
+        if (sum !== 100) {
+            layer.msg('所有人员占比之和必须等于100%，当前合计：' + sum + '%', {icon: 5});
+            return;
+        }
+
+        var postData = collectData();
+        postData.projectId = projectId;
+        postData.submit = submit === 1;
+
+        var btnText = submit === 1 ? '提交审核' : '保存但不提交';
+        $.ajax({
+            url: '/project/execute/saveAssessmentUser',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {token: token},
+            data: JSON.stringify(postData),
+            success: function(res) {
+                if (res && res.code === 200) {
+                    layer.msg(btnText + '成功', {icon: 1}, function(){
+                        closePage();
+                    });
+                } else {
+                    layer.msg(res && res.msg ? res.msg : '操作失败', {icon: 2});
+                }
+            },
+            error: function(xhr) {
+                var msg = '请求失败';
+                if (xhr.status === 401) msg = '登录已过期';
+                else if (xhr.status === 500) msg = '服务器内部错误';
+                layer.msg(msg, {icon: 2});
+            }
+        });
+    }
+
+    function closePage() {
+        var index = parent.layer.getFrameIndex(window.name);
+        if (index) {
+            parent.layer.close(index);
+        } else {
+            window.close();
+        }
+    }
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+});
+</script>
+</body>
+</html>
