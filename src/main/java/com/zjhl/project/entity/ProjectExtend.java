@@ -62,6 +62,71 @@ public class ProjectExtend {
      */
     private String ssUserName;
     
+    /**
+     * 项目考核类型（ 1=报告书 ，7=报告表，8=登记表,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,99=其他
+     */
+    private Integer assessType;
+
+    /**
+     * 监测费
+     */
+    private BigDecimal monitorFee;
+
+    /**
+     * 评审费
+     */
+    private BigDecimal reviewFee;
+
+    /**
+     * 协作费/业务费
+     */
+    private BigDecimal cooperationFee;
+
+    /**
+     * 公示公告费
+     */
+    private BigDecimal publicNoticeFee;
+
+    /**
+     * 材料费
+     */
+    private BigDecimal materialFee;
+
+    /**
+     * 差旅费
+     */
+    private BigDecimal travelFee;
+
+    /**
+     * 装订费/快递费
+     */
+    private BigDecimal bindExpressFee;
+
+    /**
+     * 其他直接费用
+     */
+    private BigDecimal otherDirectFee;
+
+    /**
+     * 是否通过政府部门审批或备案 0=否 1=是
+     */
+    private Integer isGovernmentApprove;
+
+    /**
+     * 过会审批(0=一次性过会、1=多次过会、2=其他等)
+     */
+    private Integer meetingApprove;
+
+    /**
+     * 存档是否完成 0=否 1=是
+     */
+    private Integer isArchiveFinish;
+
+    /**
+     * 进展情况
+     */
+    private String progressInfo;
+    
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getProjectId() { return projectId; }
@@ -147,6 +212,84 @@ public class ProjectExtend {
 	}
 	public void setSsUserName(String ssUserName) {
 		this.ssUserName = ssUserName;
+	}
+	public Integer getAssessType() {
+		return assessType;
+	}
+	public void setAssessType(Integer assessType) {
+		this.assessType = assessType;
+	}
+	public BigDecimal getMonitorFee() {
+		return monitorFee;
+	}
+	public void setMonitorFee(BigDecimal monitorFee) {
+		this.monitorFee = monitorFee;
+	}
+	public BigDecimal getReviewFee() {
+		return reviewFee;
+	}
+	public void setReviewFee(BigDecimal reviewFee) {
+		this.reviewFee = reviewFee;
+	}
+	public BigDecimal getCooperationFee() {
+		return cooperationFee;
+	}
+	public void setCooperationFee(BigDecimal cooperationFee) {
+		this.cooperationFee = cooperationFee;
+	}
+	public BigDecimal getPublicNoticeFee() {
+		return publicNoticeFee;
+	}
+	public void setPublicNoticeFee(BigDecimal publicNoticeFee) {
+		this.publicNoticeFee = publicNoticeFee;
+	}
+	public BigDecimal getMaterialFee() {
+		return materialFee;
+	}
+	public void setMaterialFee(BigDecimal materialFee) {
+		this.materialFee = materialFee;
+	}
+	public BigDecimal getTravelFee() {
+		return travelFee;
+	}
+	public void setTravelFee(BigDecimal travelFee) {
+		this.travelFee = travelFee;
+	}
+	public BigDecimal getBindExpressFee() {
+		return bindExpressFee;
+	}
+	public void setBindExpressFee(BigDecimal bindExpressFee) {
+		this.bindExpressFee = bindExpressFee;
+	}
+	public BigDecimal getOtherDirectFee() {
+		return otherDirectFee;
+	}
+	public void setOtherDirectFee(BigDecimal otherDirectFee) {
+		this.otherDirectFee = otherDirectFee;
+	}
+	public Integer getIsGovernmentApprove() {
+		return isGovernmentApprove;
+	}
+	public void setIsGovernmentApprove(Integer isGovernmentApprove) {
+		this.isGovernmentApprove = isGovernmentApprove;
+	}
+	public Integer getMeetingApprove() {
+		return meetingApprove;
+	}
+	public void setMeetingApprove(Integer meetingApprove) {
+		this.meetingApprove = meetingApprove;
+	}
+	public Integer getIsArchiveFinish() {
+		return isArchiveFinish;
+	}
+	public void setIsArchiveFinish(Integer isArchiveFinish) {
+		this.isArchiveFinish = isArchiveFinish;
+	}
+	public String getProgressInfo() {
+		return progressInfo;
+	}
+	public void setProgressInfo(String progressInfo) {
+		this.progressInfo = progressInfo;
 	}
     
     

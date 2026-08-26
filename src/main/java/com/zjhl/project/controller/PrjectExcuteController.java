@@ -625,6 +625,21 @@ public class PrjectExcuteController {
         extend.setSsUserId(parseLongOrNull(extMap.get("ssUserId")));
         extend.setSsUserName(parseStringOrNull(extMap.get("ssUserName")));
 
+        // 费用明细字段
+        extend.setAssessType(parseIntegerOrNull(extMap.get("assessType")));
+        extend.setMonitorFee(parseBigDecimalOrNull(extMap.get("monitorFee")));
+        extend.setReviewFee(parseBigDecimalOrNull(extMap.get("reviewFee")));
+        extend.setCooperationFee(parseBigDecimalOrNull(extMap.get("cooperationFee")));
+        extend.setPublicNoticeFee(parseBigDecimalOrNull(extMap.get("publicNoticeFee")));
+        extend.setMaterialFee(parseBigDecimalOrNull(extMap.get("materialFee")));
+        extend.setTravelFee(parseBigDecimalOrNull(extMap.get("travelFee")));
+        extend.setBindExpressFee(parseBigDecimalOrNull(extMap.get("bindExpressFee")));
+        extend.setOtherDirectFee(parseBigDecimalOrNull(extMap.get("otherDirectFee")));
+        extend.setIsGovernmentApprove(parseIntegerOrNull(extMap.get("isGovernmentApprove")));
+        extend.setMeetingApprove(parseIntegerOrNull(extMap.get("meetingApprove")));
+        extend.setIsArchiveFinish(parseIntegerOrNull(extMap.get("isArchiveFinish")));
+        extend.setProgressInfo(parseStringOrNull(extMap.get("progressInfo")));
+
         if (submit) {
             extend.setIsDeliver(1);
         }
@@ -657,5 +672,27 @@ public class PrjectExcuteController {
             return null;
         }
         return obj.toString();
+    }
+
+    private Integer parseIntegerOrNull(Object obj) {
+        if (obj == null || obj.toString().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseBigDecimalOrNull(Object obj) {
+        if (obj == null || obj.toString().isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(obj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

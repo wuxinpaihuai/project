@@ -82,6 +82,36 @@
         .readonly-table th {
             background-color: #f2f2f2; font-weight: normal; color: #666;
         }
+
+        /* 费用明细 */
+        .fee-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px 30px;
+        }
+        .fee-row-full {
+            display: flex; margin-bottom: 10px;
+        }
+        .fee-row-full .info-label {
+            min-width: 120px;
+        }
+        .fee-row-full .fee-content {
+            flex: 1;
+        }
+        .fee-item {
+            display: flex; align-items: center; line-height: 32px; font-size: 14px;
+        }
+        .fee-item .info-label {
+            min-width: 120px;
+        }
+        .fee-item .layui-input {
+            line-height: 32px;
+        }
+        .fee-readonly-item {
+            display: flex; line-height: 32px; font-size: 14px;
+        }
+        .fee-readonly-item .info-label {
+            min-width: 120px; color: #666;
+        }
     </style>
 </head>
 <body>
@@ -113,6 +143,21 @@ layui.use(['layer', 'form'], function(){
     var contractAmount = '';
     var assessmentRows = []; // {userId, userName, ratio, elId}
     var reviewerData = { ysUserId: '', ysUserName: '', esUserId: '', esUserName: '', ssUserId: '', ssUserName: '' };
+    var feeData = {
+        assessType: '',
+        monitorFee: '',
+        reviewFee: '',
+        cooperationFee: '',
+        publicNoticeFee: '',
+        materialFee: '',
+        travelFee: '',
+        bindExpressFee: '',
+        otherDirectFee: '',
+        isGovernmentApprove: '',
+        meetingApprove: '',
+        isArchiveFinish: '',
+        progressInfo: ''
+    };
 
     // 加载页面数据
     $.ajax({
@@ -146,6 +191,21 @@ layui.use(['layer', 'form'], function(){
                 ssUserId: ext.ssUserId || '',
                 ssUserName: ext.ssUserName || ''
             };
+            feeData = {
+                assessType: ext.assessType != null ? String(ext.assessType) : '',
+                monitorFee: ext.monitorFee != null ? String(ext.monitorFee) : '',
+                reviewFee: ext.reviewFee != null ? String(ext.reviewFee) : '',
+                cooperationFee: ext.cooperationFee != null ? String(ext.cooperationFee) : '',
+                publicNoticeFee: ext.publicNoticeFee != null ? String(ext.publicNoticeFee) : '',
+                materialFee: ext.materialFee != null ? String(ext.materialFee) : '',
+                travelFee: ext.travelFee != null ? String(ext.travelFee) : '',
+                bindExpressFee: ext.bindExpressFee != null ? String(ext.bindExpressFee) : '',
+                otherDirectFee: ext.otherDirectFee != null ? String(ext.otherDirectFee) : '',
+                isGovernmentApprove: ext.isGovernmentApprove != null ? String(ext.isGovernmentApprove) : '',
+                meetingApprove: ext.meetingApprove != null ? String(ext.meetingApprove) : '',
+                isArchiveFinish: ext.isArchiveFinish != null ? String(ext.isArchiveFinish) : '',
+                progressInfo: ext.progressInfo || ''
+            };
             renderPage();
         },
         error: function(xhr) {
@@ -167,6 +227,16 @@ layui.use(['layer', 'form'], function(){
         html += '<div class="info-item"><span class="info-label">合同金额(元)：</span><span class="info-value">' + escapeHtml(contractAmount) + '</span></div>';
         html += '<div class="info-item"><span class="info-label">状态：</span><span class="info-value">' + (isDeliver === 1 ? '<span style="color:#86c566;">已提交审核</span>' : '<span style="color:#ff5722;">未提交审核</span>') + '</span></div>';
         html += '</div>';
+        html += '</div>';
+
+        // 费用明细
+        html += '<div class="info-card">';
+        html += '<div class="section-title">费用明细</div>';
+        if (isDeliver === 0) {
+            html += renderEditableFeeSection();
+        } else {
+            html += renderReadonlyFeeSection();
+        }
         html += '</div>';
 
         // 第一部分：项目人员比例分配
@@ -234,6 +304,11 @@ layui.use(['layer', 'form'], function(){
             bindUserSelect('esUser');
             bindUserSelect('ssUser');
             updateRatioTip();
+            form.render('select', 'feeForm');
+            form.on('select(feeSelect)', function(data){
+                feeData[data.elem.name] = data.value;
+            });
+            bindFeeInputEvents();
 
             $('#addRatioRowBtn').on('click', function(){
                 assessmentRows.push({ userId: '', userName: '', ratio: '' });
@@ -252,6 +327,156 @@ layui.use(['layer', 'form'], function(){
         $('#closeBtn').on('click', function(){
             closePage();
         });
+    }
+
+    function renderEditableFeeSection() {
+        var html = '<div class="layui-form fee-form" lay-filter="feeForm" style="margin-top:10px;">';
+
+        // 项目考核类型（占满一行）
+        html += '<div class="fee-row-full">';
+        html += '<span class="info-label">项目考核类型：</span>';
+        html += '<div class="fee-content">';
+        html += renderFeeSelect('assessType', feeData.assessType, [
+            { value: '', text: '请选择' },
+            { value: '1', text: '报告书' },
+            { value: '7', text: '报告表' },
+            { value: '8', text: '登记表' },
+            { value: '2', text: '场调' },
+            { value: '3', text: '应急预案' },
+            { value: '4', text: '验收' },
+            { value: '5', text: '环评入围' },
+            { value: '6', text: '场调入围' },
+            { value: '99', text: '其他' }
+        ]);
+        html += '</div></div>';
+
+        // 第一行3列：监测费、评审费、协作费
+        html += '<div class="fee-grid">';
+        html += renderFeeNumberItem('监测费/直接成本：', 'monitorFee', feeData.monitorFee);
+        html += renderFeeNumberItem('评审费(元)：', 'reviewFee', feeData.reviewFee);
+        html += renderFeeNumberItem('协作费/业务费：', 'cooperationFee', feeData.cooperationFee);
+        html += '</div>';
+
+        // 第二行3列：公示公告费、材料费、差旅费
+        html += '<div class="fee-grid">';
+        html += renderFeeNumberItem('公示公告费(元)：', 'publicNoticeFee', feeData.publicNoticeFee);
+        html += renderFeeNumberItem('材料费(元)：', 'materialFee', feeData.materialFee);
+        html += renderFeeNumberItem('差旅费(元)：', 'travelFee', feeData.travelFee);
+        html += '</div>';
+
+        // 第三行3列：装订/快递费、其他直接费用
+        html += '<div class="fee-grid">';
+        html += renderFeeNumberItem('装订/快递费(元)：', 'bindExpressFee', feeData.bindExpressFee);
+        html += renderFeeNumberItem('其他直接费用(元)：', 'otherDirectFee', feeData.otherDirectFee);
+        html += renderFeeNumberItem('', '', '', true);
+        html += '</div>';
+
+        // 第四行3列：是否已审批或备案、过会审批、存档是否完成
+        html += '<div class="fee-grid">';
+        html += renderFeeSelectItem('是否已审批或备案：', 'isGovernmentApprove', feeData.isGovernmentApprove, [
+            { value: '', text: '请选择' }, { value: '0', text: '否' }, { value: '1', text: '是' }
+        ]);
+        html += renderFeeSelectItem('过会审批：', 'meetingApprove', feeData.meetingApprove, [
+            { value: '', text: '请选择' }, { value: '0', text: '一次性过会' }, { value: '1', text: '多次过会' }, { value: '2', text: '其他' }
+        ]);
+        html += renderFeeSelectItem('存档是否完成：', 'isArchiveFinish', feeData.isArchiveFinish, [
+            { value: '', text: '请选择' }, { value: '0', text: '否' }, { value: '1', text: '是' }
+        ]);
+        html += '</div>';
+
+        // 进展情况（占满一行）
+        html += '<div class="fee-row-full" style="margin-top:10px;">';
+        html += '<span class="info-label">进展情况：</span>';
+        html += '<div class="fee-content">';
+        html += '<textarea name="progressInfo" placeholder="请输入进展情况" class="layui-textarea">' + escapeHtml(feeData.progressInfo) + '</textarea>';
+        html += '</div></div>';
+
+        html += '</div>';
+        return html;
+    }
+
+    function renderReadonlyFeeSection() {
+        var assessTypeMap = {
+            '1': '报告书', '7': '报告表', '8': '登记表', '2': '场调',
+            '3': '应急预案', '4': '验收', '5': '环评入围', '6': '场调入围', '99': '其他'
+        };
+        var isGovernmentApproveMap = { '0': '否', '1': '是' };
+        var meetingApproveMap = { '0': '一次性过会', '1': '多次过会', '2': '其他' };
+        var isArchiveFinishMap = { '0': '否', '1': '是' };
+
+        var html = '';
+        html += '<div class="fee-row-full">';
+        html += '<span class="info-label">项目考核类型：</span>';
+        html += '<span class="info-value">' + (assessTypeMap[feeData.assessType] || '<span class="readonly-empty">未设置</span>') + '</span>';
+        html += '</div>';
+
+        html += '<div class="fee-grid">';
+        html += renderFeeReadonlyItem('监测费/直接成本(元)：', feeData.monitorFee);
+        html += renderFeeReadonlyItem('评审费(元)：', feeData.reviewFee);
+        html += renderFeeReadonlyItem('协作费/业务费(元)：', feeData.cooperationFee);
+        html += '</div>';
+
+        html += '<div class="fee-grid">';
+        html += renderFeeReadonlyItem('公示公告费(元)：', feeData.publicNoticeFee);
+        html += renderFeeReadonlyItem('材料费(元)：', feeData.materialFee);
+        html += renderFeeReadonlyItem('差旅费(元)：', feeData.travelFee);
+        html += '</div>';
+
+        html += '<div class="fee-grid">';
+        html += renderFeeReadonlyItem('装订/快递费(元)：', feeData.bindExpressFee);
+        html += renderFeeReadonlyItem('其他直接费用(元)：', feeData.otherDirectFee);
+        html += '<div class="fee-readonly-item"></div>';
+        html += '</div>';
+
+        html += '<div class="fee-grid">';
+        html += renderFeeReadonlyItem('是否已审批或备案：', isGovernmentApproveMap[feeData.isGovernmentApprove] || '');
+        html += renderFeeReadonlyItem('过会审批：', meetingApproveMap[feeData.meetingApprove] || '');
+        html += renderFeeReadonlyItem('存档是否完成：', isArchiveFinishMap[feeData.isArchiveFinish] || '');
+        html += '</div>';
+
+        html += '<div class="fee-row-full" style="margin-top:10px;">';
+        html += '<span class="info-label">进展情况：</span>';
+        html += '<span class="info-value">' + (feeData.progressInfo ? escapeHtml(feeData.progressInfo) : '<span class="readonly-empty">未填写</span>') + '</span>';
+        html += '</div>';
+
+        return html;
+    }
+
+    function renderFeeSelect(name, selectedValue, options) {
+        var html = '<select name="' + name + '" lay-filter="feeSelect">';
+        for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var selected = String(selectedValue) === String(opt.value) ? ' selected' : '';
+            html += '<option value="' + opt.value + '"' + selected + '>' + opt.text + '</option>';
+        }
+        html += '</select>';
+        return html;
+    }
+
+    function renderFeeNumberItem(label, name, value, isEmpty) {
+        if (isEmpty) {
+            return '<div class="fee-item"></div>';
+        }
+        return '<div class="fee-item">' +
+            '<span class="info-label">' + label + '</span>' +
+            '<div class="layui-input-block" style="margin-left:0;min-height:32px;">' +
+            '<input type="number" name="' + name + '" class="layui-input" placeholder="请输入金额" value="' + escapeHtml(value) + '">' +
+            '</div></div>';
+    }
+
+    function renderFeeSelectItem(label, name, selectedValue, options) {
+        return '<div class="fee-item">' +
+            '<span class="info-label">' + label + '</span>' +
+            '<div class="fee-content">' +
+            renderFeeSelect(name, selectedValue, options) +
+            '</div></div>';
+    }
+
+    function renderFeeReadonlyItem(label, value) {
+        return '<div class="fee-readonly-item">' +
+            '<span class="info-label">' + label + '</span>' +
+            '<span class="info-value">' + (value || value === 0 ? value : '<span class="readonly-empty">未填写</span>') + '</span>' +
+            '</div>';
     }
 
     function renderReadonlyRatioTable() {
@@ -419,6 +644,16 @@ layui.use(['layer', 'form'], function(){
         }
     }
 
+    function bindFeeInputEvents() {
+        $('.fee-form input[type="number"]').off('input').on('input', function(){
+            var name = $(this).attr('name');
+            feeData[name] = $(this).val();
+        });
+        $('.fee-form textarea[name="progressInfo"]').off('input').on('input', function(){
+            feeData.progressInfo = $(this).val();
+        });
+    }
+
     function collectData() {
         var list = [];
         $('#ratioTableBody tr[data-index]').each(function(){
@@ -440,7 +675,20 @@ layui.use(['layer', 'form'], function(){
             esUserId: $('#esUserId').val() || null,
             esUserName: $('#esUserName').val() || null,
             ssUserId: $('#ssUserId').val() || null,
-            ssUserName: $('#ssUserName').val() || null
+            ssUserName: $('#ssUserName').val() || null,
+            assessType: feeData.assessType || null,
+            monitorFee: feeData.monitorFee || null,
+            reviewFee: feeData.reviewFee || null,
+            cooperationFee: feeData.cooperationFee || null,
+            publicNoticeFee: feeData.publicNoticeFee || null,
+            materialFee: feeData.materialFee || null,
+            travelFee: feeData.travelFee || null,
+            bindExpressFee: feeData.bindExpressFee || null,
+            otherDirectFee: feeData.otherDirectFee || null,
+            isGovernmentApprove: feeData.isGovernmentApprove || null,
+            meetingApprove: feeData.meetingApprove || null,
+            isArchiveFinish: feeData.isArchiveFinish || null,
+            progressInfo: feeData.progressInfo || null
         };
         return { assessmentUsers: list, extend: ext };
     }
