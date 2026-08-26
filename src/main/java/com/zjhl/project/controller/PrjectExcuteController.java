@@ -544,6 +544,7 @@ public class PrjectExcuteController {
         Map<String, Object> data = new HashMap<>();
         data.put("projectId", projectId);
         data.put("projectName", project.getProjectName());
+        data.put("contractAmount", extend.getContractAmount());
         data.put("isDeliver", extend.getIsDeliver() != null && extend.getIsDeliver() == 1 ? 1 : 0);
         data.put("assessmentUsers", assessmentUsers);
         data.put("extend", extend);

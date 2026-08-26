@@ -110,6 +110,7 @@ layui.use(['layer', 'form'], function(){
 
     var isDeliver = 0;
     var projectName = '';
+    var contractAmount = '';
     var assessmentRows = []; // {userId, userName, ratio, elId}
     var reviewerData = { ysUserId: '', ysUserName: '', esUserId: '', esUserName: '', ssUserId: '', ssUserName: '' };
 
@@ -125,6 +126,7 @@ layui.use(['layer', 'form'], function(){
             }
             var data = res.data || {};
             projectName = data.projectName || '';
+            contractAmount = data.contractAmount || '';
             isDeliver = data.isDeliver === 1 ? 1 : 0;
             assessmentRows = [];
             var list = data.assessmentUsers || [];
@@ -161,8 +163,8 @@ layui.use(['layer', 'form'], function(){
         html += '<div class="info-card">';
         html += '<div class="section-title">项目基本信息</div>';
         html += '<div class="info-grid">';
-        html += '<div class="info-item"><span class="info-label">项目ID：</span><span class="info-value">' + escapeHtml(projectId) + '</span></div>';
         html += '<div class="info-item"><span class="info-label">项目名称：</span><span class="info-value">' + escapeHtml(projectName) + '</span></div>';
+        html += '<div class="info-item"><span class="info-label">合同金额(元)：</span><span class="info-value">' + escapeHtml(contractAmount) + '</span></div>';
         html += '<div class="info-item"><span class="info-label">状态：</span><span class="info-value">' + (isDeliver === 1 ? '<span style="color:#86c566;">已提交审核</span>' : '<span style="color:#ff5722;">未提交审核</span>') + '</span></div>';
         html += '</div>';
         html += '</div>';
