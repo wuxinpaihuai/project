@@ -67,45 +67,6 @@ public class ProjectExtend {
      */
     private Integer assessType;
 
-    /**
-     * 监测费
-     */
-    private BigDecimal monitorFee;
-
-    /**
-     * 评审费
-     */
-    private BigDecimal reviewFee;
-
-    /**
-     * 协作费/业务费
-     */
-    private BigDecimal cooperationFee;
-
-    /**
-     * 公示公告费
-     */
-    private BigDecimal publicNoticeFee;
-
-    /**
-     * 材料费
-     */
-    private BigDecimal materialFee;
-
-    /**
-     * 差旅费
-     */
-    private BigDecimal travelFee;
-
-    /**
-     * 装订费/快递费
-     */
-    private BigDecimal bindExpressFee;
-
-    /**
-     * 其他直接费用
-     */
-    private BigDecimal otherDirectFee;
 
     /**
      * 是否通过政府部门审批或备案 0=否 1=是
@@ -219,54 +180,7 @@ public class ProjectExtend {
 	public void setAssessType(Integer assessType) {
 		this.assessType = assessType;
 	}
-	public BigDecimal getMonitorFee() {
-		return monitorFee;
-	}
-	public void setMonitorFee(BigDecimal monitorFee) {
-		this.monitorFee = monitorFee;
-	}
-	public BigDecimal getReviewFee() {
-		return reviewFee;
-	}
-	public void setReviewFee(BigDecimal reviewFee) {
-		this.reviewFee = reviewFee;
-	}
-	public BigDecimal getCooperationFee() {
-		return cooperationFee;
-	}
-	public void setCooperationFee(BigDecimal cooperationFee) {
-		this.cooperationFee = cooperationFee;
-	}
-	public BigDecimal getPublicNoticeFee() {
-		return publicNoticeFee;
-	}
-	public void setPublicNoticeFee(BigDecimal publicNoticeFee) {
-		this.publicNoticeFee = publicNoticeFee;
-	}
-	public BigDecimal getMaterialFee() {
-		return materialFee;
-	}
-	public void setMaterialFee(BigDecimal materialFee) {
-		this.materialFee = materialFee;
-	}
-	public BigDecimal getTravelFee() {
-		return travelFee;
-	}
-	public void setTravelFee(BigDecimal travelFee) {
-		this.travelFee = travelFee;
-	}
-	public BigDecimal getBindExpressFee() {
-		return bindExpressFee;
-	}
-	public void setBindExpressFee(BigDecimal bindExpressFee) {
-		this.bindExpressFee = bindExpressFee;
-	}
-	public BigDecimal getOtherDirectFee() {
-		return otherDirectFee;
-	}
-	public void setOtherDirectFee(BigDecimal otherDirectFee) {
-		this.otherDirectFee = otherDirectFee;
-	}
+	 
 	public Integer getIsGovernmentApprove() {
 		return isGovernmentApprove;
 	}

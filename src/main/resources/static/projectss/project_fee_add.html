@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>费用报销</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #fff; font-family: "Microsoft YaHei", sans-serif; }
+        .form-container { padding: 20px 30px 10px; }
+        .layui-form-label { width: 110px !important; }
+        .layui-input-block { margin-left: 140px !important; }
+        .form-footer {
+            text-align: center; padding: 15px 0; border-top: 1px solid #f0f0f0;
+            margin-top: 10px;
+        }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+    </style>
+</head>
+<body>
+<div class="form-container">
+    <form class="layui-form" lay-filter="feeForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>项目名称</label>
+            <div class="layui-input-block">
+                <select name="projectId" id="projectId" lay-filter="projectId" lay-search lay-verify="required" placeholder="请选择项目">
+                    <option value="">请选择项目</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>费用类型</label>
+            <div class="layui-input-block">
+                <select name="feeType" id="feeType" lay-verify="required">
+                    <option value="">请选择费用类型</option>
+                    <option value="1">监测费/工程直接成本</option>
+                    <option value="2">评审费</option>
+                    <option value="3">协作费/业务费</option>
+                    <option value="4">公示公告费</option>
+                    <option value="5">材料费</option>
+                    <option value="6">差旅费</option>
+                    <option value="7">装订费/快递费</option>
+                    <option value="8">其他直接费用</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>金额/元</label>
+            <div class="layui-input-block">
+                <input type="number" name="feeAmount" id="feeAmount" placeholder="请输入金额" class="layui-input" step="0.01" min="0" lay-verify="required|number">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-block">
+                <textarea name="remark" id="remark" placeholder="请输入备注（选填）" class="layui-textarea" style="height:80px;"></textarea>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button type="button" class="layui-btn btn-green" id="saveSubmitBtn">保存并提交</button>
+            <button type="button" class="layui-btn btn-orange" id="saveBtn">保存但不提交</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelBtn">关闭</button>
+        </div>
+    </form>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var feeId = getQueryParam('id');
+var isEdit = !!feeId;
+var editData = null;
+
+function getQueryParam(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
+    var r = window.location.search.substr(1).match(reg);
+    return r ? decodeURIComponent(r[2]) : null;
+}
+
+layui.use(['form', 'layer'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+
+    // 加载项目下拉列表
+    function loadProjects(keyword, callback){
+        $.ajax({
+            url: '/project/fee/projects',
+            type: 'GET',
+            headers: {token: token},
+            data: { keyword: keyword || '' },
+            success: function(res){
+                if(res.code === 200 && res.data){
+                    var html = '<option value="">请选择项目</option>';
+                    for(var i = 0; i < res.data.length; i++){
+                        var p = res.data[i];
+                        html += '<option value="' + p.id + '">' + p.label + '</option>';
+                    }
+                    $('#projectId').html(html);
+                    form.render('select');
+                    if(callback) callback();
+                }
+            },
+            error: function(){
+                layer.msg('加载项目列表失败', {icon: 2});
+            }
+        });
+    }
+
+    // 初始加载项目列表
+    loadProjects('', function(){
+        // 如果是编辑，加载记录详情并回显
+        if(isEdit){
+            loadFeeDetail();
+        }
+    });
+
+    // 编辑时加载详情
+    function loadFeeDetail(){
+        $.ajax({
+            url: '/project/fee/get/' + feeId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res){
+                if(res.code === 200 && res.data){
+                    editData = res.data;
+                    // 回显项目
+                    $('#projectId').val(String(editData.projectId));
+                    // 回显费用类型
+                    $('#feeType').val(String(editData.feeType));
+                    // 回显金额
+                    $('#feeAmount').val(editData.feeAmount);
+                    // 回显备注
+                    $('#remark').val(editData.remark || '');
+                    form.render();
+                } else {
+                    layer.msg(res.msg || '加载详情失败', {icon: 2});
+                }
+            },
+            error: function(){
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    }
+
+    // 保存方法
+    function saveFee(feeStatus){
+        var projectId = $('#projectId').val();
+        var feeType = $('#feeType').val();
+        var feeAmount = $('#feeAmount').val();
+        var remark = $('#remark').val();
+
+        // 校验
+        if(!projectId){
+            layer.msg('请选择项目', {icon: 5});
+            return;
+        }
+        if(!feeType){
+            layer.msg('请选择费用类型', {icon: 5});
+            return;
+        }
+        if(!feeAmount || isNaN(parseFloat(feeAmount)) || parseFloat(feeAmount) <= 0){
+            layer.msg('请输入有效的金额', {icon: 5});
+            return;
+        }
+
+        var params = {
+            projectId: projectId,
+            feeType: parseInt(feeType),
+            feeAmount: feeAmount,
+            feeStatus: feeStatus,
+            remark: remark
+        };
+
+        var url, method;
+        if(isEdit){
+            params.id = feeId;
+            url = '/project/fee/update';
+            method = 'PUT';
+        } else {
+            url = '/project/fee/add';
+            method = 'POST';
+        }
+
+        $.ajax({
+            url: url,
+            type: method,
+            headers: {token: token},
+            contentType: 'application/json',
+            data: JSON.stringify(params),
+            success: function(res){
+                if(res.code === 200){
+                    layer.msg(isEdit ? '编辑成功' : '新增成功', {icon: 1});
+                    // 关闭弹窗，刷新父页面
+                    setTimeout(function(){
+                        var parentIndex = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(parentIndex);
+                    }, 800);
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            },
+            error: function(){
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    }
+
+    // 保存并提交 (feeStatus=1)
+    $('#saveSubmitBtn').on('click', function(){
+        saveFee(1);
+    });
+
+    // 保存但不提交 (feeStatus=0)
+    $('#saveBtn').on('click', function(){
+        saveFee(0);
+    });
+
+    // 关闭
+    $('#cancelBtn').on('click', function(){
+        var parentIndex = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(parentIndex);
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>费用报销</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 200px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .btn-red:hover { background-color: #e6451a !important; }
+        .status-submitted { color: #86c566; font-weight: bold; }
+        .status-unsubmit { color: #ffb800; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card">
+        <form class="layui-form" lay-filter="feeSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">项目名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="projectName" id="searchProjectName" placeholder="请输入项目名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">费用类型</label>
+                    <div class="layui-input-inline">
+                        <select name="feeType" id="searchFeeType">
+                            <option value="">全部</option>
+                            <option value="1">监测费/工程直接成本</option>
+                            <option value="2">评审费</option>
+                            <option value="3">协作费/业务费</option>
+                            <option value="4">公示公告费</option>
+                            <option value="5">材料费</option>
+                            <option value="6">差旅费</option>
+                            <option value="7">装订费/快递费</option>
+                            <option value="8">其他直接费用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-green" id="addFeeBtn"><i class="layui-icon">&#xe654;</i> 新建费用报销</button>
+        </div>
+        <table id="feeTable" lay-filter="feeTable"></table>
+    </div>
+</div>
+
+<!-- 行操作模板 -->
+<script type="text/html" id="feeRowToolbar">
+    {{# if(d.feeStatus === 0){ }}
+        <a class="layui-btn layui-btn-xs btn-blue" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-xs btn-red" lay-event="delete">删除</a>
+    {{# } else { }}
+        已提交无法操作
+    {{# } }}
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    // 渲染费用报销列表
+    table.render({
+        elem: '#feeTable',
+        url: '/project/fee/list',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'projectName', title: '项目名称', minWidth: 200},
+            {field: 'projectNo', title: '项目编号', width: 130, align: 'center'},
+            {field: 'ownerCompany', title: '建设单位', width: 150},
+            {field: 'feeType', title: '费用类型', width: 160, align: 'center', templet: function(d){
+                return d.feeTypeName || '-';
+            }},
+            {field: 'feeAmount', title: '金额/元', width: 130, align: 'right', templet: function(d){
+                return d.feeAmount != null ? parseFloat(d.feeAmount).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:4}) : '-';
+            }},
+            {field: 'feeStatus', title: '状态', width: 100, align: 'center', templet: function(d){
+                if(d.feeStatus === 1){
+                    return '<span class="status-submitted">已提交</span>';
+                }
+                return '<span class="status-unsubmit">未提交</span>';
+            }},
+            {field: 'remark', title: '备注', width: 150, templet: function(d){
+                if(!d.remark) return '-';
+                if(d.remark.length > 15) return '<span title="' + d.remark + '">' + d.remark.substring(0, 15) + '...</span>';
+                return d.remark;
+            }},
+            {field: 'createTime', title: '创建时间', width: 170, align: 'center', templet: function(d){
+                if(!d.createTime) return '-';
+                return d.createTime.replace('T', ' ').substring(0, 19);
+            }},
+            {title: '操作', width: 140, align: 'center', fixed: 'right', toolbar: '#feeRowToolbar'}
+        ]]
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('feeTable', {
+            where: {
+                projectName: $('#searchProjectName').val(),
+                feeType: $('#searchFeeType').val() || null
+            },
+            page: { curr: 1 }
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchProjectName').val('');
+        $('#searchFeeType').val('');
+        form.render('select');
+        table.reload('feeTable', {
+            where: { projectName: null, feeType: null },
+            page: { curr: 1 }
+        });
+    });
+
+    // 新建费用报销
+    $('#addFeeBtn').on('click', function(){
+        layer.open({
+            type: 2,
+            title: '新建费用报销',
+            area: ['600px', '500px'],
+            content: '/projectss/project_fee_add.html',
+            end: function(){
+                table.reload('feeTable');
+            }
+        });
+    });
+
+    // 行操作
+    table.on('tool(feeTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            layer.open({
+                type: 2,
+                title: '编辑费用报销',
+                area: ['600px', '500px'],
+                content: '/projectss/project_fee_add.html?id=' + data.id,
+                end: function(){
+                    table.reload('feeTable');
+                }
+            });
+        } else if(obj.event === 'delete'){
+            layer.confirm('确认删除该费用记录？', {icon: 3, title: '提示'}, function(index){
+                $.ajax({
+                    url: '/project/fee/delete/' + data.id,
+                    type: 'DELETE',
+                    headers: {token: token},
+                    success: function(res){
+                        if(res.code === 200){
+                            layer.msg('删除成功', {icon: 1});
+                            table.reload('feeTable');
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    },
+                    error: function(){
+                        layer.msg('请求异常', {icon: 2});
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+});
+</script>
+</body>
+</html>

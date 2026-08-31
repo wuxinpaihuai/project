@@ -342,7 +342,7 @@
                     return html;
                 }},
                 {field: 'remark', title: '备注', minWidth: 100},
-                {title: '操作', width: 140, align: 'center', templet: function(d){
+                {title: '操作', width: 140, align: 'center',fixed: 'right', templet: function(d){
                     var status = d.taskStatus;
                     var taskId = d.id || d.taskId || '';
                     if (status === 3 || status === 4 || status === 5 || status === 6) {

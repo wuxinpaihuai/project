@@ -1,19 +1,51 @@
 package com.zjhl.project.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zjhl.project.entity.*;
-import com.zjhl.project.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zjhl.project.entity.ProjectAssessmentUser;
+import com.zjhl.project.entity.ProjectExtend;
+import com.zjhl.project.entity.ProjectFile;
+import com.zjhl.project.entity.ProjectInfo;
+import com.zjhl.project.entity.ProjectTask;
+import com.zjhl.project.entity.SignMilestone;
+import com.zjhl.project.entity.SignVisit;
+import com.zjhl.project.entity.SignVisitFile;
+import com.zjhl.project.entity.SysMessage;
+import com.zjhl.project.entity.SysUser;
+import com.zjhl.project.entity.SysUserRole;
+import com.zjhl.project.service.ProjectAssessmentUserService;
+import com.zjhl.project.service.ProjectExtendService;
+import com.zjhl.project.service.ProjectFileService;
+import com.zjhl.project.service.ProjectInfoService;
+import com.zjhl.project.service.ProjectTaskService;
+import com.zjhl.project.service.SignMilestoneService;
+import com.zjhl.project.service.SignVisitFileService;
+import com.zjhl.project.service.SignVisitService;
+import com.zjhl.project.service.SysMessageService;
+import com.zjhl.project.service.SysUserRoleService;
+import com.zjhl.project.service.SysUserService;
+
+import cn.dev33.satoken.stp.StpUtil;
 
 @RestController
 @RequestMapping("/project/execute")
@@ -559,7 +591,8 @@ public class PrjectExcuteController {
      * 保存项目考核人员分配
      * submit=true 时同时更新 is_deliver=1（提交审核）
      */
-    @Transactional
+    @SuppressWarnings("unchecked")
+	@Transactional
     @PostMapping("/saveAssessmentUser")
     public Map<String, Object> saveAssessmentUser(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
@@ -627,14 +660,7 @@ public class PrjectExcuteController {
 
         // 费用明细字段
         extend.setAssessType(parseIntegerOrNull(extMap.get("assessType")));
-        extend.setMonitorFee(parseBigDecimalOrNull(extMap.get("monitorFee")));
-        extend.setReviewFee(parseBigDecimalOrNull(extMap.get("reviewFee")));
-        extend.setCooperationFee(parseBigDecimalOrNull(extMap.get("cooperationFee")));
-        extend.setPublicNoticeFee(parseBigDecimalOrNull(extMap.get("publicNoticeFee")));
-        extend.setMaterialFee(parseBigDecimalOrNull(extMap.get("materialFee")));
-        extend.setTravelFee(parseBigDecimalOrNull(extMap.get("travelFee")));
-        extend.setBindExpressFee(parseBigDecimalOrNull(extMap.get("bindExpressFee")));
-        extend.setOtherDirectFee(parseBigDecimalOrNull(extMap.get("otherDirectFee")));
+        
         extend.setIsGovernmentApprove(parseIntegerOrNull(extMap.get("isGovernmentApprove")));
         extend.setMeetingApprove(parseIntegerOrNull(extMap.get("meetingApprove")));
         extend.setIsArchiveFinish(parseIntegerOrNull(extMap.get("isArchiveFinish")));
@@ -685,14 +711,5 @@ public class PrjectExcuteController {
         }
     }
 
-    private BigDecimal parseBigDecimalOrNull(Object obj) {
-        if (obj == null || obj.toString().isEmpty()) {
-            return null;
-        }
-        try {
-            return new BigDecimal(obj.toString());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
+     
 }

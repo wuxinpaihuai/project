@@ -222,17 +222,6 @@ CREATE TABLE `project_extend` (
   `is_sign` tinyint DEFAULT '0' COMMENT '是否签约 0=否,1=是',
   
   `assess_type` tinyint DEFAULT NULL COMMENT '项目考核类型（ 1=报告书 ，7=报告表，8=登记表,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,99=其他',
-  `monitor_fee` decimal(16,4) DEFAULT NULL COMMENT '监测费',
-  `review_fee` decimal(16,4) DEFAULT NULL COMMENT '评审费',
-  `cooperation_fee` decimal(16,4) DEFAULT NULL COMMENT '协作费/业务费',
-  `public_notice_fee` decimal(16,4) DEFAULT NULL COMMENT '公示公告费',
-  `material_fee` decimal(16,4) DEFAULT NULL COMMENT '材料费',
-  `travel_fee` decimal(16,4) DEFAULT NULL COMMENT '差旅费',
-  `bind_express_fee` decimal(16,4) DEFAULT NULL COMMENT '装订费/快递费',
-  `tax_fee` decimal(16,4) DEFAULT NULL COMMENT '税费',
-  `other_direct_fee` decimal(16,4) DEFAULT NULL COMMENT '其他直接费用',
-  `net_receive_amount` decimal(16,4) DEFAULT NULL COMMENT '净收款额',
-  `net_assess_amount` decimal(16,4) DEFAULT NULL COMMENT '净考核额',
   `is_government_approve` tinyint DEFAULT NULL COMMENT '是否通过政府部门审批或备案 0=否 1=是',
   `meeting_approve` tinyint DEFAULT NULL COMMENT '过会审批(0=一次性过会、1=多次过会、2=其他等)',
   `is_archive_finish` tinyint DEFAULT NULL COMMENT '存档是否完成 0=否 1=是',
@@ -326,31 +315,20 @@ CREATE TABLE `project_task_log_attachment` (
     KEY `idx_log_id` (`log_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作日志附件表';
 
--- 项目考核表
-CREATE TABLE `project_assessment` (
+-- 项目费用明细表
+CREATE TABLE `project_fee_info` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `project_id` bigint NOT NULL COMMENT '关联项目ID(project_info.id)',
-  `monitor_fee` decimal(16,4) DEFAULT NULL COMMENT '监测费',
-  `review_fee` decimal(16,4) DEFAULT NULL COMMENT '评审费',
-  `cooperation_fee` decimal(16,4) DEFAULT NULL COMMENT '协作费/业务费',
-  `public_notice_fee` decimal(16,4) DEFAULT NULL COMMENT '公示公告费',
-  `material_fee` decimal(16,4) DEFAULT NULL COMMENT '材料费',
-  `travel_fee` decimal(16,4) DEFAULT NULL COMMENT '差旅费',
-  `bind_express_fee` decimal(16,4) DEFAULT NULL COMMENT '装订费/快递费',
-  `tax_fee` decimal(16,4) DEFAULT NULL COMMENT '税费',
-  `other_direct_fee` decimal(16,4) DEFAULT NULL COMMENT '其他直接费用',
-  `net_receive_amount` decimal(16,4) DEFAULT NULL COMMENT '净收款额',
-  `net_assess_amount` decimal(16,4) DEFAULT NULL COMMENT '净考核额',
-  `is_government_approve` tinyint DEFAULT NULL COMMENT '是否通过政府部门审批或备案 0=否 1=是',
-  `meeting_approve` tinyint DEFAULT NULL COMMENT '过会审批(0=一次性过会、1=多次过会、2=其他等)',
-  `is_archive_finish` tinyint DEFAULT NULL COMMENT '存档是否完成 0=否 1=是',
-  `progress_info` varchar(500) DEFAULT NULL COMMENT '进展情况',
+  `fee_type` tinyint DEFAULT NULL COMMENT '费用类型（ 1=监测费/工程直接成本 ，2=评审费,3=协作费/业务费,4=公示公告费,5=材料费,6=差旅费,7=装订费/快递费,8=其他直接费用',
+  `fee_amount` decimal(16,4) DEFAULT NULL COMMENT '费用金额（元）',
+  `submit_user_id` bigint DEFAULT NULL COMMENT '报销人用户ID',
+  `submit_user_name` varchar(50) DEFAULT NULL COMMENT '报销人姓名',
+  `submit_user_phone` varchar(20) DEFAULT NULL COMMENT '报销人手机号',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  
-  UNIQUE KEY `uk_project_id` (`project_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核表';
+  PRIMARY KEY (`id`) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目费用明细表';
 
 CREATE TABLE `project_ratio` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',

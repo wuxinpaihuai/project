@@ -63,6 +63,19 @@
 			<version>5.8.22</version>
 		</dependency>
 
+		<!-- easyexcel 阿里excel工具 -->
+		<dependency>
+		    <groupId>com.alibaba</groupId>
+		    <artifactId>easyexcel</artifactId>
+		    <version>3.3.2</version>
+		</dependency>
+		
+		<!-- 如果项目没有引入servlet，web项目一般自带 -->
+		<dependency>
+		    <groupId>javax.servlet</groupId>
+		    <artifactId>javax.servlet-api</artifactId>
+		    <scope>provided</scope>
+		</dependency>
 		<!-- 分页 
 		<dependency>
 			<groupId>com.github.pagehelper</groupId>

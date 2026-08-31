@@ -85,7 +85,7 @@
 
         /* 费用明细 */
         .fee-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr);
+            display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 10px 30px;
         }
         .fee-row-full {
@@ -145,14 +145,6 @@ layui.use(['layer', 'form'], function(){
     var reviewerData = { ysUserId: '', ysUserName: '', esUserId: '', esUserName: '', ssUserId: '', ssUserName: '' };
     var feeData = {
         assessType: '',
-        monitorFee: '',
-        reviewFee: '',
-        cooperationFee: '',
-        publicNoticeFee: '',
-        materialFee: '',
-        travelFee: '',
-        bindExpressFee: '',
-        otherDirectFee: '',
         isGovernmentApprove: '',
         meetingApprove: '',
         isArchiveFinish: '',
@@ -193,14 +185,6 @@ layui.use(['layer', 'form'], function(){
             };
             feeData = {
                 assessType: ext.assessType != null ? String(ext.assessType) : '',
-                monitorFee: ext.monitorFee != null ? String(ext.monitorFee) : '',
-                reviewFee: ext.reviewFee != null ? String(ext.reviewFee) : '',
-                cooperationFee: ext.cooperationFee != null ? String(ext.cooperationFee) : '',
-                publicNoticeFee: ext.publicNoticeFee != null ? String(ext.publicNoticeFee) : '',
-                materialFee: ext.materialFee != null ? String(ext.materialFee) : '',
-                travelFee: ext.travelFee != null ? String(ext.travelFee) : '',
-                bindExpressFee: ext.bindExpressFee != null ? String(ext.bindExpressFee) : '',
-                otherDirectFee: ext.otherDirectFee != null ? String(ext.otherDirectFee) : '',
                 isGovernmentApprove: ext.isGovernmentApprove != null ? String(ext.isGovernmentApprove) : '',
                 meetingApprove: ext.meetingApprove != null ? String(ext.meetingApprove) : '',
                 isArchiveFinish: ext.isArchiveFinish != null ? String(ext.isArchiveFinish) : '',
@@ -332,11 +316,9 @@ layui.use(['layer', 'form'], function(){
     function renderEditableFeeSection() {
         var html = '<div class="layui-form fee-form" lay-filter="feeForm" style="margin-top:10px;">';
 
-        // 项目考核类型（占满一行）
-        html += '<div class="fee-row-full">';
-        html += '<span class="info-label">项目考核类型：</span>';
-        html += '<div class="fee-content">';
-        html += renderFeeSelect('assessType', feeData.assessType, [
+        // 第一行：项目考核类型、是否已审批或备案
+        html += '<div class="fee-grid">';
+        html += renderFeeSelectItem('项目考核类型：', 'assessType', feeData.assessType, [
             { value: '', text: '请选择' },
             { value: '1', text: '报告书' },
             { value: '7', text: '报告表' },
@@ -348,40 +330,21 @@ layui.use(['layer', 'form'], function(){
             { value: '6', text: '场调入围' },
             { value: '99', text: '其他' }
         ]);
-        html += '</div></div>';
-
-        // 第一行3列：监测费、评审费、协作费
-        html += '<div class="fee-grid">';
-        html += renderFeeNumberItem('监测费/直接成本：', 'monitorFee', feeData.monitorFee);
-        html += renderFeeNumberItem('评审费(元)：', 'reviewFee', feeData.reviewFee);
-        html += renderFeeNumberItem('协作费/业务费：', 'cooperationFee', feeData.cooperationFee);
-        html += '</div>';
-
-        // 第二行3列：公示公告费、材料费、差旅费
-        html += '<div class="fee-grid">';
-        html += renderFeeNumberItem('公示公告费(元)：', 'publicNoticeFee', feeData.publicNoticeFee);
-        html += renderFeeNumberItem('材料费(元)：', 'materialFee', feeData.materialFee);
-        html += renderFeeNumberItem('差旅费(元)：', 'travelFee', feeData.travelFee);
-        html += '</div>';
-
-        // 第三行3列：装订/快递费、其他直接费用
-        html += '<div class="fee-grid">';
-        html += renderFeeNumberItem('装订/快递费(元)：', 'bindExpressFee', feeData.bindExpressFee);
-        html += renderFeeNumberItem('其他直接费用(元)：', 'otherDirectFee', feeData.otherDirectFee);
-        html += renderFeeNumberItem('', '', '', true);
-        html += '</div>';
-
-        // 第四行3列：是否已审批或备案、过会审批、存档是否完成
-        html += '<div class="fee-grid">';
         html += renderFeeSelectItem('是否已审批或备案：', 'isGovernmentApprove', feeData.isGovernmentApprove, [
             { value: '', text: '请选择' }, { value: '0', text: '否' }, { value: '1', text: '是' }
         ]);
+        html += '<div class="fee-item"></div>';
+        html += '</div>';
+
+        // 第二行：过会审批、存档是否完成
+        html += '<div class="fee-grid">';
         html += renderFeeSelectItem('过会审批：', 'meetingApprove', feeData.meetingApprove, [
             { value: '', text: '请选择' }, { value: '0', text: '一次性过会' }, { value: '1', text: '多次过会' }, { value: '2', text: '其他' }
         ]);
         html += renderFeeSelectItem('存档是否完成：', 'isArchiveFinish', feeData.isArchiveFinish, [
             { value: '', text: '请选择' }, { value: '0', text: '否' }, { value: '1', text: '是' }
         ]);
+        html += '<div class="fee-item"></div>';
         html += '</div>';
 
         // 进展情况（占满一行）
@@ -405,33 +368,17 @@ layui.use(['layer', 'form'], function(){
         var isArchiveFinishMap = { '0': '否', '1': '是' };
 
         var html = '';
-        html += '<div class="fee-row-full">';
-        html += '<span class="info-label">项目考核类型：</span>';
-        html += '<span class="info-value">' + (assessTypeMap[feeData.assessType] || '<span class="readonly-empty">未设置</span>') + '</span>';
-        html += '</div>';
 
         html += '<div class="fee-grid">';
-        html += renderFeeReadonlyItem('监测费/直接成本(元)：', feeData.monitorFee);
-        html += renderFeeReadonlyItem('评审费(元)：', feeData.reviewFee);
-        html += renderFeeReadonlyItem('协作费/业务费(元)：', feeData.cooperationFee);
-        html += '</div>';
-
-        html += '<div class="fee-grid">';
-        html += renderFeeReadonlyItem('公示公告费(元)：', feeData.publicNoticeFee);
-        html += renderFeeReadonlyItem('材料费(元)：', feeData.materialFee);
-        html += renderFeeReadonlyItem('差旅费(元)：', feeData.travelFee);
-        html += '</div>';
-
-        html += '<div class="fee-grid">';
-        html += renderFeeReadonlyItem('装订/快递费(元)：', feeData.bindExpressFee);
-        html += renderFeeReadonlyItem('其他直接费用(元)：', feeData.otherDirectFee);
+        html += renderFeeReadonlyItem('项目考核类型：', assessTypeMap[feeData.assessType] || '');
+        html += renderFeeReadonlyItem('是否已审批或备案：', isGovernmentApproveMap[feeData.isGovernmentApprove] || '');
         html += '<div class="fee-readonly-item"></div>';
         html += '</div>';
 
         html += '<div class="fee-grid">';
-        html += renderFeeReadonlyItem('是否已审批或备案：', isGovernmentApproveMap[feeData.isGovernmentApprove] || '');
         html += renderFeeReadonlyItem('过会审批：', meetingApproveMap[feeData.meetingApprove] || '');
         html += renderFeeReadonlyItem('存档是否完成：', isArchiveFinishMap[feeData.isArchiveFinish] || '');
+        html += '<div class="fee-readonly-item"></div>';
         html += '</div>';
 
         html += '<div class="fee-row-full" style="margin-top:10px;">';
@@ -451,17 +398,6 @@ layui.use(['layer', 'form'], function(){
         }
         html += '</select>';
         return html;
-    }
-
-    function renderFeeNumberItem(label, name, value, isEmpty) {
-        if (isEmpty) {
-            return '<div class="fee-item"></div>';
-        }
-        return '<div class="fee-item">' +
-            '<span class="info-label">' + label + '</span>' +
-            '<div class="layui-input-block" style="margin-left:0;min-height:32px;">' +
-            '<input type="number" name="' + name + '" class="layui-input" placeholder="请输入金额" value="' + escapeHtml(value) + '">' +
-            '</div></div>';
     }
 
     function renderFeeSelectItem(label, name, selectedValue, options) {
@@ -677,14 +613,6 @@ layui.use(['layer', 'form'], function(){
             ssUserId: $('#ssUserId').val() || null,
             ssUserName: $('#ssUserName').val() || null,
             assessType: feeData.assessType || null,
-            monitorFee: feeData.monitorFee || null,
-            reviewFee: feeData.reviewFee || null,
-            cooperationFee: feeData.cooperationFee || null,
-            publicNoticeFee: feeData.publicNoticeFee || null,
-            materialFee: feeData.materialFee || null,
-            travelFee: feeData.travelFee || null,
-            bindExpressFee: feeData.bindExpressFee || null,
-            otherDirectFee: feeData.otherDirectFee || null,
             isGovernmentApprove: feeData.isGovernmentApprove || null,
             meetingApprove: feeData.meetingApprove || null,
             isArchiveFinish: feeData.isArchiveFinish || null,
