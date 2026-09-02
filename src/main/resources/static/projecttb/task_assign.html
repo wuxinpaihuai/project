@@ -156,7 +156,7 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
         6: {name: '申请延期中', cls: 'task-status-6'}
     };
 
-    var projectTypeMap = {1:'环评', 2:'场调', 3:'应急预案', 4:'验收', 5:'环评入围', 6:'场调入围', 99:'其他'};
+    var projectTypeMap = {1:'环评', 2:'场调', 3:'应急预案', 4:'验收', 5:'环评入围', 6:'场调入围',  10:'水污染治理', 20:'大气污染治理', 30:'污染土壤修复', 99:'其他'};
 
     function formatTime(t) {
         return t ? t.replace('T', ' ') : '-';
@@ -362,12 +362,12 @@ layui.use(['layer', 'form', 'laydate', 'table'], function(){
             elem: '#taskTable',
             data: displayData,
             cols: [[
-                {field: 'index', title: '序号', width: 60, templet: function(d){
+                {field: 'index', title: '序号', width: 40, templet: function(d){
                     return d.LAY_INDEX+1;
                 }},
-                {field: 'execUserName', title: '责任人', width: 100},
-                {field: 'taskContent', title: '主体工作', minWidth: 120},
-                {field: 'taskEndTime', title: '截止时间', width: 120, templet: function(d){
+                {field: 'execUserName', title: '责任人', width: 80},
+                {field: 'taskContent', title: '主体工作', minWidth: 130},
+                {field: 'taskEndTime', title: '截止时间', width: 130, templet: function(d){
                     var dlStatus = getDeadlineStatus(d.taskEndTime, d.taskStatus);
                     var dateStr = formatShortDate(d.taskEndTime);
                     if (dlStatus === 'overdue') {

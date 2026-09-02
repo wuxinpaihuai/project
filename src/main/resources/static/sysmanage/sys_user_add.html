@@ -194,6 +194,15 @@
         </div>
     </div>
 
+    <!-- 是否考核 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">是否考核</label>
+        <div class="layui-input-block">
+            <input type="radio" name="isAssess" value="1" title="是" checked lay-filter="isAssessFilter">
+            <input type="radio" name="isAssess" value="0" title="否" lay-filter="isAssessFilter">
+        </div>
+    </div>
+
     <!-- 所属部门（多选，按层级平铺所有部门） -->
     <div class="layui-form-item">
         <label class="layui-form-label">所属部门</label>
@@ -494,6 +503,12 @@ layui.use(['form', 'layer'], function(){
                             $('input[name="status"][value="' + data.status + '"]').prop('checked', true);
                             form.render('radio');
                         }
+
+                        // 回显是否考核
+                        if (data.isAssess !== null && data.isAssess !== undefined) {
+                            $('input[name="isAssess"][value="' + data.isAssess + '"]').prop('checked', true);
+                            form.render('radio');
+                        }
                     }
                 }
             });
@@ -536,6 +551,7 @@ layui.use(['form', 'layer'], function(){
         var phone = document.getElementById('phone').value.trim();
         var sysPosition = $('select[name="sysPosition"]').val();
         var status = $('input[name="status"]:checked').val();
+        var isAssess = $('input[name="isAssess"]:checked').val();
         var id = document.getElementById('userId').value;
         var deptIds = getCheckedDeptIds($);
         var roleIds = getCheckedRoleIds($);
@@ -579,6 +595,7 @@ layui.use(['form', 'layer'], function(){
             realName: realName,
             phone: phone,
             status: parseInt(status),
+            isAssess: parseInt(isAssess),
             deptIds: deptIds,
             roleIds: roleIds
         };

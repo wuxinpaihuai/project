@@ -49,6 +49,7 @@ CREATE TABLE `sys_user` (
   `sys_position` varchar(20) DEFAULT NULL COMMENT '职位：0董事长 1总裁 2副总裁 3处长 4副处长 5技术学术委员会主任 、6副主任 7处长助理 8普通员工',
   `phone` varchar(20) DEFAULT NULL COMMENT '电话',
   `status` tinyint DEFAULT '1' COMMENT '1正常 0禁用',
+  `is_assess` tinyint DEFAULT null COMMENT '是否参与考核：1=是 0=否',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统用户表';
@@ -72,7 +73,7 @@ CREATE TABLE `project_info` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '项目ID（主键）',
   `project_name` varchar(255) NOT NULL COMMENT '项目名称',
   `project_no` varchar(255) NOT NULL COMMENT '项目编号',
-  `project_type` tinyint DEFAULT NULL COMMENT '项目类型 1=环评,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,99=其他',
+  `project_type` tinyint DEFAULT NULL COMMENT '项目类型 1=环评,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,10=水污染治理，20=大气污染治理，30=污染土壤修复，99=其他',
   `bid_type` tinyint DEFAULT NULL COMMENT '招标类型 1=公开招标,2=邀请招标,3=竞争性谈判，4=单一来源,5=询价,6=竞争性磋商',
   `bid_way` tinyint DEFAULT NULL COMMENT '评标方式 1=综合评分法,2=竞争性谈判,3=竞争性磋商,4=询价采购,5=单一来源采购,6=框架协议采购,7=电子竞价,8=均价比选,9=最低价中标',
   `area` varchar(100) DEFAULT NULL COMMENT '项目所在区域',
@@ -376,3 +377,15 @@ CREATE TABLE `project_assessment_user` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核人员分配表';
+
+CREATE TABLE `assessment_batch` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `batch_name` varchar(255) NOT NULL COMMENT '批次名称',
+  `assess_begin_day` date NOT NULL COMMENT '考核开始日期',
+  `assess_end_day` date NOT NULL COMMENT '考核结束日期',
+  `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+  `assess_status` tinyint DEFAULT NULL COMMENT '考核状态 1=未开始，2=统计中,3=已完成,4=统计失败',
+  `assess_result` varchar(255) DEFAULT null COMMENT '考核统计结果',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次表';

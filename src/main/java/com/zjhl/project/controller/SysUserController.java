@@ -150,6 +150,8 @@ public class SysUserController {
         String realName = (String) params.get("realName");
         String phone = (String) params.get("phone");
         String sysPosition = params.get("sysPosition") != null ? params.get("sysPosition").toString() : null;
+        Integer status = params.get("status") != null ? Integer.parseInt(params.get("status").toString()) : 1;
+        Integer isAssess = params.get("isAssess") != null ? Integer.parseInt(params.get("isAssess").toString()) : 1;
         List<Integer> deptIds = params.get("deptIds") != null ? (List<Integer>) params.get("deptIds") : null;
         List<Integer> roleIds = params.get("roleIds") != null ? (List<Integer>) params.get("roleIds") : null;
         
@@ -168,7 +170,8 @@ public class SysUserController {
         sysUser.setRealName(realName);
         sysUser.setPhone(phone);
         sysUser.setSysPosition(sysPosition);
-        sysUser.setStatus(0); // 默认启用
+        sysUser.setStatus(status);
+        sysUser.setIsAssess(isAssess);
         sysUser.setCreateTime(LocalDateTime.now());
         
         boolean success = sysUserService.save(sysUser);
@@ -211,6 +214,7 @@ public class SysUserController {
         String phone = (String) params.get("phone");
         String sysPosition = params.get("sysPosition") != null ? params.get("sysPosition").toString() : null;
         Integer status = params.get("status") != null ? Integer.parseInt(params.get("status").toString()) : null;
+        Integer isAssess = params.get("isAssess") != null ? Integer.parseInt(params.get("isAssess").toString()) : null;
         List<Integer> deptIds = params.get("deptIds") != null ? (List<Integer>) params.get("deptIds") : null;
         List<Integer> roleIds = params.get("roleIds") != null ? (List<Integer>) params.get("roleIds") : null;
         
@@ -235,6 +239,9 @@ public class SysUserController {
         sysUser.setSysPosition(sysPosition);
         if (status != null) {
             sysUser.setStatus(status);
+        }
+        if (isAssess != null) {
+            sysUser.setIsAssess(isAssess);
         }
         
         boolean success = sysUserService.updateById(sysUser);

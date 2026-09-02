@@ -18,6 +18,7 @@ public class SysUser {
     private String phone;
     private String sysPosition;
     private Integer status;
+    private Integer isAssess;
     private LocalDateTime createTime;
 	public Long getId() {
 		return id;
@@ -66,6 +67,12 @@ public class SysUser {
 	}
 	public void setCreateTime(LocalDateTime createTime) {
 		this.createTime = createTime;
+	}
+	public Integer getIsAssess() {
+		return isAssess;
+	}
+	public void setIsAssess(Integer isAssess) {
+		this.isAssess = isAssess;
 	}
     
 }
