@@ -73,7 +73,7 @@ CREATE TABLE `project_info` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '项目ID（主键）',
   `project_name` varchar(255) NOT NULL COMMENT '项目名称',
   `project_no` varchar(255) NOT NULL COMMENT '项目编号',
-  `project_type` tinyint DEFAULT NULL COMMENT '项目类型 1=环评,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,99=其他',
+  `project_type` tinyint DEFAULT NULL COMMENT '项目类型 1=环评,2=场调,3=应急预案,4=验收,5=环评入围,6=场调入围,10=水污染治理，20=大气污染治理，30=污染土壤修复，99=其他',
   `bid_type` tinyint DEFAULT NULL COMMENT '招标类型 1=公开招标,2=邀请招标,3=竞争性谈判，4=单一来源,5=询价,6=竞争性磋商',
   `bid_way` tinyint DEFAULT NULL COMMENT '评标方式 1=综合评分法,2=竞争性谈判,3=竞争性磋商,4=询价采购,5=单一来源采购,6=框架协议采购,7=电子竞价,8=均价比选,9=最低价中标',
   `area` varchar(100) DEFAULT NULL COMMENT '项目所在区域',
@@ -389,3 +389,13 @@ CREATE TABLE `assessment_batch` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次表';
+
+
+CREATE TABLE `assessment_batch_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键id',
+  `batch_id` bigint NOT NULL COMMENT '批次id',
+  `user_id` bigint NOT NULL COMMENT '人员id',
+  `user_name` varchar(50) DEFAULT NULL COMMENT '人员姓名',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次人员表';

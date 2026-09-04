@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考核批次</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #fff; font-family: "Microsoft YaHei", sans-serif; }
+        .form-container { padding: 20px 30px 10px; }
+        .layui-form-label { width: 120px !important; }
+        .layui-input-block { margin-left: 150px !important; }
+        .form-footer {
+            text-align: center; padding: 15px 0; border-top: 1px solid #f0f0f0;
+            margin-top: 10px;
+        }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+    </style>
+</head>
+<body>
+<div class="form-container">
+    <form class="layui-form" lay-filter="batchForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>批次名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="batchName" id="batchName" placeholder="请输入批次名称" class="layui-input" lay-verify="required">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>考核开始日期</label>
+            <div class="layui-input-block">
+                <input type="text" name="assessBeginDay" id="assessBeginDay" placeholder="请选择考核开始日期" class="layui-input" lay-verify="required" readonly>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><span style="color:#ff5722;">*</span>考核结束日期</label>
+            <div class="layui-input-block">
+                <input type="text" name="assessEndDay" id="assessEndDay" placeholder="请选择考核结束日期" class="layui-input" lay-verify="required" readonly>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-block">
+                <textarea name="remark" id="remark" placeholder="请输入备注（选填）" class="layui-textarea" style="height:80px;"></textarea>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button type="button" class="layui-btn btn-green" id="savePublishBtn">保存并发布</button>
+            <button type="button" class="layui-btn btn-orange" id="saveBtn">保存不发布</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancelBtn">关闭</button>
+        </div>
+    </form>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var batchId = getQueryParam('id');
+var isEdit = !!batchId;
+
+function getQueryParam(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
+    var r = window.location.search.substr(1).match(reg);
+    return r ? decodeURIComponent(r[2]) : null;
+}
+
+layui.use(['form', 'layer', 'laydate'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var laydate = layui.laydate;
+    var $ = layui.jquery;
+
+    // 日期控件
+    laydate.render({ elem: '#assessBeginDay', type: 'date', format: 'yyyy-MM-dd' });
+    laydate.render({ elem: '#assessEndDay', type: 'date', format: 'yyyy-MM-dd' });
+
+    // 编辑时加载详情
+    if(isEdit){
+        $.ajax({
+            url: '/assessment/batch/get/' + batchId,
+            type: 'GET',
+            headers: {token: token},
+            success: function(res){
+                if(res.code === 200 && res.data){
+                    var d = res.data;
+                    $('#batchName').val(d.batchName || '');
+                    $('#assessBeginDay').val(d.assessBeginDay || '');
+                    $('#assessEndDay').val(d.assessEndDay || '');
+                    $('#remark').val(d.remark || '');
+                    form.render();
+                } else {
+                    layer.msg(res.msg || '加载详情失败', {icon: 2});
+                }
+            },
+            error: function(){
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    }
+
+    // 保存方法
+    function saveBatch(assessStatus){
+        var batchName = $.trim($('#batchName').val());
+        var assessBeginDay = $('#assessBeginDay').val();
+        var assessEndDay = $('#assessEndDay').val();
+        var remark = $.trim($('#remark').val());
+
+        // 校验
+        if(!batchName){
+            layer.msg('批次名称不能为空', {icon: 5});
+            return;
+        }
+        if(!assessBeginDay){
+            layer.msg('请选择考核开始日期', {icon: 5});
+            return;
+        }
+        if(!assessEndDay){
+            layer.msg('请选择考核结束日期', {icon: 5});
+            return;
+        }
+        // 日期逻辑校验
+        if(assessBeginDay > assessEndDay){
+            layer.msg('考核开始日期不能晚于结束日期', {icon: 5});
+            return;
+        }
+
+        var params = {
+            batchName: batchName,
+            assessBeginDay: assessBeginDay,
+            assessEndDay: assessEndDay,
+            assessStatus: assessStatus,
+            remark: remark
+        };
+
+        var url, method;
+        if(isEdit){
+            params.id = batchId;
+            url = '/assessment/batch/update';
+            method = 'PUT';
+        } else {
+            url = '/assessment/batch/add';
+            method = 'POST';
+        }
+
+        var loadIdx = layer.load(1, {shade: [0.3, '#000']});
+
+        $.ajax({
+            url: url,
+            type: method,
+            headers: {token: token},
+            contentType: 'application/json',
+            data: JSON.stringify(params),
+            success: function(res){
+                layer.close(loadIdx);
+                if(res.code === 200){
+                    layer.msg(isEdit ? '编辑成功' : '新增成功', {icon: 1});
+                    setTimeout(function(){
+                        var parentIndex = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(parentIndex);
+                    }, 800);
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                }
+            },
+            error: function(){
+                layer.close(loadIdx);
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    }
+
+    // 保存并发布 (assessStatus=2)
+    $('#savePublishBtn').on('click', function(){
+        saveBatch(2);
+    });
+
+    // 保存不发布 (assessStatus=1)
+    $('#saveBtn').on('click', function(){
+        saveBatch(1);
+    });
+
+    // 关闭
+    $('#cancelBtn').on('click', function(){
+        var parentIndex = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(parentIndex);
+    });
+});
+</script>
+</body>
+</html>

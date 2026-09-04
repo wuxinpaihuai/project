@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考核批次管理</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 200px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-red {
+            background-color: #ff5722 !important; color: #fff !important;
+            border-color: #ff5722 !important;
+        }
+        .btn-red:hover { background-color: #e6451a !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .status-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 2px;
+            font-size: 12px; color: #fff;
+        }
+        .status-not-start { background-color: #999; }
+        .status-counting { background-color: #1e9fff; }
+        .status-complete { background-color: #86c566; }
+        .status-failed { background-color: #ff5722; }
+        .download-loading .layui-layer-content {
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; padding: 20px;
+        }
+        .download-loading .layui-icon {
+            font-size: 40px; color: #86c566; margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card">
+        <form class="layui-form" lay-filter="batchSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">批次名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="batchName" id="searchBatchName" placeholder="请输入批次名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">考核状态</label>
+                    <div class="layui-input-inline">
+                        <select name="assessStatus" id="searchAssessStatus">
+                            <option value="">全部</option>
+                            <option value="1">未开始</option>
+                            <option value="2">统计中</option>
+                            <option value="3">已完成</option>
+                            <option value="4">统计失败</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-green" id="addBatchBtn"><i class="layui-icon">&#xe654;</i> 新建批次</button>
+            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe67c;</i> 下载考核人员表格</button>
+        </div>
+        <table id="batchTable" lay-filter="batchTable"></table>
+    </div>
+</div>
+
+<!-- 行操作模板 -->
+<script type="text/html" id="batchRowToolbar">
+    {{# if(d.assessStatus === 1 || d.assessStatus === 4){ }}
+        <a class="layui-btn layui-btn-xs btn-blue" lay-event="edit">编辑</a>
+    {{# } }}
+    <a class="layui-btn layui-btn-xs btn-red" lay-event="delete">删除</a>
+</script>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    // 渲染考核批次列表
+    table.render({
+        elem: '#batchTable',
+        url: '/assessment/batch/list',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'checkbox', width: 50, align: 'center'},
+            {type: 'numbers', title: '序号', width: 60, align: 'center'},
+            {field: 'batchName', title: '批次名称', minWidth: 180},
+            {field: 'assessBeginDay', title: '考核开始日期', width: 130, align: 'center'},
+            {field: 'assessEndDay', title: '考核结束日期', width: 130, align: 'center'},
+            {field: 'assessStatus', title: '考核状态', width: 110, align: 'center', templet: function(d){
+                var cls = '';
+                if(d.assessStatus === 1) cls = 'status-not-start';
+                else if(d.assessStatus === 2) cls = 'status-counting';
+                else if(d.assessStatus === 3) cls = 'status-complete';
+                else if(d.assessStatus === 4) cls = 'status-failed';
+                return '<span class="status-tag ' + cls + '">' + (d.assessStatusName || '未知') + '</span>';
+            }},
+            {field: 'remark', title: '备注', width: 150, templet: function(d){
+                if(!d.remark) return '-';
+                if(d.remark.length > 15) return '<span title="' + d.remark + '">' + d.remark.substring(0, 15) + '...</span>';
+                return d.remark;
+            }},
+            {field: 'createTime', title: '创建时间', width: 170, align: 'center', templet: function(d){
+                if(!d.createTime) return '-';
+                return d.createTime.replace('T', ' ').substring(0, 19);
+            }},
+            {title: '操作', width: 140, align: 'center', fixed: 'right', toolbar: '#batchRowToolbar'}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('batchTable', {
+            where: {
+                batchName: $('#searchBatchName').val(),
+                assessStatus: $('#searchAssessStatus').val() || null
+            },
+            page: { curr: 1 }
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchBatchName').val('');
+        $('#searchAssessStatus').val('');
+        form.render('select');
+        table.reload('batchTable', {
+            where: { batchName: null, assessStatus: null },
+            page: { curr: 1 }
+        });
+    });
+
+    // 新建批次
+    $('#addBatchBtn').on('click', function(){
+        layer.open({
+            type: 2,
+            title: '新建批次',
+            area: ['550px', '450px'],
+            content: '/projectkh/assessment_batch_add.html',
+            end: function(){
+                table.reload('batchTable');
+            }
+        });
+    });
+
+    // 下载考核人员表格
+    $('#downloadBtn').on('click', function(){
+        var loadIndex = layer.msg('正在导出，请稍候...', {
+            icon: 16,
+            shade: [0.3, '#000'],
+            shadeClose: false,
+            time: 0
+        });
+
+        // 用XMLHttpRequest以便监听完成
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/assessment/batch/downloadAssessUsers', true);
+        xhr.setRequestHeader('token', token);
+        xhr.responseType = 'blob';
+
+        xhr.onload = function(){
+            layer.close(loadIndex);
+            if(xhr.status === 200){
+                var blob = xhr.response;
+                // 从header取文件名，兜底用默认名
+                var disposition = xhr.getResponseHeader('Content-Disposition');
+                var fileName = '考核人员表.xlsx';
+                if(disposition){
+                    var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
+                    if(match && match[1]){
+                        fileName = decodeURIComponent(match[1]);
+                    }
+                }
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                layer.msg('导出成功', {icon: 1});
+            } else {
+                layer.msg('导出失败', {icon: 2});
+            }
+        };
+        xhr.onerror = function(){
+            layer.close(loadIndex);
+            layer.msg('导出请求异常', {icon: 2});
+        };
+        xhr.send();
+    });
+
+    // 行操作
+    table.on('tool(batchTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            layer.open({
+                type: 2,
+                title: '编辑批次',
+                area: ['550px', '450px'],
+                content: '/projectkh/assessment_batch_add.html?id=' + data.id,
+                end: function(){
+                    table.reload('batchTable');
+                }
+            });
+        } else if(obj.event === 'delete'){
+            layer.confirm('确认删除该考核批次？', {icon: 3, title: '提示'}, function(index){
+                $.ajax({
+                    url: '/assessment/batch/delete/' + data.id,
+                    type: 'DELETE',
+                    headers: {token: token},
+                    success: function(res){
+                        if(res.code === 200){
+                            layer.msg('删除成功', {icon: 1});
+                            table.reload('batchTable');
+                        } else {
+                            layer.msg(res.msg || '删除失败', {icon: 2});
+                        }
+                    },
+                    error: function(){
+                        layer.msg('请求异常', {icon: 2});
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+});
+</script>
+</body>
+</html>
