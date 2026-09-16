@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择项目类型</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #fff; font-family: "Microsoft YaHei", sans-serif; }
+
+        .choice-wrap {
+            display: flex; justify-content: center; align-items: center;
+            gap: 36px; padding: 40px 30px; min-height: 100vh;
+        }
+
+        .choice-card {
+            width: 220px; height: 210px; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .25s ease;
+            border: 2px solid #e6e6e6; background: #fafafa;
+            user-select: none;
+        }
+        .choice-card:hover {
+            transform: translateY(-5px);
+            border-color: #86c566; background: #f6fbf2;
+            box-shadow: 0 8px 22px rgba(134, 197, 102, 0.30);
+        }
+        .choice-card:active { transform: translateY(-2px); }
+
+        .choice-card .icon {
+            font-size: 56px; color: #86c566; margin-bottom: 14px;
+            transition: transform .25s;
+        }
+        .choice-card:hover .icon { transform: scale(1.08); }
+
+        .choice-card .title {
+            font-size: 20px; font-weight: bold; color: #333; margin-bottom: 8px;
+        }
+        .choice-card .desc {
+            font-size: 12px; color: #999; text-align: center;
+            line-height: 1.7; padding: 0 14px;
+        }
+
+        /* 现有项目 - 橙色主题 */
+        .choice-card.old .icon { color: #ffb800; }
+        .choice-card.old:hover {
+            border-color: #ffb800; background: #fffbf0;
+            box-shadow: 0 8px 22px rgba(255, 184, 0, 0.28);
+        }
+    </style>
+</head>
+<body>
+<div class="choice-wrap">
+    <!-- 现有项目 -->
+    <div class="choice-card old" id="oldProjectBtn">
+        <i class="layui-icon icon">&#xe63c;</i>
+        <div class="title">现有项目</div>
+        <div class="desc">已有项目直接入库<br>无需走招标流程</div>
+    </div>
+
+    <!-- 新项目 -->
+    <div class="choice-card new" id="newProjectBtn">
+        <i class="layui-icon icon">&#xe654;</i>
+        <div class="title">新项目</div>
+        <div class="desc">按标准流程发起<br>从投标阶段开始</div>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+/**
+ * 在同一个 layer 弹窗内切换到目标页面
+ * 说明：layer 修改尺寸后不会自动重算位置，必须手动把弹窗重新居中，
+ *      否则弹窗会停留在原坐标、视觉上偏向右下角。
+ */
+function goto(url, title, w, h) {
+    var pw = null;
+    try { pw = window.parent; } catch (e) { pw = null; }
+
+    if (pw && pw !== window && pw.layer && typeof pw.layer.getFrameIndex === 'function') {
+        try {
+            var idx = pw.layer.getFrameIndex(window.name);
+            if (idx) {
+                var docEl = pw.document.documentElement || {};
+                var winW = docEl.clientWidth || pw.document.body.clientWidth;
+                var winH = docEl.clientHeight || pw.document.body.clientHeight;
+
+                // 尺寸限制在视口内，避免超出屏幕
+                var finalW = Math.min(w, winW - 40);
+                var finalH = Math.min(h, winH - 40);
+
+                // 1. 更新弹窗标题
+                if (typeof pw.layer.title === 'function') {
+                    pw.layer.title(title, idx);
+                }
+
+                // 2. 改尺寸 + 重新居中
+                pw.layer.style(idx, {
+                    width: finalW + 'px',
+                    height: finalH + 'px',
+                    left: Math.max((winW - finalW) / 2, 0) + 'px',
+                    top: Math.max((winH - finalH) / 2, 0) + 'px',
+                    margin: '0'
+                });
+
+                // 3. 在当前弹窗内跳转
+                location.replace(url);
+                return;
+            }
+        } catch (err) {
+            // 出现异常时降级为直接跳转
+        }
+    }
+
+    // 非弹窗环境（直接访问本页），直接跳转
+    location.href = url;
+}
+
+document.getElementById('newProjectBtn').onclick = function () {
+    goto('/projecttb/project_add.html', '新增项目', 900, 600);
+};
+
+document.getElementById('oldProjectBtn').onclick = function () {
+    goto('/projecttb/project_old_add.html', '新增现有项目', 900, 700);
+};
+</script>
+</body>
+</html>

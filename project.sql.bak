@@ -375,6 +375,7 @@ CREATE TABLE `project_assessment_user` (
   `user_name` varchar(50) DEFAULT NULL COMMENT '人员姓名',
   `ratio` decimal(5,2) NOT NULL COMMENT '占比(数值，20代表20%)',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+   UNIQUE KEY `uk_project_user` (`project_id`,`user_id`),
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核人员分配表';
 
@@ -390,12 +391,3 @@ CREATE TABLE `assessment_batch` (
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次表';
 
-
-CREATE TABLE `assessment_batch_user` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键id',
-  `batch_id` bigint NOT NULL COMMENT '批次id',
-  `user_id` bigint NOT NULL COMMENT '人员id',
-  `user_name` varchar(50) DEFAULT NULL COMMENT '人员姓名',
-  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`) 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次人员表';

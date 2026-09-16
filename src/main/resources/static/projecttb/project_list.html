@@ -134,6 +134,10 @@ layui.use(['table', 'layer', 'form'], function(){
         page: true,
         limit: 10,
         limits: [10, 20, 50, 100],
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
         response: {
             statusName: 'code',
             statusCode: 200,
@@ -233,13 +237,13 @@ layui.use(['table', 'layer', 'form'], function(){
         });
     });
 
-    // 新增项目
+    // 新增项目 - 先弹出项目类型选择（现有项目 / 新项目）
     $('#addBtn').on('click', function(){
         layer.open({
             type: 2,
             title: '新增项目',
-            area: ['900px', '600px'],
-            content: '/projecttb/project_add.html',
+            area: ['620px', '380px'],
+            content: '/projecttb/project_choice.html',
             end: function(){ table.reload('projectTable'); }
         });
     });

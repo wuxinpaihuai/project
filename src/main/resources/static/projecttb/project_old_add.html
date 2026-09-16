@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增现有项目</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #fff; font-family: "Microsoft YaHei", sans-serif; padding: 15px 20px; }
+        .form-container { max-width: 850px; margin: 0 auto; }
+        .layui-form-item { margin-bottom: 12px; }
+        .layui-form-label { width: 110px !important; padding: 9px 10px 9px 0; }
+        .layui-input-block { margin-left: 110px !important; }
+        .layui-input { height: 38px; line-height: 38px; }
+        .required-star { color: red; margin-right: 3px; }
+        .btn-group { margin-top: 20px; padding-left: 110px; }
+        .btn-green { background-color: #86c566 !important; color: #fff !important; border-color: #86c566 !important; }
+        .btn-green:hover { background-color: #7ab857 !important; }
+
+        /* 双列布局 */
+        .row-group { display: flex; gap: 0; }
+        .row-group .col-item { flex: 1; min-width: 0; }
+        .row-group .col-item .layui-form-item { margin-bottom: 12px; }
+        .row-group .col-item .layui-form-label { width: 110px !important; }
+        .row-group .col-item .layui-input-block { margin-left: 110px !important; }
+
+        /* 分割线标题 */
+        .section-title {
+            font-size: 14px; font-weight: bold; color: #333; padding: 10px 0 8px;
+            border-bottom: 2px solid #86c566; margin-bottom: 12px;
+        }
+        .section-title:first-child { margin-top: 0; }
+
+        /* 附件上传 */
+        .file-list { margin-top: 8px; }
+        .file-item {
+            display: flex; align-items: center; padding: 6px 10px; margin-bottom: 4px;
+            background: #f8f8f8; border-radius: 4px; border: 1px solid #e6e6e6;
+        }
+        .file-item .file-name { flex: 1; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item .file-remove { color: #ff5722; cursor: pointer; font-size: 18px; margin-left: 10px; }
+        .file-item .file-remove:hover { color: #d32f2f; }
+        .upload-btn-wrap { margin-top: 6px; }
+
+        /* ★★★ 可搜索用户下拉组件（业务员 / 技术负责人通用）★★★ */
+        .us-form-item,
+        .us-form-item .layui-input-block { overflow: visible !important; }
+        .us-wrap { position: relative; overflow: visible !important; }
+        .us-wrap .us-input-wrap { position: relative; }
+        .us-wrap .us-input-wrap input.layui-input { padding-right: 30px; cursor: text; }
+        .us-wrap .us-input-wrap .us-arrow {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 14px; color: #999; cursor: pointer; transition: transform 0.2s;
+            user-select: none;
+        }
+        .us-wrap .us-input-wrap .us-arrow.open { transform: translateY(-50%) rotate(180deg); }
+        .us-wrap .us-dropdown {
+            position: absolute; top: 42px; left: 0; width: 100%;
+            background: #fff; border: 1px solid #d2d2d2;
+            z-index: 99999; display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 0 0 4px 4px;
+            overflow: visible !important;
+        }
+        .us-wrap .us-dropdown .us-list { max-height: 220px; overflow-y: auto; }
+        .us-wrap .us-dropdown .us-list .us-item {
+            padding: 9px 12px; cursor: pointer; font-size: 13px; color: #333;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .us-wrap .us-dropdown .us-list .us-item:hover { background: #f0f7ff; }
+        .us-wrap .us-dropdown .us-list .us-item.active { background: #e8f5e0; color: #5a9e3e; font-weight: bold; }
+        .us-wrap .us-dropdown .us-list .us-item .item-phone { color: #999; font-size: 12px; }
+        .us-wrap .us-dropdown .us-list .us-empty { padding: 15px; text-align: center; color: #999; font-size: 13px; }
+    </style>
+</head>
+<body>
+<form class="layui-form form-container" lay-filter="oldProjectForm" id="oldProjectForm">
+
+    <!-- 基本信息 -->
+    <div class="section-title">基本信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span class="required-star">*</span>项目名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="projectName" id="projectName" placeholder="请输入项目名称" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><span class="required-star">*</span>项目编号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="projectNo" id="projectNo" placeholder="请输入项目编号" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目类型</label>
+                <div class="layui-input-block">
+                    <select name="projectType" id="projectType">
+                        <option value="">请选择项目类型</option>
+                        <option value="1">环评</option>
+                        <option value="2">场调</option>
+                        <option value="3">应急预案</option>
+                        <option value="4">验收</option>
+                        <option value="5">环评入围</option>
+                        <option value="6">场调入围</option>
+                        <option value="10">水污染治理</option>
+                        <option value="20">大气污染治理</option>
+                        <option value="30">污染土壤修复</option>
+                        <option value="99">其他</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目地址</label>
+                <div class="layui-input-block">
+                    <input type="text" name="area" id="area" placeholder="请输入项目所在地址" class="layui-input" maxlength="100">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目来源</label>
+                <div class="layui-input-block">
+                    <select name="projectSource" id="projectSource">
+                        <option value="">请选择项目来源</option>
+                        <option value="1">自拓非招投标</option>
+                        <option value="2">自拓+招投标</option>
+                        <option value="3">渠道维护非招投标</option>
+                        <option value="4">渠道维护+招投标</option>
+                        <option value="5">公开招投标</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目周期(天)</label>
+                <div class="layui-input-block">
+                    <input type="number" name="projectCycle" id="projectCycle" placeholder="请输入项目周期（天）" class="layui-input" min="0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 业主信息 -->
+    <div class="section-title">业主信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">业主单位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerCompany" id="ownerCompany" placeholder="请输入业主单位" class="layui-input" maxlength="255">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系人</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerContact" id="ownerContact" placeholder="请输入联系人" class="layui-input" maxlength="50">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系方式</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerPhone" id="ownerPhone" placeholder="请输入联系方式" class="layui-input" maxlength="20">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">职位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ownerPost" id="ownerPost" placeholder="请输入职位" class="layui-input" maxlength="50">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 业务员信息 -->
+    <div class="section-title">业务员信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item us-form-item">
+                <label class="layui-form-label">业务员</label>
+                <div class="layui-input-block us-wrap" id="bizUserWrap">
+                    <input type="hidden" id="bisnessUserId" name="bisnessUserId" value="">
+                    <div class="us-input-wrap">
+                        <input type="text" id="bisnessUserName" name="bisnessUserName" placeholder="请选择业务员（可搜索）" class="layui-input" autocomplete="off">
+                        <i class="layui-icon us-arrow" id="bizArrow">&#xe623;</i>
+                    </div>
+                    <div class="us-dropdown" id="bizDropdown">
+                        <div class="us-list" id="bizList">
+                            <div class="us-empty">点击输入框加载用户数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">业务员手机</label>
+                <div class="layui-input-block">
+                    <input type="text" id="bisnessUserPhone" name="bisnessUserPhone" placeholder="选择业务员后自动填充" class="layui-input" readonly style="background:#f2f2f2; cursor:not-allowed;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 技术负责人信息 -->
+    <div class="section-title">技术负责人信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item us-form-item">
+                <label class="layui-form-label">技术负责人</label>
+                <div class="layui-input-block us-wrap" id="techUserWrap">
+                    <input type="hidden" id="techUserId" name="techUserId" value="">
+                    <div class="us-input-wrap">
+                        <input type="text" id="techUserName" name="techUserName" placeholder="请选择技术负责人（可搜索）" class="layui-input" autocomplete="off">
+                        <i class="layui-icon us-arrow" id="techArrow">&#xe623;</i>
+                    </div>
+                    <div class="us-dropdown" id="techDropdown">
+                        <div class="us-list" id="techList">
+                            <div class="us-empty">点击输入框加载用户数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">负责人手机</label>
+                <div class="layui-input-block">
+                    <input type="text" id="techUserPhone" name="techUserPhone" placeholder="选择技术负责人后自动填充" class="layui-input" readonly style="background:#f2f2f2; cursor:not-allowed;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 费用信息 -->
+    <div class="section-title">费用信息</div>
+    <div class="row-group">
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">项目金额</label>
+                <div class="layui-input-block">
+                    <input type="number" name="projectAmount" id="projectAmount" placeholder="请输入项目金额" class="layui-input" step="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="col-item">
+            <div class="layui-form-item">
+                <label class="layui-form-label">限价单位</label>
+                <div class="layui-input-block">
+                    <input type="text" name="priceUnit" id="priceUnit" placeholder="请输入限价单位" class="layui-input" maxlength="20">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 其他信息 -->
+    <div class="section-title">其他信息</div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">项目详情</label>
+        <div class="layui-input-block">
+            <textarea name="contentDetail" id="contentDetail" placeholder="请输入项目详情" class="layui-textarea" style="height:80px;"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">备注</label>
+        <div class="layui-input-block">
+            <textarea name="remark" id="remark" placeholder="请输入备注" class="layui-textarea" style="height:80px;"></textarea>
+        </div>
+    </div>
+
+    <!-- 附件上传 -->
+    <div class="section-title">附件</div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">上传附件</label>
+        <div class="layui-input-block">
+            <div class="file-list" id="fileList"></div>
+            <div class="upload-btn-wrap">
+                <button type="button" class="layui-btn layui-btn-sm btn-green" id="uploadBtn">
+                    <i class="layui-icon">&#xe67c;</i>上传文件
+                </button>
+                <span style="font-size:12px;color:#999;margin-left:8px;">支持多选上传，可删除后重新上传</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="btn-group">
+        <button type="button" class="layui-btn btn-green" lay-submit lay-filter="oldProjectSubmit" id="submitBtn">保存</button>
+        <button type="button" class="layui-btn layui-btn-primary" onclick="closeWindow()">取消</button>
+    </div>
+</form>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+var uploadedFiles = [];
+
+function closeWindow() {
+    var index = parent.layer.getFrameIndex(window.name);
+    parent.layer.close(index);
+}
+
+/* 附件列表渲染 */
+function renderFileList() {
+    var html = '';
+    uploadedFiles.forEach(function (file, idx) {
+        html += '<div class="file-item">';
+        html += '  <span class="file-name" title="' + file.originalName + '">' + file.originalName + '</span>';
+        html += '  <i class="layui-icon file-remove" data-idx="' + idx + '">&#xe640;</i>';
+        html += '</div>';
+    });
+    document.getElementById('fileList').innerHTML = html;
+    document.querySelectorAll('.file-remove').forEach(function (el) {
+        el.addEventListener('click', function () {
+            var idx = parseInt(this.getAttribute('data-idx'));
+            uploadedFiles.splice(idx, 1);
+            renderFileList();
+        });
+    });
+}
+
+layui.use(['form', 'layer', 'upload'], function () {
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.jquery;
+    var upload = layui.upload;
+
+    /* ==================== 可搜索用户下拉组件（工厂函数） ==================== */
+    function createUserSelect(cfg) {
+        var inputEl = document.getElementById(cfg.inputId);
+        var dropdownEl = document.getElementById(cfg.dropdownId);
+        var listEl = document.getElementById(cfg.listId);
+        var arrowEl = document.getElementById(cfg.arrowId);
+        var hiddenEl = document.getElementById(cfg.hiddenId);
+        var phoneEl = document.getElementById(cfg.phoneId);
+        var wrapEl = document.getElementById(cfg.wrapId);
+
+        var allUsers = [];
+        var usersLoaded = false;
+        var selectedUserName = '';
+
+        function loadUsers(callback) {
+            $.ajax({
+                url: '/sys/user/searchByName',
+                type: 'GET',
+                headers: {token: token},
+                data: {name: ''},
+                success: function (res) {
+                    if (res.code === 200 && res.data) {
+                        allUsers = res.data;
+                        usersLoaded = true;
+                        if (callback) callback();
+                    } else {
+                        allUsers = [];
+                        usersLoaded = false;
+                        listEl.innerHTML = '<div class="us-empty">暂无用户数据</div>';
+                    }
+                },
+                error: function () {
+                    allUsers = [];
+                    usersLoaded = false;
+                    listEl.innerHTML = '<div class="us-empty">加载失败，请重试</div>';
+                }
+            });
+        }
+
+        function clearSelection() {
+            hiddenEl.value = '';
+            phoneEl.value = '';
+            selectedUserName = '';
+        }
+
+        function setSelection(user) {
+            if (!user) { clearSelection(); return; }
+            hiddenEl.value = user.id || '';
+            inputEl.value = user.realName || '';
+            phoneEl.value = user.phone || '';
+            selectedUserName = user.realName || '';
+        }
+
+        function syncSelectionByInput() {
+            var keyword = inputEl.value.trim();
+            if (!keyword) { clearSelection(); return; }
+            var currentId = hiddenEl.value;
+            if (currentId) {
+                var matched = allUsers.find(function (u) { return u.id == currentId; });
+                if (matched && matched.realName === keyword) { setSelection(matched); return; }
+            }
+            var matchedByName = allUsers.find(function (u) { return u.realName === keyword; });
+            if (matchedByName) { setSelection(matchedByName); } else { clearSelection(); }
+        }
+
+        function renderList(keyword) {
+            var currentId = hiddenEl.value;
+            var list = allUsers;
+            if (keyword) {
+                var kw = keyword.toLowerCase();
+                list = allUsers.filter(function (u) {
+                    return u.realName && u.realName.toLowerCase().indexOf(kw) > -1;
+                });
+            }
+            if (list.length === 0) {
+                listEl.innerHTML = '<div class="us-empty">' + (keyword ? '无匹配用户' : '暂无用户数据') + '</div>';
+                return;
+            }
+            var html = '';
+            list.forEach(function (u) {
+                var cls = (currentId && u.id == currentId) ? ' active' : '';
+                html += '<div class="us-item' + cls + '" data-id="' + u.id + '" data-name="' + (u.realName || '') + '" data-phone="' + (u.phone || '') + '">';
+                html += '  <span>' + (u.realName || '') + '</span>';
+                html += '  <span class="item-phone">' + (u.phone || '') + '</span>';
+                html += '</div>';
+            });
+            listEl.innerHTML = html;
+        }
+
+        function openDropdown() {
+            if (!usersLoaded) {
+                listEl.innerHTML = '<div class="us-empty">加载中...</div>';
+                dropdownEl.style.display = 'block';
+                arrowEl.classList.add('open');
+                loadUsers(function () {
+                    renderList(inputEl.value.trim());
+                    dropdownEl.style.display = 'block';
+                });
+            } else {
+                renderList(inputEl.value.trim());
+                dropdownEl.style.display = 'block';
+                arrowEl.classList.add('open');
+            }
+        }
+
+        function closeDropdown() {
+            dropdownEl.style.display = 'none';
+            arrowEl.classList.remove('open');
+        }
+
+        inputEl.addEventListener('focus', function () { openDropdown(); });
+
+        inputEl.addEventListener('input', function () {
+            var keyword = this.value.trim();
+            if (!usersLoaded) {
+                openDropdown();
+            } else {
+                renderList(keyword);
+                dropdownEl.style.display = 'block';
+                arrowEl.classList.add('open');
+            }
+        });
+
+        inputEl.addEventListener('blur', function () {
+            setTimeout(function () {
+                if (!inputEl.value.trim()) { clearSelection(); return; }
+                if (inputEl.value.trim() !== selectedUserName) { syncSelectionByInput(); }
+            }, 200);
+        });
+
+        arrowEl.addEventListener('click', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (dropdownEl.style.display !== 'none') {
+                closeDropdown();
+            } else {
+                inputEl.focus();
+                openDropdown();
+            }
+        });
+
+        listEl.addEventListener('mousedown', function (e) {
+            var item = e.target.closest('.us-item');
+            if (!item) return;
+            e.preventDefault();
+            e.stopPropagation();
+            hiddenEl.value = item.getAttribute('data-id');
+            inputEl.value = item.getAttribute('data-name');
+            phoneEl.value = item.getAttribute('data-phone') || '';
+            selectedUserName = inputEl.value;
+            closeDropdown();
+        });
+
+        document.addEventListener('click', function (e) {
+            if (wrapEl && !wrapEl.contains(e.target)) { closeDropdown(); }
+        });
+
+        return { clearSelection: clearSelection };
+    }
+
+    // 业务员下拉
+    createUserSelect({
+        wrapId: 'bizUserWrap', inputId: 'bisnessUserName', dropdownId: 'bizDropdown',
+        listId: 'bizList', arrowId: 'bizArrow', hiddenId: 'bisnessUserId', phoneId: 'bisnessUserPhone'
+    });
+
+    // 技术负责人下拉
+    createUserSelect({
+        wrapId: 'techUserWrap', inputId: 'techUserName', dropdownId: 'techDropdown',
+        listId: 'techList', arrowId: 'techArrow', hiddenId: 'techUserId', phoneId: 'techUserPhone'
+    });
+
+    /* ==================== 附件上传（多选、可删除） ==================== */
+    upload.render({
+        elem: '#uploadBtn',
+        url: '/file/upload',
+        headers: {token: token},
+        accept: 'file',
+        multiple: true,
+        auto: true,
+        before: function () { layer.load(1); },
+        done: function (res) {
+            layer.closeAll('loading');
+            if (res.code === 200) {
+                uploadedFiles.push({
+                    filePath: res.data,
+                    originalName: res.originalName || res.data
+                });
+                renderFileList();
+            } else {
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+        },
+        error: function () {
+            layer.closeAll('loading');
+            layer.msg('上传出错', {icon: 2});
+        }
+    });
+
+    /* ==================== 提交保存 ==================== */
+    var isSubmitting = false;
+    form.on('submit(oldProjectSubmit)', function () {
+        if (isSubmitting) return false;
+
+        var projectName = document.getElementById('projectName').value.trim();
+        var projectNo = document.getElementById('projectNo').value.trim();
+
+        if (!projectName) { layer.msg('请输入项目名称', {icon: 5}); return false; }
+        if (!projectNo) { layer.msg('请输入项目编号', {icon: 5}); return false; }
+
+        var $submitBtn = $('#submitBtn');
+        isSubmitting = true;
+        $submitBtn.prop('disabled', true).addClass('layui-btn-disabled').text('保存中...');
+
+        var data = {
+            projectName: projectName,
+            projectNo: projectNo,
+            projectType: $('#projectType').val() || null,
+            area: document.getElementById('area').value.trim() || null,
+            projectSource: $('#projectSource').val() || null,
+            projectCycle: document.getElementById('projectCycle').value.trim() || null,
+            ownerCompany: document.getElementById('ownerCompany').value.trim() || null,
+            ownerContact: document.getElementById('ownerContact').value.trim() || null,
+            ownerPhone: document.getElementById('ownerPhone').value.trim() || null,
+            ownerPost: document.getElementById('ownerPost').value.trim() || null,
+            bisnessUserId: document.getElementById('bisnessUserId').value || null,
+            bisnessUserName: document.getElementById('bisnessUserName').value.trim() || null,
+            bisnessUserPhone: document.getElementById('bisnessUserPhone').value.trim() || null,
+            techUserId: document.getElementById('techUserId').value || null,
+            techUserName: document.getElementById('techUserName').value.trim() || null,
+            techUserPhone: document.getElementById('techUserPhone').value.trim() || null,
+            projectAmount: document.getElementById('projectAmount').value.trim() || null,
+            priceUnit: document.getElementById('priceUnit').value.trim() || null,
+            contentDetail: document.getElementById('contentDetail').value.trim() || null,
+            remark: document.getElementById('remark').value.trim() || null,
+            fileList: uploadedFiles
+        };
+
+        $.ajax({
+            url: '/project/info/addOld',
+            type: 'POST',
+            headers: {token: token},
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (res) {
+                if (res.code === 200) {
+                    layer.msg('新增成功', {icon: 1}, function () {
+                        closeWindow();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', {icon: 2});
+                    isSubmitting = false;
+                    $submitBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
+                }
+            },
+            error: function () {
+                layer.msg('请求失败，请重试', {icon: 2});
+                isSubmitting = false;
+                $submitBtn.prop('disabled', false).removeClass('layui-btn-disabled').text('保存');
+            }
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>

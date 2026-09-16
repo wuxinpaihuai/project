@@ -85,7 +85,7 @@ CREATE TABLE `project_info` (
   `bid_website` varchar(100) DEFAULT NULL COMMENT '选择来源哪个招标网',
   `bid_url` varchar(500) DEFAULT NULL COMMENT '招标网址',
    `price_type` tinyint DEFAULT NULL COMMENT '报价类型 1=金额 0=其他',
-   `project_cycle` tinyint DEFAULT NULL COMMENT '项目周期',
+   `project_cycle` int DEFAULT NULL COMMENT '项目周期',
   `project_amount` decimal(12,2) DEFAULT NULL COMMENT '项目金额',
   `max_price` decimal(12,2) DEFAULT NULL COMMENT '最高限价',
   `min_price` decimal(12,2) DEFAULT NULL COMMENT '最低限价',
@@ -375,6 +375,7 @@ CREATE TABLE `project_assessment_user` (
   `user_name` varchar(50) DEFAULT NULL COMMENT '人员姓名',
   `ratio` decimal(5,2) NOT NULL COMMENT '占比(数值，20代表20%)',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+   UNIQUE KEY `uk_project_user` (`project_id`,`user_id`),
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目考核人员分配表';
 

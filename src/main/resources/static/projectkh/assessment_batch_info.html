@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考核明细</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 100px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 220px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green { background-color: #86c566 !important; color: #fff !important; border-color: #86c566 !important; }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue { background-color: #1e9fff !important; color: #fff !important; border-color: #1e9fff !important; }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .num-cell { text-align: right; font-family: Consolas, monospace; }
+        .remark-warn { color: #ff5722; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <div class="search-card">
+        <form class="layui-form" lay-filter="infoSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">考核批次</label>
+                    <div class="layui-input-inline">
+                        <select name="batchId" id="batchId" lay-filter="batchId" lay-verify="required">
+                            <option value="">请选择考核批次</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">考核人员</label>
+                    <div class="layui-input-inline">
+                        <select name="userId" id="userId" lay-filter="userId" lay-search lay-verify="required">
+                            <option value="">请选择考核人员</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="statBtn"><i class="layui-icon">&#xe615;</i> 统计</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe67c;</i> 下载考核明细列表</button>
+        </div>
+        <table id="infoTable" lay-filter="infoTable"></table>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    var currentBatchId = null;
+    var currentUserId = null;
+
+    // 金额格式化
+    function fmtMoney(val) {
+        if (val === '-' || val === null || val === undefined) return '-';
+        var n = parseFloat(val);
+        if (isNaN(n)) return '-';
+        return n.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // 加载考核批次下拉
+    function loadBatchOptions(callback) {
+        $.ajax({
+            url: '/assessment/info/batchOptions',
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    var html = '<option value="">请选择考核批次</option>';
+                    for (var i = 0; i < res.data.length; i++) {
+                        var b = res.data[i];
+                        html += '<option value="' + b.id + '" data-begin="' + b.assessBeginDay + '" data-end="' + b.assessEndDay + '">' + b.batchName + '</option>';
+                    }
+                    $('#batchId').html(html);
+                    form.render('select');
+                    // 默认选中第一个
+                    if (res.data.length > 0) {
+                        currentBatchId = res.data[0].id;
+                        $('#batchId').val(String(currentBatchId));
+                        form.render('select');
+                    }
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    // 加载考核人员下拉
+    function loadUserOptions(callback) {
+        $.ajax({
+            url: '/assessment/info/userOptions',
+            type: 'GET',
+            headers: {token: token},
+            success: function(res) {
+                if (res.code === 200 && res.data) {
+                    var html = '<option value="">请选择考核人员</option>';
+                    for (var i = 0; i < res.data.length; i++) {
+                        var u = res.data[i];
+                        html += '<option value="' + u.id + '">' + u.label + '</option>';
+                    }
+                    $('#userId').html(html);
+                    form.render('select');
+                    // 默认选中第一个
+                    if (res.data.length > 0) {
+                        currentUserId = res.data[0].id;
+                        $('#userId').val(String(currentUserId));
+                        form.render('select');
+                    }
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    // 渲染表格
+    function renderTable(data) {
+        table.render({
+            elem: '#infoTable',
+            data: data,
+            page: false,
+            limit: 9999,
+            cols: [[
+                {field: 'seq', title: '序号', width: 60, align: 'center', fixed: 'left'},
+                {field: 'userName', title: '姓名', width: 80, align: 'center', fixed: 'left'},
+                {field: 'projectName', title: '项目名称', minWidth: 180,align: 'center', fixed: 'left'},
+                {field: 'ownerCompany', title: '委托单位', width: 140},
+                {field: 'contractAmount', title: '合同额', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.contractAmount); }},
+                {field: 'receiveAmount', title: '收款额', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.receiveAmount); }},
+                {field: 'fee1', title: '监测费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.fee1); }},
+                {field: 'fee2', title: '评审费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.fee2); }},
+                {field: 'fee3', title: '协作费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.fee3); }},
+                {field: 'fee4', title: '公示公告费', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.fee4); }},
+                {field: 'fee5', title: '材料费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.fee5); }},
+                {field: 'fee6', title: '差旅费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.fee6); }},
+                {field: 'fee7', title: '装订快递费', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.fee7); }},
+                {field: 'fee8', title: '其他直接费用', width: 120, align: 'right', templet: function(d){ return fmtMoney(d.fee8); }},
+                {field: 'taxFee', title: '税费', width: 100, align: 'right', templet: function(d){ return fmtMoney(d.taxFee); }},
+                {field: 'netReceive', title: '净收款额', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.netReceive); }},
+                {field: 'netAssess', title: '净考核额', width: 110, align: 'right', templet: function(d){ return fmtMoney(d.netAssess); }},
+                {field: 'isGovernmentApprove', title: '审批或备案', width: 110, align: 'center'},
+                {field: 'meetingApprove', title: '过会审批', width: 110, align: 'center'},
+                {field: 'techUserName', title: '项目负责人', width: 100, align: 'center'},
+                {field: 'bisnessUserName', title: '业务员', width: 90, align: 'center'},
+                {field: 'techPersonName', title: '技术员', width: 90, align: 'center'},
+                {field: 'techRatio', title: '占比', width: 80, align: 'center'},
+                {field: 'ysUserName', title: '一级审核', width: 90, align: 'center'},
+                {field: 'esUserName', title: '二级审核', width: 90, align: 'center'},
+                {field: 'ssUserName', title: '三级审核', width: 90, align: 'center'},
+                {field: 'assessType', title: '报告类型', width: 100, align: 'center'},
+                {field: 'isArchiveFinish', title: '是否存档', width: 90, align: 'center'},
+                {field: 'progressInfo', title: '进展情况', width: 130, templet: function(d){
+                    if(!d.progressInfo || d.progressInfo === '-') return '-';
+                    if(d.progressInfo.length > 12) return '<span title="' + d.progressInfo + '">' + d.progressInfo.substring(0,12) + '...</span>';
+                    return d.progressInfo;
+                }},
+                {field: 'remark', title: '备注', width: 140, templet: function(d){
+                    if(!d.remark) return '-';
+                    return '<span class="remark-warn">' + d.remark + '</span>';
+                }}
+            ]],
+            done: function() {
+                // 表格渲染完成
+            }
+        });
+    }
+
+    // 执行统计
+    function doStat() {
+        var batchId = $('#batchId').val();
+        var userId = $('#userId').val();
+        if (!batchId) { layer.msg('请选择考核批次', {icon: 5}); return; }
+        if (!userId) { layer.msg('请选择考核人员', {icon: 5}); return; }
+
+        currentBatchId = batchId;
+        currentUserId = userId;
+
+        var loadIdx = layer.load(1, {shade: [0.3, '#000'], content: '正在统计中，请稍候...'});
+
+        $.ajax({
+            url: '/assessment/info/stat',
+            type: 'GET',
+            headers: {token: token},
+            data: { batchId: batchId, userId: userId },
+            success: function(res) {
+                layer.close(loadIdx);
+                if (res.code === 200) {
+                    renderTable(res.data || []);
+                } else {
+                    layer.msg(res.msg || '统计失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.close(loadIdx);
+                layer.msg('请求异常', {icon: 2});
+            }
+        });
+    }
+
+    // 页面初始化：加载下拉并自动触发统计
+    loadBatchOptions(function() {
+        loadUserOptions(function() {
+            if (currentBatchId && currentUserId) {
+                doStat();
+            }
+        });
+    });
+
+    // 切换批次或人员自动统计
+    form.on('select(batchId)', function(data) {
+        if ($('#userId').val()) doStat();
+    });
+    form.on('select(userId)', function(data) {
+        if ($('#batchId').val()) doStat();
+    });
+
+    // 手动统计按钮
+    $('#statBtn').on('click', function() {
+        doStat();
+    });
+
+    // 下载考核明细列表
+    $('#downloadBtn').on('click', function() {
+        var batchId = $('#batchId').val();
+        if (!batchId) { layer.msg('请先选择考核批次', {icon: 5}); return; }
+
+        var loadIdx = layer.load(1, {shade: [0.3, '#000'], content: '正在导出所有考核人员明细，请稍候...'});
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/assessment/info/download?batchId=' + batchId, true);
+        xhr.setRequestHeader('token', token);
+        xhr.responseType = 'blob';
+
+        xhr.onload = function() {
+            layer.close(loadIdx);
+            if (xhr.status === 200) {
+                var blob = xhr.response;
+                var disposition = xhr.getResponseHeader('Content-Disposition');
+                var fileName = '考核明细.xlsx';
+                if (disposition) {
+                    var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
+                    if (match && match[1]) fileName = decodeURIComponent(match[1]);
+                }
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                layer.msg('导出成功', {icon: 1});
+            } else {
+                layer.msg('导出失败', {icon: 2});
+            }
+        };
+        xhr.onerror = function() {
+            layer.close(loadIdx);
+            layer.msg('导出请求异常', {icon: 2});
+        };
+        xhr.send();
+    });
+});
+</script>
+</body>
+</html>

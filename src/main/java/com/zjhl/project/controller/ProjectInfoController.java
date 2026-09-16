@@ -3,13 +3,16 @@ package com.zjhl.project.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zjhl.project.entity.ProjectExtend;
 import com.zjhl.project.entity.ProjectFile;
 import com.zjhl.project.entity.ProjectInfo;
 import com.zjhl.project.entity.ProjectStage;
+import com.zjhl.project.service.ProjectExtendService;
 import com.zjhl.project.service.ProjectFileService;
 import com.zjhl.project.service.ProjectInfoService;
 import com.zjhl.project.service.ProjectStageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -30,6 +33,9 @@ public class ProjectInfoController {
 
     @Autowired
     private ProjectFileService projectFileService;
+
+    @Autowired
+    private ProjectExtendService projectExtendService;
 
     /**
      * 项目列表（分页+条件查询）
@@ -187,6 +193,115 @@ public class ProjectInfoController {
             result.put("code", 500);
             result.put("msg", "新增失败");
         }
+        return result;
+    }
+
+    /**
+     * 新增现有项目（已有项目直接入库，无需招标流程）
+     * 保存成功后自动写入：
+     *   1) project_stage 三条记录：
+     *      - 投标阶段(stage_type=1, stage_status=2, remark=现有项目无需投标)
+     *      - 签约阶段(stage_type=2, stage_status=1, remark=现有项目自动进入签约阶段)
+     *      - 实施阶段(stage_type=3, stage_status=1, remark=现有项目自动进入签约阶段)
+     *   2) project_extend 一条记录：is_win_bid=1、is_sign=0
+     */
+    @PostMapping("/addOld")
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> addOld(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        // ========== 1. 保存项目基本信息 ==========
+        ProjectInfo project = new ProjectInfo();
+        project.setProjectName((String) params.get("projectName"));
+        project.setProjectNo((String) params.get("projectNo"));
+        project.setProjectType(params.get("projectType") != null ? Integer.parseInt(params.get("projectType").toString()) : null);
+        project.setArea((String) params.get("area"));
+        project.setProjectSource((String) params.get("projectSource"));
+        project.setProjectCycle(params.get("projectCycle") != null ? Integer.parseInt(params.get("projectCycle").toString()) : null);
+        project.setOwnerCompany((String) params.get("ownerCompany"));
+        project.setOwnerContact((String) params.get("ownerContact"));
+        project.setOwnerPhone((String) params.get("ownerPhone"));
+        project.setOwnerPost((String) params.get("ownerPost"));
+        project.setBisnessUserId(params.get("bisnessUserId") != null ? Long.parseLong(params.get("bisnessUserId").toString()) : null);
+        project.setBisnessUserName((String) params.get("bisnessUserName"));
+        project.setBisnessUserPhone((String) params.get("bisnessUserPhone"));
+        project.setTechUserId(params.get("techUserId") != null ? Long.parseLong(params.get("techUserId").toString()) : null);
+        project.setTechUserName((String) params.get("techUserName"));
+        project.setTechUserPhone((String) params.get("techUserPhone"));
+        project.setProjectAmount(params.get("projectAmount") != null ? new java.math.BigDecimal(params.get("projectAmount").toString()) : null);
+        project.setPriceUnit((String) params.get("priceUnit"));
+        project.setContentDetail((String) params.get("contentDetail"));
+        project.setRemark((String) params.get("remark"));
+        project.setCreateTime(LocalDateTime.now());
+        project.setUpdateTime(LocalDateTime.now());
+
+        boolean success = projectInfoService.save(project);
+        if (!success) {
+            result.put("code", 500);
+            result.put("msg", "新增失败");
+            return result;
+        }
+
+        Long newProjectId = project.getId();
+
+        // ========== 2. 写入三条项目阶段记录 ==========
+        // 2.1 投标阶段：直接标记为已完成（现有项目无需投标）
+        ProjectStage bidStage = new ProjectStage();
+        bidStage.setProjectId(newProjectId);
+        bidStage.setStageType(1);
+        bidStage.setStageStatus(2);
+        bidStage.setStageRemark("现有项目无需投标");
+        bidStage.setCreateTime(LocalDateTime.now());
+        projectStageService.save(bidStage);
+
+        // 2.2 签约阶段：进行中
+        ProjectStage signStage = new ProjectStage();
+        signStage.setProjectId(newProjectId);
+        signStage.setStageType(2);
+        signStage.setStageStatus(1);
+        signStage.setStageRemark("现有项目自动进入签约阶段");
+        signStage.setCreateTime(LocalDateTime.now());
+        projectStageService.save(signStage);
+
+        // 2.3 实施阶段：进行中
+        ProjectStage execStage = new ProjectStage();
+        execStage.setProjectId(newProjectId);
+        execStage.setStageType(3);
+        execStage.setStageStatus(1);
+        execStage.setStageRemark("现有项目自动进入签约阶段");
+        execStage.setCreateTime(LocalDateTime.now());
+        projectStageService.save(execStage);
+
+        // ========== 3. 写入项目拓展信息（已中标、未签约） ==========
+        ProjectExtend extend = new ProjectExtend();
+        extend.setProjectId(newProjectId);
+        extend.setIsWinBid(1);
+        extend.setIsSign(0);
+        extend.setCreateTime(LocalDateTime.now());
+        projectExtendService.save(extend);
+
+        // ========== 4. 保存项目附件 ==========
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> fileList = (List<Map<String, Object>>) params.get("fileList");
+        if (fileList != null && !fileList.isEmpty()) {
+            for (Map<String, Object> fileMap : fileList) {
+                ProjectFile pf = new ProjectFile();
+                pf.setProjectId(newProjectId);
+                pf.setStageType(1);
+                pf.setFilePath((String) fileMap.get("filePath"));
+                pf.setOriginalName((String) fileMap.get("originalName"));
+                pf.setCreateTime(LocalDateTime.now());
+                projectFileService.save(pf);
+            }
+        }
+
+        result.put("code", 200);
+        result.put("msg", "新增成功");
         return result;
     }
 
