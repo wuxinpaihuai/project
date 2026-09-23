@@ -65,16 +65,13 @@ public class ProjectInfoController {
         Page<ProjectInfo> page = new Page<>(pageNum, pageSize);
         Page<ProjectInfo> resultPage = projectInfoService.page(page, wrapper);
 
-        // 为每条项目记录填充项目状态（stage_status）
+        // 为每条项目记录推导「项目阶段」与「项目状态」
         List<ProjectInfo> records = resultPage.getRecords();
         for (ProjectInfo info : records) {
-            QueryWrapper<ProjectStage> stageWrapper = new QueryWrapper<>();
-            stageWrapper.eq("project_id", info.getId());
-            stageWrapper.eq("stage_type", 1);
-            stageWrapper.orderByDesc("create_time");
-            List<ProjectStage> stages = projectStageService.list(stageWrapper);
-            if (!stages.isEmpty()) {
-                info.setStageStatus(stages.get(0).getStageStatus());
+            ProjectStage currentStage = resolveCurrentStage(info.getId());
+            if (currentStage != null) {
+                info.setStageType(currentStage.getStageType());
+                info.setStageStatus(currentStage.getStageStatus());
             }
         }
 
@@ -273,7 +270,7 @@ public class ProjectInfoController {
         execStage.setProjectId(newProjectId);
         execStage.setStageType(3);
         execStage.setStageStatus(1);
-        execStage.setStageRemark("现有项目自动进入签约阶段");
+        execStage.setStageRemark("现有项目自动进入实施阶段");
         execStage.setCreateTime(LocalDateTime.now());
         projectStageService.save(execStage);
 
@@ -292,7 +289,8 @@ public class ProjectInfoController {
             for (Map<String, Object> fileMap : fileList) {
                 ProjectFile pf = new ProjectFile();
                 pf.setProjectId(newProjectId);
-                pf.setStageType(1);
+                // 现有项目自动进入签约阶段，附件默认归属签约阶段
+                pf.setStageType(2);
                 pf.setFilePath((String) fileMap.get("filePath"));
                 pf.setOriginalName((String) fileMap.get("originalName"));
                 pf.setCreateTime(LocalDateTime.now());
@@ -445,5 +443,83 @@ public class ProjectInfoController {
         result.put("msg", "查询成功");
         result.put("data", files);
         return result;
+    }
+
+    /**
+     * 推导项目当前所处阶段（用于列表页「项目阶段」「项目状态」两列）
+     *
+     * 规则（依据 project_stage 记录数 + project_extend.is_sign）：
+     *   1) 只有招标阶段(type=1)                     → 项目阶段=招标阶段(1)，状态取 type=1 记录
+     *   2) 招标(1) + 签约(2)                        → 项目阶段=签约阶段(2)，状态取 type=2 记录
+     *   3) 存在实施阶段(3)记录                      → 查 project_extend.is_sign：
+     *        is_sign=1 已签约 → 项目阶段=实施阶段(3)，状态取 type=3 记录
+     *        is_sign=0 未签约 → 项目阶段=签约阶段(2)，状态取 type=2 记录
+     *
+     * @return 当前阶段对应的 project_stage 记录（其 stageStatus 即为项目状态）；无记录返回 null
+     */
+    private ProjectStage resolveCurrentStage(Long projectId) {
+        QueryWrapper<ProjectStage> wrapper = new QueryWrapper<>();
+        wrapper.eq("project_id", projectId);
+        List<ProjectStage> stages = projectStageService.list(wrapper);
+        if (stages == null || stages.isEmpty()) {
+            return null;
+        }
+
+        // 按阶段类型分组，同类型保留 create_time 最新的一条
+        ProjectStage bidStage = null;   // type=1 招标/投标阶段
+        ProjectStage signStage = null;  // type=2 签约阶段
+        ProjectStage execStage = null;  // type=3 实施阶段
+        for (ProjectStage s : stages) {
+            Integer type = s.getStageType();
+            if (type == null) {
+                continue;
+            }
+            if (type == 1) {
+                if (bidStage == null || isNewer(s, bidStage)) bidStage = s;
+            } else if (type == 2) {
+                if (signStage == null || isNewer(s, signStage)) signStage = s;
+            } else if (type == 3) {
+                if (execStage == null || isNewer(s, execStage)) execStage = s;
+            }
+        }
+
+        // 存在实施阶段记录 → 由「是否已签约」决定当前阶段
+        if (execStage != null) {
+            if (isProjectSigned(projectId)) {
+                return execStage;                       // 已签约 → 实施阶段
+            }
+            // 未签约 → 签约阶段（若没有签约阶段记录，则退回实施阶段记录）
+            return signStage != null ? signStage : execStage;
+        }
+
+        // 尚在签约阶段
+        if (signStage != null) {
+            return signStage;
+        }
+
+        // 仅招标阶段
+        if (bidStage != null) {
+            return bidStage;
+        }
+
+        // 兜底
+        return stages.get(0);
+    }
+
+    /** 判断 s1 是否比 s2 更新（create_time 更晚） */
+    private boolean isNewer(ProjectStage s1, ProjectStage s2) {
+        return s1.getCreateTime() != null && s2.getCreateTime() != null
+                && s1.getCreateTime().isAfter(s2.getCreateTime());
+    }
+
+    /**
+     * 项目是否已签约（project_extend.is_sign = 1）
+     */
+    private boolean isProjectSigned(Long projectId) {
+        QueryWrapper<ProjectExtend> wrapper = new QueryWrapper<>();
+        wrapper.eq("project_id", projectId);
+        wrapper.last("limit 1");
+        ProjectExtend extend = projectExtendService.getOne(wrapper, false);
+        return extend != null && extend.getIsSign() != null && extend.getIsSign() == 1;
     }
 }

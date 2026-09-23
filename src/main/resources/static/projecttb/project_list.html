@@ -124,6 +124,14 @@ layui.use(['table', 'layer', 'form'], function(){
         2: {name: '已完成', cls: 'status-completed'}
     };
 
+    // 项目阶段映射（后端依据 project_stage 记录推导）
+    var stageTypeMap = {
+        1: '招标阶段',
+        2: '签约阶段',
+        3: '实施阶段',
+        4: '维护阶段'
+    };
+
     // 渲染表格
     table.render({
         elem: '#projectTable',
@@ -156,6 +164,9 @@ layui.use(['table', 'layer', 'form'], function(){
                 }
                 return '-';
             }},
+            {field: 'stageType', title: '项目阶段', width: 110, align: 'center', templet: function(d){
+                return stageTypeMap[d.stageType] || '-';
+            }},
             {field: 'stageStatus', title: '项目状态', width: 100, align: 'center', templet: function(d){
                 var info = stageStatusMap[d.stageStatus];
                 if (info) {
@@ -173,7 +184,7 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'bidTime', title: '投标时间', width: 160, align: 'center', templet: function(d){
                 return d.bidTime ? d.bidTime.replace('T', ' ') : '-';
             }},
-            {title: '操作', width: 160, align: 'center', fixed: 'right', toolbar: '#rowToolbar'}
+            {title: '操作', width: 260, align: 'center', fixed: 'right', toolbar: '#rowToolbar'}
         ]],
         done: function(res) {
             if (res.code === 401) {
@@ -188,7 +199,16 @@ layui.use(['table', 'layer', 'form'], function(){
     // 编辑、删除按钮
     table.on('tool(projectTable)', function(obj){
         var data = obj.data;
-        if (obj.event === 'edit') {
+        if (obj.event === 'detail') {
+            layer.open({
+                type: 2,
+                title: '项目详情 - ' + (data.projectName || ''),
+                area: ['900px', '90%'],
+                content: '/projecttb/project_detail.html?projectId=' + data.id,
+                maxmin: true,
+                shadeClose: false
+            });
+        } else if (obj.event === 'edit') {
             layer.open({
                 type: 2,
                 title: '编辑项目',
@@ -276,6 +296,7 @@ layui.use(['table', 'layer', 'form'], function(){
 </script>
 
 <script type="text/html" id="rowToolbar">
+    <a class="layui-btn layui-btn-xs btn-orange" lay-event="detail"><i class="layui-icon">&#xe63c;</i> 详情</a>
     <a class="layui-btn layui-btn-xs btn-blue" lay-event="edit"><i class="layui-icon">&#xe642;</i> 编辑</a>
     <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon">&#xe640;</i> 删除</a>
 </script>
