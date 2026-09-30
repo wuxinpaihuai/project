@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点水情数据</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 180px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .out-yes { color: #ff5722; font-weight: bold; }
+        .out-no { color: #86c566; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- 搜索区 -->
+    <div class="search-card">
+        <form class="layui-form" lay-filter="dataSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">站名</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="stationName" id="searchStationName" placeholder="请输入站名" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">站号</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="stationCode" id="searchStationCode" placeholder="请输入站号" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">数据日期</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="dataDay" id="searchDataDay" placeholder="请选择数据日期" class="layui-input" readonly>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">地市</label>
+                    <div class="layui-input-inline">
+                        <select name="city" id="searchCity">
+                            <option value="">全部</option>
+                            <option value="杭州市">杭州市</option>
+                            <option value="宁波市">宁波市</option>
+                            <option value="温州市">温州市</option>
+                            <option value="嘉兴市">嘉兴市</option>
+                            <option value="湖州市">湖州市</option>
+                            <option value="绍兴市">绍兴市</option>
+                            <option value="金华市">金华市</option>
+                            <option value="衢州市">衢州市</option>
+                            <option value="舟山市">舟山市</option>
+                            <option value="台州市">台州市</option>
+                            <option value="丽水市">丽水市</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 表格区 -->
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe601;</i> 下载站点水情数据</button>
+        </div>
+        <table id="dataTable" lay-filter="dataTable"></table>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+/* ============ 日期工具 ============ */
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function getTodayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+layui.use(['table', 'layer', 'form', 'laydate'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var $ = layui.jquery;
+
+    // 数据日期：默认当天
+    var todayStr = getTodayStr();
+    $('#searchDataDay').val(todayStr);
+
+    laydate.render({
+        elem: '#searchDataDay',
+        type: 'date',
+        format: 'yyyy-MM-dd',
+        value: todayStr
+    });
+
+    // 小数格式化
+    function fmtDecimal(v, scale) {
+        if (v === null || v === undefined || v === '') return '-';
+        var n = parseFloat(v);
+        if (isNaN(n)) return '-';
+        return n.toFixed(scale);
+    }
+
+    // 时间格式化（兼容 "yyyy-MM-dd HH:mm:ss" 字符串 / ISO 字符串 / 时间戳数字）
+    function fmtTime(t) {
+        if (t === null || t === undefined || t === '') return '-';
+        if (typeof t === 'number') {
+            var d = new Date(t);
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+                   pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        }
+        return String(t).replace('T', ' ').substring(0, 19);
+    }
+
+    // 日期格式化（yyyy-MM-dd）
+    function fmtDate(t) {
+        if (!t) return '-';
+        return String(t).substring(0, 10);
+    }
+
+    // 当前查询条件
+    function currentWhere() {
+        return {
+            stationName: $('#searchStationName').val().trim(),
+            stationCode: $('#searchStationCode').val().trim(),
+            dataDay: $('#searchDataDay').val(),
+            city: $('#searchCity').val()
+        };
+    }
+
+    // 渲染列表（默认当天数据）
+    table.render({
+        elem: '#dataTable',
+        url: '/water/data/list',
+        method: 'GET',
+        headers: {token: token},
+        where: {
+            stationName: '',
+            stationCode: '',
+            dataDay: todayStr,
+            city: ''
+        },
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'checkbox', width: 50, align: 'center', fixed: 'left'},
+            {type: 'numbers', title: '序号', width: 80, align: 'center', fixed: 'left'},
+            {field: 'city', title: '市', width: 80, align: 'center', fixed: 'left', templet: function(d){
+                return d.city || '-';
+            }},
+            {field: 'county', title: '区县', width: 110, align: 'center', templet: function(d){
+                return d.county || '-';
+            }},
+            {field: 'stationName', title: '站名', minWidth: 120},
+            {field: 'stationCode', title: '站号', width: 120, align: 'center'},
+            {field: 'waterLevel', title: '水位（m）', width: 100, align: 'right', templet: function(d){
+                return fmtDecimal(d.waterLevel, 3);
+            }},
+            {field: 'waterLimitLevel', title: '汛限水位（m）', width: 130, align: 'right', templet: function(d){
+                return fmtDecimal(d.waterLimitLevel, 3);
+            }},
+            {field: 'isOut', title: '是否超汛限', width: 100, align: 'center', templet: function(d){
+                if (d.isOut === 1) {
+                    return '<span class="out-yes">是</span>';
+                }
+                return '<span class="out-no">否</span>';
+            }},
+            {field: 'longitude', title: '经度', width: 120, align: 'center', templet: function(d){
+                return fmtDecimal(d.longitude, 6);
+            }},
+            {field: 'latitude', title: '纬度', width: 120, align: 'center', templet: function(d){
+                return fmtDecimal(d.latitude, 6);
+            }},
+            {field: 'reportTime', title: '上报时间', width: 170, align: 'center', templet: function(d){
+                return fmtTime(d.reportTime);
+            }},
+            {field: 'dataDay', title: '数据日期', width: 120, align: 'center', templet: function(d){
+                return fmtDate(d.dataDay);
+            }}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('dataTable', {
+            where: currentWhere(),
+            page: {curr: 1}
+        });
+    });
+
+    // 重置（数据日期恢复为当天）
+    $('#resetBtn').on('click', function(){
+        $('#searchStationName').val('');
+        $('#searchStationCode').val('');
+        $('#searchDataDay').val(todayStr);
+        $('#searchCity').val('');
+        form.render('select');
+        table.reload('dataTable', {
+            where: {stationName: '', stationCode: '', dataDay: todayStr, city: ''},
+            page: {curr: 1}
+        });
+    });
+
+    // ============ 下载站点水情数据 ============
+    $('#downloadBtn').on('click', function(){
+        var where = currentWhere();
+        var params = 'stationName=' + encodeURIComponent(where.stationName || '') +
+                     '&stationCode=' + encodeURIComponent(where.stationCode || '') +
+                     '&dataDay=' + encodeURIComponent(where.dataDay || '') +
+                     '&city=' + encodeURIComponent(where.city || '');
+
+        var loadIdx = layer.msg('正在导出数据，请稍候……', {
+            icon: 16, shade: 0.3, shadeClose: false, time: 0
+        });
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/water/data/download?' + params, true);
+        xhr.setRequestHeader('token', token);
+        xhr.responseType = 'blob';
+
+        xhr.onload = function(){
+            layer.close(loadIdx);
+            if (xhr.status === 200) {
+                var blob = xhr.response;
+                var disposition = xhr.getResponseHeader('Content-Disposition');
+                var fileName = '站点水情数据.xlsx';
+                if (disposition) {
+                    var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
+                    if (match && match[1]) {
+                        fileName = decodeURIComponent(match[1]);
+                    }
+                }
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                layer.msg('导出成功', {icon: 1});
+            } else {
+                layer.msg('导出失败', {icon: 2});
+            }
+        };
+        xhr.onerror = function(){
+            layer.close(loadIdx);
+            layer.msg('导出请求异常', {icon: 2});
+        };
+        xhr.send();
+    });
+});
+</script>
+</body>
+</html>

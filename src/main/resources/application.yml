@@ -21,6 +21,9 @@ file:
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
+  configuration:
+      map-underscore-to-camel-case: true
+
   global-config:
     db-config:
       id-type: auto
@@ -32,3 +35,7 @@ sa-token:
   token-name: token
   timeout: 86400
   is-log: false
+  
+water:
+  fetch:
+    cron: "0 00 12 * * ?"

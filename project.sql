@@ -29,6 +29,7 @@ CREATE TABLE `sys_role_menu` (
   UNIQUE KEY `uk_role_menu` (`role_id`,`menu_id`),
   KEY `idx_menu_id` (`menu_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色菜单中间表';
+
 CREATE TABLE `sys_menu` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `parent_id` bigint DEFAULT '0' COMMENT '父菜单ID 0=顶级',
@@ -391,3 +392,36 @@ CREATE TABLE `assessment_batch` (
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考核批次表';
 
+CREATE TABLE `water_station_info` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `station_name` varchar(255) DEFAULT NULL COMMENT '站点名称',
+  `station_code` varchar(255) DEFAULT NULL COMMENT '站点编号',
+  `station_type` varchar(255) DEFAULT NULL COMMENT '站点类型（RR=雨量站 ZZ=水位站 ZQ=流量站 TT=潮位站 DD=堰闸站）',
+  `longitude` varchar(255) DEFAULT NULL COMMENT '经度',
+  `latitude` varchar(255) DEFAULT NULL COMMENT '纬度',
+  `city` varchar(255) DEFAULT NULL COMMENT '地市',
+  `county` varchar(255) DEFAULT NULL COMMENT '区县',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='水利站点信息表';
+
+CREATE TABLE `water_station_data` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `data_day` DATE DEFAULT NULL COMMENT '数据日期（yyyy-mm-dd）',
+  `station_name` varchar(255) DEFAULT NULL COMMENT '站名',
+  `station_code` varchar(255) DEFAULT NULL COMMENT '站号',
+  `water_level`  DECIMAL(10,3) DEFAULT NULL COMMENT '水位（m）',
+  `water_limit_level` DECIMAL(10,3) DEFAULT NULL COMMENT '汛限水位（m）',
+  `is_out` tinyint DEFAULT NULL COMMENT '是否超汛限：1=是，0=否',
+  `longitude` DECIMAL(10,6) DEFAULT NULL COMMENT '经度',
+  `latitude` DECIMAL(10,6) DEFAULT NULL COMMENT '纬度',
+  `province` varchar(255) DEFAULT NULL COMMENT '省',
+  `city` varchar(255) DEFAULT NULL COMMENT '市',
+  `county` varchar(255) DEFAULT NULL COMMENT '区县',
+  `report_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '上报时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) ,
+  INDEX idx_data_day (data_day),
+  UNIQUE KEY uk_day_station (data_day, station_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='水利站点水情信息表';

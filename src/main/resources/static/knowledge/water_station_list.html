@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水利站点管理</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f2f2f2; font-family: "Microsoft YaHei", sans-serif; }
+        .page-container { padding: 15px; }
+        .search-card {
+            background: #fff; border-radius: 4px; padding: 15px 15px 0;
+            margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: #fff; border-radius: 4px; padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .layui-form-item { margin-bottom: 10px; }
+        .layui-form-label { width: 90px !important; padding: 9px 10px 9px 0; }
+        .layui-input-inline { width: 180px !important; }
+        .toolbar-btns { margin-bottom: 10px; }
+        .btn-green {
+            background-color: #86c566 !important; color: #fff !important;
+            border-color: #86c566 !important;
+        }
+        .btn-green:hover { background-color: #7ab857 !important; }
+        .btn-blue {
+            background-color: #1e9fff !important; color: #fff !important;
+            border-color: #1e9fff !important;
+        }
+        .btn-blue:hover { background-color: #0d8dee !important; }
+        .btn-orange {
+            background-color: #ffb800 !important; color: #fff !important;
+            border-color: #ffb800 !important;
+        }
+        .btn-orange:hover { background-color: #e6a600 !important; }
+        .type-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 2px;
+            font-size: 12px; color: #fff;
+        }
+        .type-rr { background-color: #1e9fff; }
+        .type-zz { background-color: #009688; }
+        .type-zq { background-color: #ff5722; }
+        .type-tt { background-color: #a233c6; }
+        .type-dd { background-color: #ffb800; }
+        .type-other { background-color: #999; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <!-- 搜索区 -->
+    <div class="search-card">
+        <form class="layui-form" lay-filter="stationSearchForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">站点名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="stationName" id="searchStationName" placeholder="请输入站点名称" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">站点编号</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="stationCode" id="searchStationCode" placeholder="请输入站点编号" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">站点类型</label>
+                    <div class="layui-input-inline">
+                        <select name="stationType" id="searchStationType">
+                            <option value="">全部</option>
+                            <option value="RR">雨量站</option>
+                            <option value="ZZ">水位站</option>
+                            <option value="ZQ">流量站</option>
+                            <option value="TT">潮位站</option>
+                            <option value="DD">堰闸站</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">地市</label>
+                    <div class="layui-input-inline">
+                        <select name="city" id="searchCity">
+                            <option value="">全部</option>
+                            <option value="杭州市">杭州市</option>
+                            <option value="宁波市">宁波市</option>
+                            <option value="温州市">温州市</option>
+                            <option value="嘉兴市">嘉兴市</option>
+                            <option value="湖州市">湖州市</option>
+                            <option value="绍兴市">绍兴市</option>
+                            <option value="金华市">金华市</option>
+                            <option value="衢州市">衢州市</option>
+                            <option value="舟山市">舟山市</option>
+                            <option value="台州市">台州市</option>
+                            <option value="丽水市">丽水市</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button type="button" class="layui-btn btn-green" id="searchBtn"><i class="layui-icon">&#xe615;</i> 查询</button>
+                    <button type="reset" class="layui-btn layui-btn-primary" id="resetBtn"><i class="layui-icon">&#xe669;</i> 重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 表格区 -->
+    <div class="table-card">
+        <div class="toolbar-btns">
+            <button type="button" class="layui-btn btn-orange" id="syncBtn"><i class="layui-icon">&#xe669;</i> 批量同步站点</button>
+            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe601;</i> 下载站点</button>
+        </div>
+        <table id="stationTable" lay-filter="stationTable"></table>
+    </div>
+</div>
+
+<script src="/layui/layui.js"></script>
+<script>
+var token = localStorage.getItem('token');
+
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.jquery;
+
+    // 站点类型映射
+    var stationTypeMap = {
+        'RR': {name: '雨量站', cls: 'type-rr'},
+        'ZZ': {name: '水位站', cls: 'type-zz'},
+        'ZQ': {name: '流量站', cls: 'type-zq'},
+        'TT': {name: '潮位站', cls: 'type-tt'},
+        'DD': {name: '堰闸站', cls: 'type-dd'}
+    };
+
+    // 时间格式化
+    function fmtTime(t) {
+        if (!t) return '-';
+        return String(t).replace('T', ' ').substring(0, 19);
+    }
+
+    // 当前查询条件
+    function currentWhere() {
+        return {
+            stationName: $('#searchStationName').val().trim(),
+            stationCode: $('#searchStationCode').val().trim(),
+            stationType: $('#searchStationType').val(),
+            city: $('#searchCity').val()
+        };
+    }
+
+    // 渲染列表
+    table.render({
+        elem: '#stationTable',
+        url: '/water/station/list',
+        method: 'GET',
+        headers: {token: token},
+        where: {},
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        request: {
+            pageName: 'pageNum',
+            limitName: 'pageSize'
+        },
+        response: {
+            statusName: 'code',
+            statusCode: 200,
+            countName: 'total',
+            dataName: 'records'
+        },
+        cols: [[
+            {type: 'checkbox', width: 50, align: 'center', fixed: 'left'},
+            {type: 'numbers', title: '序号', width: 90, align: 'center', fixed: 'left'},
+            {field: 'stationName', title: '站点名称', minWidth: 160, fixed: 'left'},
+            {field: 'stationCode', title: '站点编号', width: 100, align: 'center'},
+            {field: 'stationType', title: '站点类型', width: 90, align: 'center', templet: function(d){
+                var info = stationTypeMap[d.stationType];
+                if (info) {
+                    return '<span class="type-tag ' + info.cls + '">' + info.name + '</span>';
+                }
+                return d.stationType || '-';
+            }},
+            {field: 'longitude', title: '经度', width: 130, align: 'center', templet: function(d){
+                return d.longitude || '-';
+            }},
+            {field: 'latitude', title: '纬度', width: 130, align: 'center', templet: function(d){
+                return d.latitude || '-';
+            }},
+            {field: 'city', title: '地市', width: 80, align: 'center', templet: function(d){
+                return d.city || '-';
+            }},
+            {field: 'county', title: '区县', width: 80, align: 'center', templet: function(d){
+                return d.county || '-';
+            }},
+            {field: 'createTime', title: '创建时间', width: 120, align: 'center', templet: function(d){
+                return fmtTime(d.createTime);
+            }},
+            {field: 'updateTime', title: '更新时间', width: 120, align: 'center', templet: function(d){
+                return fmtTime(d.updateTime);
+            }}
+        ]],
+        done: function(res) {
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+            }
+        }
+    });
+
+    // 查询
+    $('#searchBtn').on('click', function(){
+        table.reload('stationTable', {
+            where: currentWhere(),
+            page: {curr: 1}
+        });
+    });
+
+    // 重置
+    $('#resetBtn').on('click', function(){
+        $('#searchStationName').val('');
+        $('#searchStationCode').val('');
+        $('#searchStationType').val('');
+        $('#searchCity').val('');
+        form.render('select');
+        table.reload('stationTable', {
+            where: {stationName: '', stationCode: '', stationType: '', city: ''},
+            page: {curr: 1}
+        });
+    });
+
+    // ============ 批量同步站点 ============
+    $('#syncBtn').on('click', function(){
+        layer.confirm('确定要同步站点数据吗？系统将以「站点编号」为准，更新已存在的站点、新增不存在的站点。', {
+            icon: 3, title: '批量同步站点'
+        }, function(index){
+            layer.close(index);
+
+            // 等待提示框：遮罩屏蔽操作，处理完成后关闭
+            var loadIdx = layer.msg('后台同步中，请稍后……', {
+                icon: 16,
+                shade: 0.3,
+                shadeClose: false,
+                time: 0
+            });
+
+            $.ajax({
+                url: '/water/station/sync',
+                type: 'POST',
+                headers: {token: token},
+                timeout: 0,          // 不超时，等待后台处理完
+                success: function(res){
+                    layer.close(loadIdx);
+                    if (res.code === 200) {
+                        var msg = '同步完成！<br><br>' +
+                                  '<b>成功：' + res.successCount + ' 条</b><br>' +
+                                  '<b>失败：' + res.failCount + ' 条</b><br><br>' +
+                                  '其中：新增 ' + res.insertCount + ' 条，更新 ' + res.updateCount + ' 条';
+                        if (res.skipCount && res.skipCount > 0) {
+                            msg += '<br><span style="color:#ff5722;">跳过（缺少站点编号）：' + res.skipCount + ' 条</span>';
+                        }
+                        if (res.costMs != null) {
+                            msg += '<br><span style="color:#999;font-size:12px;">耗时 ' + (res.costMs / 1000).toFixed(1) + ' 秒</span>';
+                        }
+                        layer.alert(msg, {icon: 1, title: '同步结果', area: '420px'}, function(i){
+                            layer.close(i);
+                            table.reload('stationTable');
+                        });
+                    } else if (res.code === 401) {
+                        layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                            window.top.location.href = '/login.html';
+                        });
+                    } else {
+                        layer.alert(res.msg || '同步失败', {icon: 2, title: '同步失败'});
+                    }
+                },
+                error: function(xhr){
+                    layer.close(loadIdx);
+                    var msg = '同步请求失败';
+                    if (xhr.status === 401) msg = '登录已过期，请重新登录';
+                    else if (xhr.status === 404) msg = '接口不存在(404)';
+                    else if (xhr.status === 500) msg = '服务器内部错误(500)';
+                    layer.alert(msg, {icon: 2});
+                }
+            });
+        });
+    });
+
+    // ============ 下载站点 ============
+    $('#downloadBtn').on('click', function(){
+        var where = currentWhere();
+        var params = 'stationName=' + encodeURIComponent(where.stationName || '') +
+                     '&stationCode=' + encodeURIComponent(where.stationCode || '') +
+                     '&stationType=' + encodeURIComponent(where.stationType || '') +
+                     '&city=' + encodeURIComponent(where.city || '');
+
+        var loadIdx = layer.msg('正在导出数据，请稍候……', {
+            icon: 16, shade: 0.3, shadeClose: false, time: 0
+        });
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/water/station/download?' + params, true);
+        xhr.setRequestHeader('token', token);
+        xhr.responseType = 'blob';
+
+        xhr.onload = function(){
+            layer.close(loadIdx);
+            if (xhr.status === 200) {
+                var blob = xhr.response;
+                var disposition = xhr.getResponseHeader('Content-Disposition');
+                var fileName = '水利站点信息.xlsx';
+                if (disposition) {
+                    var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
+                    if (match && match[1]) {
+                        fileName = decodeURIComponent(match[1]);
+                    }
+                }
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                layer.msg('导出成功', {icon: 1});
+            } else {
+                layer.msg('导出失败', {icon: 2});
+            }
+        };
+        xhr.onerror = function(){
+            layer.close(loadIdx);
+            layer.msg('导出请求异常', {icon: 2});
+        };
+        xhr.send();
+    });
+});
+</script>
+</body>
+</html>
