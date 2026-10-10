@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -44,6 +45,26 @@ public class WaterStationDataController {
     private WaterStationDataService waterStationDataService;
 
     /**
+     * 按天导出表头：
+     * 序号、市、区县、站名、站号、水位（m）、汛限水位（m）、是否超汛限、经度、纬度、上报时间
+     */
+    private static final String[] DAY_HEADS = {"序号", "市", "区县", "站名", "站号",
+            "水位（m）", "汛限水位（m）", "是否超汛限", "经度", "纬度", "上报时间"};
+
+    /**
+     * 单站历史导出表头（比按天多一列"数据日期"，跨天数据需要区分）：
+     * 序号、数据日期、市、区县、站名、站号、水位（m）、汛限水位（m）、是否超汛限、经度、纬度、上报时间
+     */
+    private static final String[] STATION_HEADS = {"序号", "数据日期", "市", "区县", "站名", "站号",
+            "水位（m）", "汛限水位（m）", "是否超汛限", "经度", "纬度", "上报时间"};
+
+    /**
+     * 导出时间统一按东八区格式化。
+     * 数据本身是北京时间，而容器 JVM 默认时区常为 UTC，不显式指定会导致导出的时间整体偏移 8 小时。
+     */
+    private static final TimeZone CHINA_ZONE = TimeZone.getTimeZone("GMT+8");
+
+    /**
      * 站点水情数据列表（分页 + 条件查询）
      * 默认查询当天数据（由前端传入 dataDay 默认当天）
      */
@@ -76,7 +97,7 @@ public class WaterStationDataController {
     }
 
     /**
-     * 构造查询条件（列表与下载共用）
+     * 构造查询条件（列表与按天下载共用）
      */
     private QueryWrapper<WaterStationData> buildQuery(String stationName, String stationCode,
                                                       String dataDay, String city) {
@@ -97,7 +118,7 @@ public class WaterStationDataController {
     }
 
     /**
-     * 下载站点水情数据（按当前查询条件导出）
+     * 下载"按天"水情数据（按当前查询条件导出）
      * 表头：序号、市、区县、站名、站号、水位（m）、汛限水位（m）、是否超汛限、经度、纬度、上报时间
      */
     @GetMapping("/download")
@@ -112,17 +133,6 @@ public class WaterStationDataController {
             wrapper.orderByDesc("report_time").orderByDesc("id");
             List<WaterStationData> list = waterStationDataService.list(wrapper);
 
-            // 表头
-            String[] heads = {"序号", "市", "区县", "站名", "站号", "水位（m）", "汛限水位（m）",
-                    "是否超汛限", "经度", "纬度", "上报时间"};
-            List<List<String>> headList = new ArrayList<>();
-            for (String h : heads) {
-                List<String> col = new ArrayList<>();
-                col.add(h);
-                headList.add(col);
-            }
-
-            // 数据
             List<List<Object>> dataList = new ArrayList<>();
             int seq = 1;
             for (WaterStationData d : list) {
@@ -141,32 +151,115 @@ public class WaterStationDataController {
                 dataList.add(row);
             }
 
-            String fileName = URLEncoder.encode("站点水情数据", StandardCharsets.UTF_8.toString());
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
-
-            EasyExcel.write(response.getOutputStream())
-                    .head(headList)
-                    .autoCloseStream(true)
-                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
-                    .registerWriteHandler(createCellStyleStrategy())
-                    .sheet("站点水情数据")
-                    .doWrite(dataList);
-
-        } catch (IOException e) {
-            try {
-                response.reset();
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
-                Map<String, Object> err = new HashMap<>();
-                err.put("code", 500);
-                err.put("msg", "导出失败：" + e.getMessage());
-                response.getWriter().write(new ObjectMapper().writeValueAsString(err));
-            } catch (IOException ex) {
-                // ignore
-            }
+            writeExcel(response, DAY_HEADS, dataList, "站点水情数据", "站点水情数据");
+        } catch (Exception e) {
+            // 兜底捕获全部异常（含 EasyExcel 运行时异常），避免直接抛 500 导致前端只能看到"导出失败"
+            writeError(response, e);
         }
+    }
+
+    /**
+     * 下载"单个站点"的全部历史水情数据。
+     * 根据站号查询该站点所有记录，按数据日期倒序排列。
+     * 表头：序号、数据日期、市、区县、站名、站号、水位（m）、汛限水位（m）、是否超汛限、经度、纬度、上报时间
+     */
+    @GetMapping("/downloadByStation")
+    public void downloadByStation(
+            @RequestParam String stationCode,
+            HttpServletResponse response) {
+        try {
+            if (stationCode == null || stationCode.trim().isEmpty()) {
+                writeError(response, new IOException("站号不能为空"));
+                return;
+            }
+
+            QueryWrapper<WaterStationData> wrapper = new QueryWrapper<>();
+            wrapper.eq("station_code", stationCode.trim());
+            // 按数据日期倒序
+            wrapper.orderByDesc("data_day").orderByDesc("id");
+            List<WaterStationData> list = waterStationDataService.list(wrapper);
+
+            // 站名取任一记录即可（同一站号站名固定）
+            String stationName = list.isEmpty() ? null : list.get(0).getStationName();
+            String displayName = (stationName != null && !stationName.trim().isEmpty())
+                    ? stationName.trim() : stationCode.trim();
+
+            List<List<Object>> dataList = new ArrayList<>();
+            int seq = 1;
+            for (WaterStationData d : list) {
+                List<Object> row = new ArrayList<>();
+                row.add(seq++);
+                row.add(formatDay(d.getDataDay()));
+                row.add(nvl(d.getCity()));
+                row.add(nvl(d.getCounty()));
+                row.add(nvl(d.getStationName()));
+                row.add(nvl(d.getStationCode()));
+                row.add(decimalToStr(d.getWaterLevel(), 3));
+                row.add(decimalToStr(d.getWaterLimitLevel(), 3));
+                row.add(d.getIsOut() != null && d.getIsOut() == 1 ? "是" : "否");
+                row.add(decimalToStr(d.getLongitude(), 6));
+                row.add(decimalToStr(d.getLatitude(), 6));
+                row.add(formatDateTime(d.getReportTime()));
+                dataList.add(row);
+            }
+
+            writeExcel(response, STATION_HEADS, dataList,
+                    displayName + "_历史水情数据", safeSheetName(displayName));
+        } catch (Exception e) {
+            // 兜底捕获全部异常（含 EasyExcel 运行时异常），避免直接抛 500 导致前端只能看到"导出失败"
+            writeError(response, e);
+        }
+    }
+
+    /**
+     * 统一写出 Excel（含表头灰底加粗居中 + 全表细边框 + 自适应列宽）
+     */
+    private void writeExcel(HttpServletResponse response, String[] heads,
+                            List<List<Object>> dataList, String fileName, String sheetName)
+            throws IOException {
+        List<List<String>> headList = new ArrayList<>();
+        for (String h : heads) {
+            List<String> col = new ArrayList<>();
+            col.add(h);
+            headList.add(col);
+        }
+
+        String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString());
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+        response.setHeader("Content-Disposition", "attachment;filename=" + encodedName + ".xlsx");
+
+        EasyExcel.write(response.getOutputStream())
+                .head(headList)
+                .autoCloseStream(true)
+                .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
+                .registerWriteHandler(createCellStyleStrategy())
+                .sheet(sheetName)
+                .doWrite(dataList);
+    }
+
+    /** 导出异常时以 JSON 形式返回，便于前端提示 */
+    private void writeError(HttpServletResponse response, Exception e) {
+        try {
+            response.reset();
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
+            Map<String, Object> err = new HashMap<>();
+            err.put("code", 500);
+            err.put("msg", "导出失败：" + e.getMessage());
+            response.getWriter().write(new ObjectMapper().writeValueAsString(err));
+        } catch (IOException ex) {
+            // ignore
+        }
+    }
+
+    /** Excel sheet 名非法字符替换 + 长度截断（sheet 名上限 31 字符） */
+    private String safeSheetName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return "历史水情数据";
+        }
+        String s = name.trim().replaceAll("[\\\\/:*?\\[\\]]", "_");
+        return s.length() > 31 ? s.substring(0, 31) : s;
     }
 
     private String nvl(String v) {
@@ -174,13 +267,28 @@ public class WaterStationDataController {
     }
 
     /**
-     * Date → 字符串（yyyy-MM-dd HH:mm:ss，null 返回空串）
+     * Date → yyyy-MM-dd HH:mm:ss（null 返回空串），固定按东八区输出
      */
     private String formatDateTime(Date date) {
         if (date == null) {
             return "";
         }
-        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(CHINA_ZONE);
+        return sdf.format(date);
+    }
+
+    /**
+     * Date → yyyy-MM-dd（null 返回空串），固定按东八区输出。
+     * 不指定时区时，东八区零点会被按 UTC 格式化成前一天，导出会"少一天"。
+     */
+    private String formatDay(Date date) {
+        if (date == null) {
+            return "";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        sdf.setTimeZone(CHINA_ZONE);
+        return sdf.format(date);
     }
 
     /**

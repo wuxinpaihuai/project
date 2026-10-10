@@ -3,6 +3,8 @@ package com.zjhl.project.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,7 +20,13 @@ public class WaterStationData {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 数据日期 */
+    /**
+     * 数据日期（yyyy-MM-dd）。
+     * DATE 列本身不含时间，用 Date 承载时零点落在东八区（UTC+8），
+     * 若按 UTC 序列化会变成前一天 16:00，前端截取日期就会出现"少一天"。
+     * 故必须显式指定 GMT+8。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date dataDay;
 
     /** 站名 */

@@ -89,7 +89,8 @@
     <!-- 表格区 -->
     <div class="table-card">
         <div class="toolbar-btns">
-            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe601;</i> 下载站点水情数据</button>
+            <button type="button" class="layui-btn btn-blue" id="downloadBtn"><i class="layui-icon">&#xe601;</i> 下载按天水情数据</button>
+            <button type="button" class="layui-btn btn-green" id="downloadStationBtn"><i class="layui-icon">&#xe601;</i> 下载单站水情数据</button>
         </div>
         <table id="dataTable" lay-filter="dataTable"></table>
     </div>
@@ -132,21 +133,35 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         return n.toFixed(scale);
     }
 
-    // 时间格式化（兼容 "yyyy-MM-dd HH:mm:ss" 字符串 / ISO 字符串 / 时间戳数字）
+    // 时间格式化（兼容 "yyyy-MM-dd HH:mm:ss" 字符串 / ISO 带时区字符串 / 时间戳数字）
     function fmtTime(t) {
         if (t === null || t === undefined || t === '') return '-';
-        if (typeof t === 'number') {
-            var d = new Date(t);
-            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
-                   pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        // 已是 "yyyy-MM-dd HH:mm:ss" 形式，直接使用
+        if (typeof t === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t)) {
+            return t.substring(0, 19);
         }
-        return String(t).replace('T', ' ').substring(0, 19);
+        var d = new Date(t);
+        if (isNaN(d.getTime())) {
+            return String(t).replace('T', ' ').substring(0, 19);
+        }
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+               pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
     }
 
     // 日期格式化（yyyy-MM-dd）
+    // 后端 DATE 字段若被序列化成 UTC 的 ISO 串（如 2026-09-28T16:00:00.000+00:00），
+    // 直接截取前 10 位会少一天，这里按本地时区重新计算。
     function fmtDate(t) {
-        if (!t) return '-';
-        return String(t).substring(0, 10);
+        if (t === null || t === undefined || t === '') return '-';
+        // 已是纯日期串，直接使用，不做任何时区转换
+        if (typeof t === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t)) {
+            return t;
+        }
+        var d = new Date(t);
+        if (isNaN(d.getTime())) {
+            return String(t).substring(0, 10);
+        }
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
     }
 
     // 当前查询条件
@@ -162,6 +177,7 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
     // 渲染列表（默认当天数据）
     table.render({
         elem: '#dataTable',
+        id: 'dataTable',
         url: '/water/data/list',
         method: 'GET',
         headers: {token: token},
@@ -186,31 +202,31 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         },
         cols: [[
             {type: 'checkbox', width: 50, align: 'center', fixed: 'left'},
-            {type: 'numbers', title: '序号', width: 80, align: 'center', fixed: 'left'},
-            {field: 'city', title: '市', width: 80, align: 'center', fixed: 'left', templet: function(d){
+            {type: 'numbers', title: '序号', width: 60, align: 'center', fixed: 'left'},
+            {field: 'city', title: '市', width: 110, align: 'center', templet: function(d){
                 return d.city || '-';
             }},
             {field: 'county', title: '区县', width: 110, align: 'center', templet: function(d){
                 return d.county || '-';
             }},
-            {field: 'stationName', title: '站名', minWidth: 120},
+            {field: 'stationName', title: '站名', minWidth: 160},
             {field: 'stationCode', title: '站号', width: 120, align: 'center'},
-            {field: 'waterLevel', title: '水位（m）', width: 100, align: 'right', templet: function(d){
+            {field: 'waterLevel', title: '水位（m）', width: 110, align: 'right', templet: function(d){
                 return fmtDecimal(d.waterLevel, 3);
             }},
             {field: 'waterLimitLevel', title: '汛限水位（m）', width: 130, align: 'right', templet: function(d){
                 return fmtDecimal(d.waterLimitLevel, 3);
             }},
-            {field: 'isOut', title: '是否超汛限', width: 100, align: 'center', templet: function(d){
+            {field: 'isOut', title: '是否超汛限', width: 110, align: 'center', templet: function(d){
                 if (d.isOut === 1) {
                     return '<span class="out-yes">是</span>';
                 }
                 return '<span class="out-no">否</span>';
             }},
-            {field: 'longitude', title: '经度', width: 120, align: 'center', templet: function(d){
+            {field: 'longitude', title: '经度', width: 120, align: 'right', templet: function(d){
                 return fmtDecimal(d.longitude, 6);
             }},
-            {field: 'latitude', title: '纬度', width: 120, align: 'center', templet: function(d){
+            {field: 'latitude', title: '纬度', width: 120, align: 'right', templet: function(d){
                 return fmtDecimal(d.latitude, 6);
             }},
             {field: 'reportTime', title: '上报时间', width: 170, align: 'center', templet: function(d){
@@ -250,53 +266,113 @@ layui.use(['table', 'layer', 'form', 'laydate'], function(){
         });
     });
 
-    // ============ 下载站点水情数据 ============
+    // ============ 通用导出：带等待遮罩，从响应头解析文件名 ============
+    // 失败时会展示后端返回的具体原因与 HTTP 状态码，便于定位问题
+    function exportExcel(url, fallbackName) {
+        var loadIdx = layer.msg('正在导出数据，请稍候……', {
+            icon: 16, shade: 0.3, shadeClose: false, time: 0
+        });
+
+        // Blob -> 文本（用于读取后端返回的错误信息）
+        function readBlobText(blob, cb) {
+            if (!blob || !blob.size) { cb(''); return; }
+            var reader = new FileReader();
+            reader.onload = function(){ cb(reader.result || ''); };
+            reader.onerror = function(){ cb(''); };
+            reader.readAsText(blob);
+        }
+
+        // 从后端返回的 JSON 中取 msg
+        function pickMsg(text, def) {
+            if (!text) { return def; }
+            try {
+                var obj = JSON.parse(text);
+                if (obj && obj.msg) { return obj.msg; }
+            } catch (e) { /* 非 JSON，忽略 */ }
+            return def;
+        }
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('token', token);
+        xhr.responseType = 'blob';
+
+        xhr.onload = function(){
+            layer.close(loadIdx);
+            var contentType = xhr.getResponseHeader('Content-Type') || '';
+
+            // 情况一：HTTP 非 200（404 接口不存在 / 500 后端异常 / 401 未登录等）
+            if (xhr.status !== 200) {
+                readBlobText(xhr.response, function(text){
+                    layer.msg(pickMsg(text, '导出失败（HTTP ' + xhr.status + '）'), {icon: 2});
+                });
+                return;
+            }
+
+            // 情况二：HTTP 200，但后端以 JSON 形式返回了错误（导出异常时的兜底响应）
+            if (contentType.indexOf('application/json') >= 0) {
+                readBlobText(xhr.response, function(text){
+                    layer.msg(pickMsg(text, '导出失败'), {icon: 2});
+                });
+                return;
+            }
+
+            // 情况三：正常下载
+            var fileName = fallbackName || '导出数据.xlsx';
+            var disposition = xhr.getResponseHeader('Content-Disposition');
+            if (disposition) {
+                var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
+                if (match && match[1]) {
+                    fileName = decodeURIComponent(match[1]);
+                }
+            }
+            var downloadUrl = window.URL.createObjectURL(xhr.response);
+            var a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            // 延迟释放，避免个别浏览器在下载启动前回收 URL 导致"下载失败"
+            setTimeout(function(){ window.URL.revokeObjectURL(downloadUrl); }, 5000);
+            layer.msg('导出成功', {icon: 1});
+        };
+        xhr.onerror = function(){
+            layer.close(loadIdx);
+            layer.msg('导出请求异常（网络错误，或服务未启动）', {icon: 2});
+        };
+        xhr.send();
+    }
+
+    // ============ 下载按天水情数据（按当前查询条件导出） ============
     $('#downloadBtn').on('click', function(){
         var where = currentWhere();
         var params = 'stationName=' + encodeURIComponent(where.stationName || '') +
                      '&stationCode=' + encodeURIComponent(where.stationCode || '') +
                      '&dataDay=' + encodeURIComponent(where.dataDay || '') +
                      '&city=' + encodeURIComponent(where.city || '');
+        exportExcel('/water/data/download?' + params, '站点水情数据.xlsx');
+    });
 
-        var loadIdx = layer.msg('正在导出数据，请稍候……', {
-            icon: 16, shade: 0.3, shadeClose: false, time: 0
-        });
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/water/data/download?' + params, true);
-        xhr.setRequestHeader('token', token);
-        xhr.responseType = 'blob';
-
-        xhr.onload = function(){
-            layer.close(loadIdx);
-            if (xhr.status === 200) {
-                var blob = xhr.response;
-                var disposition = xhr.getResponseHeader('Content-Disposition');
-                var fileName = '站点水情数据.xlsx';
-                if (disposition) {
-                    var match = disposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/i);
-                    if (match && match[1]) {
-                        fileName = decodeURIComponent(match[1]);
-                    }
-                }
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                layer.msg('导出成功', {icon: 1});
-            } else {
-                layer.msg('导出失败', {icon: 2});
-            }
-        };
-        xhr.onerror = function(){
-            layer.close(loadIdx);
-            layer.msg('导出请求异常', {icon: 2});
-        };
-        xhr.send();
+    // ============ 下载单站水情数据（先选一条站点记录，导出该站全部历史） ============
+    $('#downloadStationBtn').on('click', function(){
+        var checked = table.checkStatus('dataTable').data;
+        if (!checked || checked.length === 0) {
+            layer.msg('请先勾选一条站点记录', {icon: 0});
+            return;
+        }
+        if (checked.length > 1) {
+            layer.msg('只能勾选一条站点记录', {icon: 0});
+            return;
+        }
+        var row = checked[0];
+        if (!row.stationCode) {
+            layer.msg('该记录缺少站号，无法导出', {icon: 2});
+            return;
+        }
+        var fallbackName = (row.stationName || row.stationCode) + '_历史水情数据.xlsx';
+        exportExcel('/water/data/downloadByStation?stationCode=' + encodeURIComponent(row.stationCode),
+                    fallbackName);
     });
 });
 </script>
