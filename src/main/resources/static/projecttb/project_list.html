@@ -88,8 +88,28 @@
         <div class="toolbar-btns">
             <button type="button" class="layui-btn btn-green" id="addBtn"><i class="layui-icon">&#xe654;</i> 新增项目</button>
             <button type="button" class="layui-btn btn-orange" id="taskAssignBtn"><i class="layui-icon">&#xe705;</i> 体系作战任务分配</button>
+            <button type="button" class="layui-btn btn-blue" id="importOldBtn"><i class="layui-icon">&#xe681;</i> 现有项目批量导入</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="downloadTplBtn"><i class="layui-icon">&#xe601;</i> 项目批量导入模板</button>
         </div>
         <table id="projectTable" lay-filter="projectTable"></table>
+    </div>
+</div>
+
+<!-- 现有项目批量导入弹窗 -->
+<div id="importOldDialog" style="display:none; padding: 25px 25px 15px;">
+    <div style="margin-bottom: 15px;">
+        <button type="button" class="layui-btn layui-btn-primary" id="chooseFileBtn"><i class="layui-icon">&#xe67c;</i> 选择Excel文件</button>
+        <span id="chosenFileName" style="line-height: 38px; color: #666; margin-left: 10px;">未选择文件</span>
+    </div>
+    <div style="color: #999; font-size: 12px; margin-bottom: 20px;">
+        仅支持 .xls / .xlsx 格式的Excel文件，请先<button type="button" class="layui-btn layui-btn-xs layui-btn-primary" id="downloadTplLink">下载导入模板</button>
+    </div>
+    <div style="text-align: center; margin-bottom: 15px;">
+        <button type="button" class="layui-btn btn-green" id="doImportBtn"><i class="layui-icon">&#xe681;</i> 上传</button>
+    </div>
+    <div id="importResult" style="display:none; border-top: 1px solid #eee; padding-top: 12px;">
+        <div id="importSummary" style="margin-bottom: 8px; font-weight: bold;"></div>
+        <div id="importFailList" style="max-height: 180px; overflow-y: auto; color: #ff5722; font-size: 12px; line-height: 22px;"></div>
     </div>
 </div>
 
@@ -97,10 +117,11 @@
 <script>
 var token = localStorage.getItem('token');
 
-layui.use(['table', 'layer', 'form'], function(){
+layui.use(['table', 'layer', 'form', 'upload'], function(){
     var table = layui.table;
     var layer = layui.layer;
     var form = layui.form;
+    var upload = layui.upload;
     var $ = layui.jquery;
 
     // 项目类型映射
@@ -290,6 +311,104 @@ layui.use(['table', 'layer', 'form'], function(){
             area: ['1100px', '700px'],
             content: '/projecttb/task_assign.html?projectId=' + selectedProject.id,
             end: function(){ table.reload('projectTable'); }
+        });
+    });
+
+    // 下载项目批量导入模板
+    function downloadImportTemplate() {
+        window.open('/file/现有项目信息批量导入模板.xlsx', '_blank');
+    }
+    $('#downloadTplBtn').on('click', downloadImportTemplate);
+    $(document).on('click', '#downloadTplLink', downloadImportTemplate);
+
+    // ==================== 现有项目批量导入 ====================
+    // upload 组件只初始化一次，防止弹窗重复打开导致重复绑定上传事件
+    var importing = false;   // 导入中标记，防止用户多次点击上传按钮
+    var fileChosen = false;  // 是否已选择文件
+
+    upload.render({
+        elem: '#chooseFileBtn',
+        url: '/project/info/importOld',
+        auto: false,           // 不自动上传，点击「上传」按钮后再提交
+        accept: 'file',
+        exts: 'xls|xlsx',      // 只允许Excel文件
+        bindAction: '#doImportBtn',
+        headers: {token: token},
+        choose: function(obj){
+            fileChosen = true;
+            obj.preview(function(index, file, result){
+                $('#chosenFileName').text(file.name);
+            });
+        },
+        before: function(){
+            if (importing) {
+                return false; // 导入中，防止用户多次点击上传按钮
+            }
+            if (!fileChosen) {
+                layer.msg('请先选择Excel文件', {icon: 5});
+                return false;
+            }
+            importing = true;
+            $('#doImportBtn').addClass('layui-btn-disabled').css('pointer-events', 'none');
+            layer.msg('导入中，请耐心等待...', {icon: 16, shade: 0.3, time: 0});
+        },
+        done: function(res){
+            importing = false;
+            layer.closeAll('dialog');
+            $('#doImportBtn').removeClass('layui-btn-disabled').css('pointer-events', 'auto');
+
+            if (res.code === 401) {
+                layer.msg('登录已过期，请重新登录', {icon: 5}, function(){
+                    window.top.location.href = '/login.html';
+                });
+                return;
+            }
+            if (res.code !== 200) {
+                layer.msg(res.msg || '导入失败', {icon: 2});
+                return;
+            }
+
+            var d = res.data || {};
+            var successCount = d.successCount || 0;
+            var failCount = d.failCount || 0;
+
+            // 在弹窗内展示导入结果（成功多少条、失败明细到哪一行什么问题）
+            $('#importResult').show();
+            $('#importSummary').html('导入完成：成功 <span style="color:#86c566;">' + successCount + '</span> 条，失败 <span style="color:#ff5722;">' + failCount + '</span> 条');
+            var failHtml = '';
+            (d.failList || []).forEach(function(f){
+                failHtml += '<div>第 ' + f.row + ' 行（' + (f.projectName || '未命名') + '）：' + f.reason + '</div>';
+            });
+            $('#importFailList').html(failHtml);
+
+            if (failCount === 0) {
+                layer.msg('导入成功 ' + successCount + ' 条记录', {icon: 1});
+            }
+            table.reload('projectTable');
+        },
+        error: function(){
+            importing = false;
+            layer.closeAll('dialog');
+            $('#doImportBtn').removeClass('layui-btn-disabled').css('pointer-events', 'auto');
+            layer.msg('导入失败，请稍后重试', {icon: 2});
+        }
+    });
+
+    // 打开导入弹窗（每次打开重置界面状态）
+    $('#importOldBtn').on('click', function(){
+        importing = false;
+        fileChosen = false;
+        $('#chosenFileName').text('未选择文件');
+        $('#importResult').hide();
+        $('#importSummary').text('');
+        $('#importFailList').html('');
+        $('#doImportBtn').removeClass('layui-btn-disabled').css('pointer-events', 'auto');
+
+        layer.open({
+            type: 1,
+            title: '现有项目批量导入',
+            area: ['560px', '440px'],
+            content: $('#importOldDialog')
         });
     });
 });

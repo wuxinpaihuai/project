@@ -421,5 +421,7 @@ CREATE TABLE `water_station_data` (
   `county` varchar(255) DEFAULT NULL COMMENT '区县',
   `report_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '上报时间',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`) 
+  PRIMARY KEY (`id`) ,
+  INDEX idx_data_day (data_day),
+  UNIQUE KEY uk_day_station (data_day, station_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='水利站点水情信息表';

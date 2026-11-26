@@ -9,11 +9,15 @@ import com.zjhl.project.entity.ProjectInfo;
 import com.zjhl.project.entity.ProjectStage;
 import com.zjhl.project.service.ProjectExtendService;
 import com.zjhl.project.service.ProjectFileService;
+import com.zjhl.project.service.ProjectImportService;
 import com.zjhl.project.service.ProjectInfoService;
 import com.zjhl.project.service.ProjectStageService;
+import com.zjhl.project.service.SysUserService;
+import com.zjhl.project.entity.SysUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,6 +40,12 @@ public class ProjectInfoController {
 
     @Autowired
     private ProjectExtendService projectExtendService;
+
+    @Autowired
+    private ProjectImportService projectImportService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     /**
      * 项目列表（分页+条件查询）
@@ -300,6 +310,48 @@ public class ProjectInfoController {
 
         result.put("code", 200);
         result.put("msg", "新增成功");
+        return result;
+    }
+
+    /**
+     * 现有项目批量导入（上传Excel模板，逐行校验后写入 project_info / project_stage / project_extend 三张表）
+     * 返回：total/successCount/failCount/failList(row, projectName, reason)
+     */
+    @PostMapping("/importOld")
+    public Map<String, Object> importOld(@RequestParam("file") MultipartFile file) {
+        Map<String, Object> result = new HashMap<>();
+        if (!StpUtil.isLogin()) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
+        if (file == null || file.isEmpty()) {
+            result.put("code", 400);
+            result.put("msg", "请选择要上传的Excel文件");
+            return result;
+        }
+        String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        if (!filename.endsWith(".xls") && !filename.endsWith(".xlsx")) {
+            result.put("code", 400);
+            result.put("msg", "只允许上传 .xls / .xlsx 格式的Excel文件");
+            return result;
+        }
+
+        try {
+            // 当前登录用户（写入 project_info.bisness_user_id / bisness_user_name）
+            Long loginUserId = StpUtil.getLoginIdAsLong();
+            SysUser loginUser = sysUserService.getById(loginUserId);
+            String loginUserName = loginUser != null ? loginUser.getRealName() : null;
+
+            Map<String, Object> data = projectImportService.importOldProjects(file, loginUserId, loginUserName);
+            result.put("code", 200);
+            result.put("msg", "导入完成");
+            result.put("data", data);
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("msg", "导入失败：" + e.getMessage());
+        }
         return result;
     }
 
