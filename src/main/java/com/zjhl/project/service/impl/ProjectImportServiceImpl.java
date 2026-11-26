@@ -26,12 +26,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ProjectImportServiceImpl implements ProjectImportService {
@@ -72,7 +75,8 @@ public class ProjectImportServiceImpl implements ProjectImportService {
         PROJECT_TYPE_MAP.put("验收", 4);
         PROJECT_TYPE_MAP.put("环评入围", 5);
         PROJECT_TYPE_MAP.put("场调入围", 6);
-        PROJECT_TYPE_MAP.put("环评咨询", 7);
+        PROJECT_TYPE_MAP.put("环保咨询", 7);
+        PROJECT_TYPE_MAP.put("环评+验收", 8);
         PROJECT_TYPE_MAP.put("水污染治理", 10);
         PROJECT_TYPE_MAP.put("大气污染治理", 20);
         PROJECT_TYPE_MAP.put("污染土壤修复", 30);
@@ -84,7 +88,7 @@ public class ProjectImportServiceImpl implements ProjectImportService {
     static {
         PROJECT_SOURCE_MAP.put("自拓非招投标", "1");
         PROJECT_SOURCE_MAP.put("自拓+招投标", "2");
-        PROJECT_SOURCE_MAP.put("渠道维护", "3");
+        PROJECT_SOURCE_MAP.put("渠道维护非招投标", "3");
         PROJECT_SOURCE_MAP.put("渠道维护+招投标", "4");
         PROJECT_SOURCE_MAP.put("公开招投标", "5");
     }
@@ -114,8 +118,9 @@ public class ProjectImportServiceImpl implements ProjectImportService {
             return result;
         }
 
-        // ========== 2. 预加载全部用户（real_name → id），避免逐行查询数据库 ==========
+        // ========== 2. 预加载全部用户（real_name → id）与已有项目名称，避免逐行查询数据库 ==========
         Map<String, Long> userMap = loadUserMap();
+        Set<String> existingNames = loadExistingProjectNames();
 
         int successCount = 0;
         List<Map<String, Object>> failList = new ArrayList<>();
@@ -126,8 +131,8 @@ public class ProjectImportServiceImpl implements ProjectImportService {
                 continue;
             }
 
-            // ========== 3. 校验 ==========
-            List<String> errors = validate(row, userMap);
+            // ========== 3. 校验（含项目名称去重） ==========
+            List<String> errors = validate(row, userMap, existingNames);
             if (!errors.isEmpty()) {
                 failList.add(buildFailItem(row, String.join("；", errors)));
                 continue;
@@ -140,6 +145,8 @@ public class ProjectImportServiceImpl implements ProjectImportService {
                     return null;
                 });
                 successCount++;
+                // 导入成功后将名称加入去重集合，防止同一文件内重名项目重复导入
+                existingNames.add(trim(row.getProjectName()));
             } catch (Exception e) {
                 log.error("现有项目批量导入失败，Excel行号={}", row.getRowNum(), e);
                 failList.add(buildFailItem(row, "写入数据库失败：" + e.getMessage()));
@@ -156,10 +163,13 @@ public class ProjectImportServiceImpl implements ProjectImportService {
     /**
      * 单行校验，返回错误信息列表（空表示通过）
      */
-    private List<String> validate(ProjectImportRow row, Map<String, Long> userMap) {
+    private List<String> validate(ProjectImportRow row, Map<String, Long> userMap, Set<String> existingNames) {
         List<String> errors = new ArrayList<>();
-        if (isBlank(row.getProjectName())) {
+        String projectName = trim(row.getProjectName());
+        if (projectName == null) {
             errors.add("项目名称不能为空");
+        } else if (existingNames.contains(projectName)) {
+            errors.add("项目名称【" + projectName + "】在系统中已存在，不允许重复导入");
         }
         if (isBlank(row.getProjectNo())) {
             errors.add("项目编号不能为空");
@@ -216,6 +226,7 @@ public class ProjectImportServiceImpl implements ProjectImportService {
         project.setBisnessUserName(bisnessUserName);
         project.setTechUserId(userMap.get(techName));
         project.setTechUserName(techName);
+        project.setProjectAmount(new BigDecimal(row.getWinBidAmount()));
         project.setCreateTime(now);
         project.setUpdateTime(now);
         projectInfoService.save(project);
@@ -282,6 +293,24 @@ public class ProjectImportServiceImpl implements ProjectImportService {
             map.putIfAbsent(u.getRealName().trim(), u.getId());
         }
         return map;
+    }
+
+    /**
+     * 预加载 project_info 中已有的项目名称，用于插入前去重
+     */
+    private Set<String> loadExistingProjectNames() {
+        QueryWrapper<ProjectInfo> wrapper = new QueryWrapper<>();
+        wrapper.select("project_name");
+        wrapper.isNotNull("project_name");
+        wrapper.ne("project_name", "");
+        List<ProjectInfo> list = projectInfoService.list(wrapper);
+        Set<String> names = new HashSet<>();
+        for (ProjectInfo p : list) {
+            if (p.getProjectName() != null) {
+                names.add(p.getProjectName().trim());
+            }
+        }
+        return names;
     }
 
     private Map<String, Object> buildFailItem(ProjectImportRow row, String reason) {
